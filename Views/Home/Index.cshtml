@@ -1,8 +1,139 @@
 ﻿@{
     ViewData["Title"] = "Index";
+    Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<div>
-    <h1>Index</h1>
-    <p>Bienvenidos al sitio web de NombreProyecto</p>
+<style>
+    /* ESTILO PAMI / ACCESIBILIDAD +85 AÑOS */
+    
+    .menu-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding-top: 20px;
+    }
+
+    .titulo-principal {
+        font-size: 2.5rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        color: #000;
+        text-align: center;
+        margin-bottom: 30px;
+        border-bottom: 4px solid #0d6efd;
+        padding-bottom: 10px;
+    }
+
+    /* GRILLA 3x3 */
+    .grid-botones {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr); /* 3 Columnas fijas */
+        gap: 25px; /* Espacio entre botones */
+    }
+
+    /* TARJETA / BOTÓN */
+    .btn-menu {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 220px; /* Altura fija gigante */
+        background-color: #fff;
+        border: 3px solid #6c757d; /* Borde gris grueso por defecto */
+        border-radius: 12px;
+        text-decoration: none;
+        color: #000;
+        transition: all 0.2s ease-in-out;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    /* ICONOS */
+    .btn-menu i {
+        font-size: 4rem; /* Icono gigante */
+        margin-bottom: 15px;
+        color: #0d6efd; /* Azul PAMI */
+    }
+
+    /* TEXTO */
+    .btn-menu span {
+        font-size: 1.5rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        text-align: center;
+    }
+
+    /* EFECTO HOVER (CUANDO PASA EL MOUSE) */
+    .btn-menu:hover {
+        background-color: #e9ecef;
+        transform: translateY(-5px);
+        border-color: #0d6efd;
+        box-shadow: 0 8px 15px rgba(13, 110, 253, 0.2);
+    }
+
+    /* EFECTO FOCO (ACCESIBILIDAD TECLADO) */
+    .btn-menu:focus {
+        background-color: #fff3cd; /* Amarillo patito */
+        border-color: #000;
+        outline: none;
+        box-shadow: 0 0 0 0.4rem rgba(255, 193, 7, 0.5);
+    }
+
+    /* BOTÓN DE SALIR (ROJO) */
+    .btn-salir {
+        border-color: #dc3545;
+    }
+    .btn-salir i { color: #dc3545; }
+    .btn-salir:hover {
+        background-color: #fee2e2;
+        border-color: #b02a37;
+    }
+
+</style>
+
+<div class="menu-container">
+    <h1 class="titulo-principal">Sistema de Farmacia</h1>
+
+    <div class="grid-botones">
+        
+        <a href="@Url.Action("Create", "Facturas")" class="btn-menu">
+            <i class="bi bi-cart4"></i>
+            <span>Nueva Venta</span>
+        </a>
+
+        <a href="@Url.Action("Index", "Socios")" class="btn-menu">
+            <i class="bi bi-people-fill"></i>
+            <span>Socios / Clientes</span>
+        </a>
+
+        <a href="@Url.Action("Index", "Medicamentos")" class="btn-menu">
+            <i class="bi bi-capsule"></i>
+            <span>Medicamentos</span>
+        </a>
+
+        <a href="@Url.Action("Index", "ObrasSociales")" class="btn-menu">
+            <i class="bi bi-hospital"></i>
+            <span>Obras Sociales</span>
+        </a>
+
+        <a href="#" class="btn-menu"> <i class="bi bi-building"></i>
+            <span>Mandatarias</span>
+        </a>
+
+        <a href="#" class="btn-menu"> <i class="bi bi-currency-dollar"></i>
+            <span>Cobros y Caja</span>
+        </a>
+
+        <a href="#" class="btn-menu">
+            <i class="bi bi-question-square"></i>
+            <span>Liquidaciones</span> </a>
+
+        <a href="#" class="btn-menu">
+            <i class="bi bi-gear-fill"></i>
+            <span>Configuración</span> </a>
+
+        <a href="@Url.Action("Index", "Account")" class="btn-menu btn-salir">
+            <i class="bi bi-power"></i>
+            <span>Salir del Sistema</span>
+        </a>
+
+    </div>
 </div>

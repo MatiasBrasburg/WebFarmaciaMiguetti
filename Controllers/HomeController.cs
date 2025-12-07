@@ -1,6 +1,10 @@
 using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using WebFarmaciaMiguetti.Models;
+using Microsoft.AspNetCore.Http;
+using System;
+using System.Text.Json;        
+
 
 namespace WebFarmaciaMiguetti.Controllers;
 
@@ -12,9 +16,22 @@ public class HomeController : Controller
     {
         _logger = logger;
     }
-
     public IActionResult Index()
+{
+
+    var usuarioLogueado = HttpContext.Session.GetString("UsuarioAutorizado");
+
+    if (string.IsNullOrEmpty(usuarioLogueado))
     {
-        return View();
+        // NO ESTÁ LOGUEADO: Lo mandamos a la puerta (Login)
+        return RedirectToAction("Index", "Account"); 
+    }
+
+   
+    return View(); 
+}
+    public IActionResult Home()
+    {
+        return View("Home");
     }
 }
