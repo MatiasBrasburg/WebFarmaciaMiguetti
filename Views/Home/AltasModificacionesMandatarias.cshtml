@@ -1,242 +1,613 @@
+@using System.Text.Json
+@using System.Linq
 @{
     ViewData["Title"] = "Gestión de Mandatarias";
-    // Recuperamos la lista o creamos una nueva para evitar errores de null
-    List<Mandatarias> lista = ViewBag.ListaMandatarias as List<Mandatarias> ?? new List<Mandatarias>();
+    var listaMandatarias = (ViewBag.ListaMandatarias as IEnumerable<dynamic>)?.ToList() ?? new List<dynamic>();
+    // Ordenar alfabéticamente por RazonSocial
+    if (listaMandatarias.Any())
+    {
+        listaMandatarias = listaMandatarias.OrderBy(m => m.RazonSocial).ToList();
+    }
 }
 
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+
 <style>
-    /* REGLA UX 85 AÑOS: Alto contraste y tamaño grande */
+    /* ========== DISEÑO RESPONSIVO PARA 85 AÑOS ========== */
     body {
-        background-color: #f4f6f9; /* Fondo gris muy suave para descansar la vista */
+        font-family: 'Roboto', 'Open Sans', Arial, sans-serif;
+        font-size: clamp(16px, 2vw, 18px);
+        line-height: 1.6;
+        background-color: #f8f9fa;
     }
 
-    .titulo-principal {
-        font-family: 'Roboto', sans-serif;
-        font-weight: 700;
-        font-size: 2.5rem;
-        color: #000;
-        margin-bottom: 30px;
-        border-bottom: 4px solid #0d6efd; /* Línea guía visual */
-        padding-bottom: 10px;
-    }
-
-    /* TABLA ROBUSTA */
-    .tabla-accesible {
-        background-color: #fff;
-        font-size: 1.25rem; /* 20px base */
-        border: 2px solid #000;
-    }
-    .tabla-accesible thead {
-        background-color: #000;
-        color: #fff;
-    }
-    .tabla-accesible th, .tabla-accesible td {
-        padding: 15px; /* Espaciado generoso (Ley de Fitts) */
-        vertical-align: middle;
-    }
-
-    /* BOTONES GIGANTES Y CLAROS */
-    .btn-accion {
+    h1 {
+        font-size: clamp(2rem, 5vw, 2.8rem);
         font-weight: bold;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        border: 2px solid #000; /* Borde físico */
-        box-shadow: 2px 2px 0px #000; /* Sombra sólida retro */
-    }
-    .btn-accion:active {
-        transform: translate(2px, 2px);
-        box-shadow: none;
+        color: #000000;
+        margin-bottom: 2rem;
     }
 
-    /* INPUTS EN EL MODAL */
-    .form-control-accesible {
-        font-size: 1.5rem;
+    .container {
+        width: 95%;
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 1rem;
+    }
+
+    /* Tabla con alto contraste - RESPONSIVA */
+    .table {
+        font-size: clamp(1rem, 1.5vw, 1.2rem);
+        border: 3px solid #000000;
+        width: 100%;
+    }
+
+    .table th {
+        background-color: #343a40;
+        color: #ffffff;
+        font-weight: bold;
+        font-size: clamp(1.1rem, 1.8vw, 1.3rem);
+        padding: clamp(0.5rem, 1vw, 0.7rem);
+        border: 2px solid #000000;
+    }
+
+    .table td {
+        padding: clamp(0.5rem, 1vw, 0.7rem);
+        border: 2px solid #dee2e6;
+        color: #000000;
+        background-color: #ffffff;
+        vertical-align: middle;
+        word-wrap: break-word;
+    }
+
+    /* Buscador arriba a la derecha */
+    .buscador-container {
+        margin-bottom: 1.5rem;
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .input-buscador {
+        font-size: clamp(1.1rem, 1.8vw, 1.3rem);
+        padding: clamp(0.6rem, 1vw, 0.8rem);
+        border: 3px solid #0d6efd;
+        font-weight: bold;
+        width: 100%;
+        max-width: 400px;
+    }
+
+    .input-buscador:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.4rem rgba(13, 110, 253, 0.3);
+    }
+
+    /* Botones GIGANTES - RESPONSIVOS */
+    .btn-giant {
+        font-size: clamp(1rem, 2vw, 1.4rem);
+        padding: clamp(0.8rem, 1.5vw, 1rem) clamp(1rem, 2vw, 2rem);
+        font-weight: bold;
+        border: 3px solid;
+        margin: 0.3rem;
+        white-space: nowrap;
+    }
+
+    .btn-success {
+        background-color: #198754;
+        border-color: #198754;
+        color: #ffffff;
+    }
+
+    .btn-warning {
+        background-color: #ffc107;
+        border-color: #ffc107;
+        color: #000000;
+    }
+
+    .btn-danger {
+        background-color: #dc3545;
+        border-color: #dc3545;
+        color: #ffffff;
+    }
+
+    .btn-secondary {
+        background-color: #6c757d;
+        border-color: #6c757d;
+        color: #ffffff;
+    }
+
+    /* Inputs de formulario con bordes gruesos */
+    .form-control {
+        font-size: clamp(1.1rem, 2vw, 1.3rem);
+        padding: clamp(0.8rem, 1.5vw, 1rem);
         border: 3px solid #6c757d;
-        height: auto;
-        padding: 15px;
-    }
-    .form-control-accesible:focus {
-        border-color: #ffc107; /* Amarillo brillante para foco */
-        box-shadow: 0 0 0 0.25rem rgba(255, 193, 7, 0.5);
     }
 
-    /* MENSAJE VACÍO */
-    .alerta-vacia {
-        background-color: #fff3cd;
-        border: 2px solid #ffecb5;
-        padding: 40px;
-        text-align: center;
-        font-size: 1.5rem;
-        color: #664d03;
-        border-radius: 10px;
+    .form-control:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.3rem rgba(13, 110, 253, 0.5);
+        outline: none;
+    }
+
+    .form-label {
+        font-size: clamp(1.1rem, 2vw, 1.3rem);
+        font-weight: bold;
+        color: #000000;
+        margin-bottom: 0.5rem;
+    }
+
+    /* Alertas GRANDES para feedback visual */
+    .alert {
+        font-size: clamp(1.2rem, 2vw, 1.4rem);
+        padding: 1.5rem;
+        border: 3px solid;
+        font-weight: bold;
+    }
+
+    .alert-success {
+        background-color: #d1e7dd;
+        border-color: #198754;
+        color: #000000;
+    }
+
+    .alert-danger {
+        background-color: #f8d7da;
+        border-color: #dc3545;
+        color: #000000;
+    }
+
+    /* Modal con contraste alto */
+    .modal-header {
+        background-color: #343a40;
+        color: #ffffff;
+        border-bottom: 3px solid #000000;
+    }
+
+    .modal-title {
+        font-size: clamp(1.4rem, 3vw, 1.8rem);
+        font-weight: bold;
+    }
+
+    .modal-body {
+        font-size: clamp(1rem, 2vw, 1.2rem);
+        padding: clamp(1rem, 2vw, 2rem);
+    }
+
+    .modal-footer {
+        border-top: 3px solid #dee2e6;
+        padding: 1.5rem;
+    }
+
+    .mb-3 {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-text {
+        font-size: clamp(0.9rem, 1.5vw, 1.1rem);
+        color: #6c757d;
+    }
+
+    /* Ocultar filas que no coinciden con la búsqueda */
+    .hidden-row {
+        display: none !important;
+    }
+
+    /* FORZAR que las filas se muestren por defecto */
+    .fila-mandataria {
+        display: table-row !important;
+    }
+
+    /* ========== MEDIA QUERIES PARA MÓVIL ========== */
+    @@media (max-width: 768px) {
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+        }
+
+        .container {
+            padding: 0.5rem;
+        }
+
+        .buscador-container {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .input-buscador {
+            max-width: 100%;
+        }
+
+        /* Tabla en móvil: Convertir a cards */
+        .table thead {
+            display: none;
+        }
+
+        .table, .table tbody, .table tr, .table td {
+            display: block;
+            width: 100%;
+        }
+
+        .table tr {
+            margin-bottom: 1rem;
+            border: 3px solid #000000;
+            background-color: #ffffff;
+            padding: 1rem;
+        }
+
+        .table td {
+            text-align: left;
+            padding: 0.5rem;
+            border: none;
+            border-bottom: 1px solid #dee2e6;
+            position: relative;
+            padding-left: 45%;
+        }
+
+        .table td:last-child {
+            border-bottom: none;
+        }
+
+        .table td::before {
+            content: attr(data-label);
+            position: absolute;
+            left: 0.5rem;
+            font-weight: bold;
+            color: #343a40;
+            width: 40%;
+        }
+
+        .btn-giant {
+            width: 100%;
+            margin: 0.5rem 0;
+            font-size: 1.2rem;
+            padding: 1rem;
+        }
+
+        .modal-dialog {
+            margin: 0.5rem;
+        }
+    }
+
+    /* ========== MEDIA QUERIES PARA TABLET ========== */
+    @@media (min-width: 769px) and (max-width: 1024px) {
+        .btn-giant {
+            font-size: 1.1rem;
+            padding: 0.8rem 1rem;
+            min-width: 140px;
+        }
+
+        .table {
+            font-size: 1rem;
+        }
+
+        .table th {
+            font-size: 1.1rem;
+        }
+    }
+
+    /* ========== MEDIA QUERIES PARA DESKTOP GRANDE ========== */
+    @@media (min-width: 1400px) {
+        .container {
+            max-width: 1600px;
+        }
+
+        .btn-giant {
+            font-size: 1.5rem;
+            padding: 1.2rem 2.5rem;
+        }
+
+        .table {
+            font-size: 1.3rem;
+        }
     }
 </style>
 
-<div class="container mt-4">
-    
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="titulo-principal">🏢 GESTIÓN DE MANDATARIAS</h2>
-        <button type="button" class="btn btn-success btn-lg btn-accion py-3 px-4" onclick="abrirModalAgregar()">
-            <i class="bi bi-plus-circle-fill me-2"></i> AGREGAR NUEVA
+<div class="container mt-5">
+    <h1>📋 GESTIÓN DE MANDATARIAS</h1>
+
+    <!-- MENSAJES DE FEEDBACK -->
+    @if (ViewBag.MensajeExito != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @ViewBag.MensajeExito
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+        </div>
+    }
+
+    @if (TempData["MensajeError"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @TempData["MensajeError"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+        </div>
+    }
+
+    <!-- BOTÓN AGREGAR NUEVA MANDATARIA -->
+    <div class="mb-4">
+        <button type="button" class="btn btn-success btn-giant" onclick="abrirModalAgregar()">
+            ➕ AGREGAR NUEVA
         </button>
     </div>
 
-    @if (lista.Count > 0)
-    {
-        <div class="table-responsive">
-            <table class="table table-striped table-hover tabla-accesible">
-                <thead>
-                    <tr>
-                        <th scope="col" style="width: 10%;">ID</th>
-                        <th scope="col" style="width: 50%;">NOMBRE DE LA MANDATARIA</th>
-                        <th scope="col" style="width: 40%; text-align: center;">ACCIONES</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var item in lista)
+    <!-- BUSCADOR ARRIBA A LA DERECHA DE LA TABLA -->
+    <div class="buscador-container">
+        <label for="inputBuscador" style="font-size: clamp(1.1rem, 2vw, 1.3rem); font-weight: bold; white-space: nowrap;">🔍 BUSCAR:</label>
+        <input type="text" 
+               class="form-control input-buscador" 
+               id="inputBuscador" 
+               placeholder="Escriba para filtrar..." 
+               onkeyup="filtrarTabla()"
+               oninput="filtrarTabla()"
+               onchange="filtrarTabla()">
+    </div>
+
+    <!-- TABLA DE MANDATARIAS (ORDENADA ALFABÉTICAMENTE) -->
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover" id="tablaMandatarias">
+            <thead>
+                <tr>
+                    <th style="width: 8%;">ID</th>
+                    <th style="width: 25%;">RAZÓN SOCIAL</th>
+                    <th style="width: 15%;">CUIT</th>
+                    <th style="width: 20%;">DESCRIPCIÓN</th>
+                    <th style="width: 17%;">DIRECCIÓN</th>
+                    <th style="width: 15%;">ACCIONES</th>
+                </tr>
+            </thead>
+            <tbody id="tbodyMandatarias">
+                @if (listaMandatarias != null && listaMandatarias.Count > 0)
+                {
+                    @foreach (var mandataria in listaMandatarias)
                     {
-                        <tr>
-                            <td>#@item.IdMandatarias</td>
-                            <td><strong>@item.RazonSocial</strong></td>
-                            <td class="text-center">
-                                <button class="btn btn-warning btn-lg btn-accion me-2" 
-                                        onclick="abrirModalEditar(@item.IdMandatarias, '@item.RazonSocial')">
-                                    <i class="bi bi-pencil-square"></i> MODIFICAR
+                        <tr class="fila-mandataria" style="display: table-row;">
+                            <td data-label="ID">@mandataria.IdMandatarias</td>
+                            <td data-label="RAZÓN SOCIAL">@mandataria.RazonSocial</td>
+                            <td data-label="CUIT">@(mandataria.Cuit > 0 ? mandataria.Cuit.ToString() : "-")</td>
+                            <td data-label="DESCRIPCIÓN">@(string.IsNullOrEmpty(mandataria.Descripcion) ? "-" : mandataria.Descripcion)</td>
+                            <td data-label="DIRECCIÓN">@(string.IsNullOrEmpty(mandataria.Direccion) ? "-" : mandataria.Direccion)</td>
+                            <td data-label="ACCIONES">
+                                <button type="button" class="btn btn-warning btn-giant" 
+                                        onclick='abrirModalModificar(@mandataria.IdMandatarias, "@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(mandataria.RazonSocial))", @(mandataria.Cuit), "@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(mandataria.Descripcion ?? ""))", "@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(mandataria.Direccion ?? ""))")'>
+                                    ✏️ MODIFICAR
                                 </button>
-                                
-                                <button class="btn btn-danger btn-lg btn-accion" 
-                                        onclick="abrirModalEliminar(@item.IdMandatarias, '@item.RazonSocial')">
-                                    <i class="bi bi-trash-fill"></i> ELIMINAR
+                                <button type="button" class="btn btn-danger btn-giant" 
+                                        onclick='abrirModalEliminar(@mandataria.IdMandatarias, "@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(mandataria.RazonSocial))")'>
+                                    🗑️ ELIMINAR
                                 </button>
                             </td>
                         </tr>
                     }
-                </tbody>
-            </table>
-        </div>
-    }
-    else
-    {
-        <div class="alerta-vacia">
-            <i class="bi bi-info-circle-fill" style="font-size: 3rem;"></i><br><br>
-            <strong>NO HAY MANDATARIAS CARGADAS.</strong><br>
-            Presione el botón verde "AGREGAR NUEVA" para comenzar.
-        </div>
-    }
+                }
+                else
+                {
+                    <tr style="display: table-row;">
+                        <td colspan="6" class="text-center">No hay mandatarias registradas.</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
 </div>
 
-<div class="modal fade" id="modalGestion" tabindex="-1" aria-labelledby="modalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content" style="border: 4px solid #000;">
-            
-            <form action="@Url.Action("ModificarMandataria", "TuControlador")" method="post">
-                <input type="hidden" id="inputId" name="IdMandataria" value="0" />
-                <input type="hidden" id="inputQueToco" name="QueToco" value="" />
-
-                <div class="modal-header bg-light">
-                    <h3 class="modal-title fw-bold" id="modalLabel">TÍTULO DINÁMICO</h3>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+<!-- MODAL REUTILIZABLE (UN SOLO MODAL PARA TODO) -->
+<div class="modal fade" id="modalMandataria" tabindex="-1" aria-labelledby="modalTitulo" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="post" asp-controller="Home" asp-action="ModificarMandataria">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitulo">TÍTULO DEL MODAL</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                 </div>
-                
-                <div class="modal-body p-4">
-                    <div id="mensajeEliminar" class="alert alert-danger d-none text-center">
-                        <h4 class="fw-bold">¿ESTÁ SEGURO?</h4>
-                        <p class="fs-5">Se eliminará la mandataria: <strong id="nombreEliminarDisplay"></strong></p>
+                <div class="modal-body">
+                    <!-- Campo oculto para el ID (solo para Modificar/Eliminar) -->
+                    <input type="hidden" name="IdMandataria" id="inputIdMandataria" value="0">
+                    
+                    <!-- Campo oculto para saber qué acción ejecutar -->
+                    <input type="hidden" name="QueToco" id="inputQueToco" value="">
+
+                    <!-- Formulario de Agregar/Modificar -->
+                    <div id="divFormulario">
+                        <!-- Campo 1: Razón Social (OBLIGATORIO) -->
+                        <div class="mb-3">
+                            <label for="inputNombreMandataria" class="form-label">📝 RAZÓN SOCIAL: *</label>
+                            <input type="text" class="form-control" name="NombreMandataria" id="inputNombreMandataria" 
+                                   placeholder="Escriba la razón social..." maxlength="200" required>
+                        </div>
+
+                        <!-- Campo 2: CUIT (OPCIONAL) -->
+                        <div class="mb-3">
+                            <label for="inputCuit" class="form-label">🔢 CUIT:</label>
+                            <input type="number" class="form-control" name="Cuit" id="inputCuit" 
+                                   placeholder="Escriba el CUIT (solo números)..." min="0" max="99999999999">
+                            <small class="form-text">Campo opcional. Deje vacío o en cero si no aplica.</small>
+                        </div>
+
+                        <!-- Campo 3: Descripción (OPCIONAL) -->
+                        <div class="mb-3">
+                            <label for="inputDescripcion" class="form-label">📄 DESCRIPCIÓN:</label>
+                            <textarea class="form-control" name="Descripcion" id="inputDescripcion" 
+                                      placeholder="Escriba una descripción..." rows="3" maxlength="500"></textarea>
+                            <small class="form-text">Campo opcional. Puede dejarlo vacío.</small>
+                        </div>
+
+                        <!-- Campo 4: Dirección (OPCIONAL) -->
+                        <div class="mb-3">
+                            <label for="inputDireccion" class="form-label">📍 DIRECCIÓN:</label>
+                            <input type="text" class="form-control" name="Direccion" id="inputDireccion" 
+                                   placeholder="Escriba la dirección..." maxlength="300">
+                            <small class="form-text">Campo opcional. Puede dejarlo vacío.</small>
+                        </div>
                     </div>
 
-                    <div id="contenedorInputNombre">
-                        <label for="inputNombre" class="form-label fs-4 fw-bold">Nombre de la Mandataria:</label>
-                        <input type="text" class="form-control form-control-accesible" 
-                               id="inputNombre" name="NombreMandataria" 
-                               placeholder="Escriba el nombre aquí..." autocomplete="off">
+                    <!-- Mensaje de confirmación (visible solo en Eliminar) -->
+                    <div id="divMensajeEliminar" style="display: none;">
+                        <p style="font-size: clamp(1.2rem, 2vw, 1.4rem); color: #dc3545; font-weight: bold;">
+                            ⚠️ ¿Está seguro que desea eliminar la mandataria <strong id="spanNombreEliminar"></strong>?
+                        </p>
+                        <p style="font-size: clamp(1rem, 1.8vw, 1.2rem);">Esta acción no se puede deshacer.</p>
                     </div>
                 </div>
-                
-                <div class="modal-footer p-3 bg-light d-flex justify-content-between">
-                    <button type="button" class="btn btn-secondary btn-lg btn-accion" data-bs-dismiss="modal">
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-giant" data-bs-dismiss="modal">
                         ❌ CANCELAR
                     </button>
-                    <button type="submit" class="btn btn-primary btn-lg btn-accion px-5" id="btnConfirmar">
-                        ✅ ACEPTAR
+                    <button type="submit" class="btn btn-giant" id="btnConfirmarModal">
+                        CONFIRMAR
                     </button>
                 </div>
             </form>
-
         </div>
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+</html>
+
+@section Scripts {
 <script>
-    // Referencias a elementos del DOM
-    const modalElement = document.getElementById('modalGestion');
-    const modalInstance = new bootstrap.Modal(modalElement);
-    
-    const tituloModal = document.getElementById('modalLabel');
-    const inputId = document.getElementById('inputId');
+    console.log('Script cargado correctamente');
+
+    // ========== FILTRAR TABLA EN TIEMPO REAL (ESTILO SPOTIFY) ==========
+    function filtrarTabla() {
+        console.log('filtrarTabla ejecutándose...');
+        
+        // Obtener el valor del input y convertir a minúsculas
+        var input = document.getElementById('inputBuscador');
+        
+        if (!input) {
+            console.error('NO SE ENCONTRÓ EL INPUT CON ID inputBuscador');
+            return;
+        }
+        
+        var filtro = input.value.toLowerCase();
+        console.log('Texto buscado: "' + filtro + '"');
+        
+        // Obtener todas las filas con clase 'fila-mandataria'
+        var filas = document.querySelectorAll('.fila-mandataria');
+        console.log('Total de filas encontradas: ' + filas.length);
+        
+        // Si el input está vacío, mostrar TODAS las filas
+        if (filtro === '') {
+            console.log('Input vacío - mostrando todas las filas');
+            filas.forEach(function(fila) {
+                fila.style.display = 'table-row';
+            });
+            return;
+        }
+        
+        var filasVisibles = 0;
+        var filasOcultas = 0;
+        
+        // Recorrer cada fila y buscar coincidencias
+        filas.forEach(function(fila) {
+            // Obtener todo el texto de la fila (todas las celdas)
+            var textoCompleto = fila.textContent.toLowerCase();
+            
+            // Si el texto de la fila incluye lo que estoy buscando, mostrarla
+            if (textoCompleto.indexOf(filtro) !== -1) {
+                fila.style.display = 'table-row';
+                filasVisibles++;
+            } else {
+                fila.style.display = 'none';
+                filasOcultas++;
+            }
+        });
+        
+        console.log('Filas visibles: ' + filasVisibles + ' | Filas ocultas: ' + filasOcultas);
+    }
+
+    // Verificar que el input existe cuando carga la página
+    document.addEventListener('DOMContentLoaded', function() {
+        var input = document.getElementById('inputBuscador');
+        if (input) {
+            console.log('✅ Input del buscador encontrado correctamente');
+            // Agregar listener por si acaso
+            input.addEventListener('input', filtrarTabla);
+        } else {
+            console.error('❌ NO SE ENCONTRÓ EL INPUT DEL BUSCADOR');
+        }
+    });
+
+
+    // REFERENCIAS AL MODAL Y SUS ELEMENTOS
+    const modal = new bootstrap.Modal(document.getElementById('modalMandataria'));
+    const modalTitulo = document.getElementById('modalTitulo');
+    const inputIdMandataria = document.getElementById('inputIdMandataria');
     const inputQueToco = document.getElementById('inputQueToco');
-    const inputNombre = document.getElementById('inputNombre');
-    const contenedorNombre = document.getElementById('contenedorInputNombre');
-    const mensajeEliminar = document.getElementById('mensajeEliminar');
-    const nombreEliminarDisplay = document.getElementById('nombreEliminarDisplay');
-    const btnConfirmar = document.getElementById('btnConfirmar');
+    const inputNombreMandataria = document.getElementById('inputNombreMandataria');
+    const inputCuit = document.getElementById('inputCuit');
+    const inputDescripcion = document.getElementById('inputDescripcion');
+    const inputDireccion = document.getElementById('inputDireccion');
+    const divFormulario = document.getElementById('divFormulario');
+    const divMensajeEliminar = document.getElementById('divMensajeEliminar');
+    const spanNombreEliminar = document.getElementById('spanNombreEliminar');
+    const btnConfirmarModal = document.getElementById('btnConfirmarModal');
 
-    // Función 1: Preparar Modal para AGREGAR
+    // FUNCIÓN 1: ABRIR MODAL PARA AGREGAR (todos los campos vacíos)
     function abrirModalAgregar() {
-        // Resetear formulario
-        inputId.value = 0;
-        inputQueToco.value = "Agregar";
-        inputNombre.value = "";
-        
-        // Ajustar UI
-        tituloModal.innerText = "NUEVA MANDATARIA";
-        tituloModal.className = "modal-title fw-bold text-success";
-        
-        contenedorNombre.classList.remove('d-none');
-        mensajeEliminar.classList.add('d-none');
-        
-        btnConfirmar.className = "btn btn-success btn-lg btn-accion px-5";
-        btnConfirmar.innerHTML = "💾 GUARDAR";
+        modalTitulo.textContent = '➕ AGREGAR NUEVA MANDATARIA';
+        btnConfirmarModal.textContent = '💾 GUARDAR';
+        btnConfirmarModal.className = 'btn btn-success btn-giant';
 
-        // Abrir y poner foco (Espera 500ms para asegurar que el modal renderizó)
-        modalInstance.show();
-        setTimeout(() => inputNombre.focus(), 500);
+        inputQueToco.value = 'Agregar';
+        inputIdMandataria.value = '0';
+        inputNombreMandataria.value = '';
+        inputCuit.value = '';
+        inputDescripcion.value = '';
+        inputDireccion.value = '';
+        inputNombreMandataria.required = true;
+
+        divFormulario.style.display = 'block';
+        divMensajeEliminar.style.display = 'none';
+
+        modal.show();
     }
 
-    // Función 2: Preparar Modal para MODIFICAR
-    function abrirModalEditar(id, nombreActual) {
-        inputId.value = id;
-        inputQueToco.value = "Modificar";
-        inputNombre.value = nombreActual;
+    // FUNCIÓN 2: ABRIR MODAL PARA MODIFICAR (TODOS los campos pre-llenados con datos actuales)
+    function abrirModalModificar(id, nombreActual, cuitActual, descripcionActual, direccionActual) {
+        modalTitulo.textContent = '✏️ MODIFICAR MANDATARIA';
+        btnConfirmarModal.textContent = '💾 GUARDAR CAMBIOS';
+        btnConfirmarModal.className = 'btn btn-warning btn-giant';
 
-        tituloModal.innerText = "EDITAR MANDATARIA";
-        tituloModal.className = "modal-title fw-bold text-warning";
+        inputQueToco.value = 'Modificar';
+        inputIdMandataria.value = id;
+        inputNombreMandataria.value = nombreActual;
+        inputCuit.value = (cuitActual > 0) ? cuitActual : '';
+        inputDescripcion.value = descripcionActual === '-' ? '' : descripcionActual || '';
+        inputDireccion.value = direccionActual === '-' ? '' : direccionActual || '';
+        inputNombreMandataria.required = true;
 
-        contenedorNombre.classList.remove('d-none');
-        mensajeEliminar.classList.add('d-none');
+        divFormulario.style.display = 'block';
+        divMensajeEliminar.style.display = 'none';
 
-        btnConfirmar.className = "btn btn-warning btn-lg btn-accion px-5";
-        btnConfirmar.innerHTML = "💾 ACTUALIZAR";
-
-        modalInstance.show();
-        setTimeout(() => inputNombre.focus(), 500);
+        modal.show();
     }
 
-    // Función 3: Preparar Modal para ELIMINAR
+    // FUNCIÓN 3: ABRIR MODAL PARA ELIMINAR (sin formulario, solo confirmación)
     function abrirModalEliminar(id, nombre) {
-        inputId.value = id;
-        inputQueToco.value = "Eliminar";
-        inputNombre.value = nombre; // Se envía aunque no se muestre, por si acaso
+        modalTitulo.textContent = '🗑️ ELIMINAR MANDATARIA';
+        btnConfirmarModal.textContent = '🗑️ SÍ, ELIMINAR';
+        btnConfirmarModal.className = 'btn btn-danger btn-giant';
 
-        tituloModal.innerText = "ELIMINAR MANDATARIA";
-        tituloModal.className = "modal-title fw-bold text-danger";
+        inputQueToco.value = 'Eliminar';
+        inputIdMandataria.value = id;
+        inputNombreMandataria.required = false;
+        spanNombreEliminar.textContent = nombre;
 
-        contenedorNombre.classList.add('d-none'); // Ocultar input
-        mensajeEliminar.classList.remove('d-none'); // Mostrar advertencia
-        nombreEliminarDisplay.innerText = nombre;
+        divFormulario.style.display = 'none';
+        divMensajeEliminar.style.display = 'block';
 
-        btnConfirmar.className = "btn btn-danger btn-lg btn-accion px-5";
-        btnConfirmar.innerHTML = "🗑️ SI, ELIMINAR";
-
-        modalInstance.show();
+        modal.show();
     }
 </script>
+}

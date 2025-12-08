@@ -6,7 +6,7 @@ using System.Data;
 namespace WebFarmaciaMiguetti.Models;
 public static class BD
 {
-private static string _connectionString = @"Server=.\SQLEXPRESS;DataBase=FarmaciaNet;Integrated Security=True;TrustServerCertificate=True;";
+private static string _connectionString = @"Server=.\SQLEXPRESS01;DataBase=FarmaciaNet;Integrated Security=True;TrustServerCertificate=True;";
 
 
 
@@ -24,45 +24,45 @@ private static string _connectionString = @"Server=.\SQLEXPRESS;DataBase=Farmaci
          return ObjMandataria;
     }
 
-     public static Mandatarias TraerMandatariaPorId  (int IdMandataria)
+     public static Mandatarias TraerMandatariaPorId  (int IdMandatarias)
     {
      Mandatarias ObjMandataria = null;
         using (SqlConnection connection = new SqlConnection(_connectionString))
         {
-            string query = "SELECT * FROM Mandatarias where IdMandataria = @pIdMandataria"; 
-            ObjMandataria = connection.QueryFirstOrDefault<Mandatarias>(query, new {pIdMandataria = IdMandataria});
+            string query = "SELECT * FROM Mandatarias where IdMandatarias = @pIdMandatarias"; 
+            ObjMandataria = connection.QueryFirstOrDefault<Mandatarias>(query, new {pIdMandatarias = IdMandatarias});
          }
     
          return ObjMandataria;
     }
- public static void ModificarMandataria  (int IdMandataria, string nuevoNombre)
+ public static void ModificarMandataria  (int IdMandatarias, string nuevoNombre, long Cuit, string? Descripcion, string? Direccion)
     {
      Mandatarias ObjMandataria = null;
         using (SqlConnection connection = new SqlConnection(_connectionString))
         {
-            string query = "UPDATE Mandatarias SET RazonSocial = @pNuevoNombre where IdMandataria = @pIdMandataria"; 
-            connection.Execute(query, new {pIdMandataria = IdMandataria, pNuevoNombre = nuevoNombre});
+            string query = "UPDATE Mandatarias SET RazonSocial = @pNuevoNombre, Cuit = @pCuit, Descripcion = @pDescripcion, Direccion = @pDireccion where IdMandatarias = @pIdMandatarias"; 
+            connection.Execute(query, new {pIdMandatarias = IdMandatarias, pNuevoNombre = nuevoNombre, pCuit = Cuit, pDescripcion = Descripcion, pDireccion = Direccion});
          }
     
     }
-     public static void AgregarMandataria  (string nuevoNombre)
+     public static void AgregarMandataria  (string nuevoNombre, long Cuit, string? Descripcion, string? Direccion)
     {
      Mandatarias ObjMandataria = null;
         using (SqlConnection connection = new SqlConnection(_connectionString))
                 {
-                    string query = "INSERT INTO Mandatarias (RazonSocial) VALUES (@pNuevoNombre)"; 
-            connection.Execute(query, new {pNuevoNombre = nuevoNombre});
+                    string query = "INSERT INTO Mandatarias (RazonSocial, Cuit, Descripcion, Direccion) VALUES (@pNuevoNombre, @pCuit, @pDescripcion, @pDireccion)"; 
+            connection.Execute(query, new {pNuevoNombre = nuevoNombre, pCuit = Cuit, pDescripcion = Descripcion, pDireccion = Direccion});
          }
     
     }
 
-      public static void EliminarMandataria  (int IdMandataria)
+      public static void EliminarMandataria  (int IdMandatarias)
     {
      Mandatarias ObjMandataria = null;
         using (SqlConnection connection = new SqlConnection(_connectionString))
                 {
-                    string query = "DELETE FROM Mandatarias WHERE IdMandataria = @pIdMandataria"; 
-            connection.Execute(query, new {pIdMandataria = IdMandataria});
+                    string query = "DELETE FROM Mandatarias WHERE IdMandatarias = @pIdMandatarias"; 
+            connection.Execute(query, new {pIdMandatarias = IdMandatarias});
          }
     
     }

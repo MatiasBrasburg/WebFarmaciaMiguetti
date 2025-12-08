@@ -40,7 +40,7 @@ public class HomeController : Controller
 ViewBag.ListaMandatarias = ListMandatarias;
         return View("AltasModificacionesMandatarias");
     }
-    public IActionResult ModificarMandataria (int IdMandataria, string QueToco, string? NombreMandataria)
+    public IActionResult ModificarMandataria (int IdMandataria, string QueToco, string? NombreMandataria, long Cuit, string? Descripcion, string? Direccion)
     {
 string nuevoNombreMandataria = "";
         if(QueToco == "Modificar")
@@ -59,7 +59,7 @@ string nuevoNombreMandataria = "";
 
             if(ObjtMandataria != null)
             {
-                BD.ModificarMandataria(IdMandataria, nuevoNombreMandataria);
+                BD.ModificarMandataria(IdMandataria, nuevoNombreMandataria, Cuit, Descripcion, Direccion);
             }
             else
             {
@@ -73,7 +73,7 @@ string nuevoNombreMandataria = "";
 
             if(!string.IsNullOrEmpty(NombreMandataria))
             {
-               BD.AgregarMandataria(NombreMandataria);
+               BD.AgregarMandataria(NombreMandataria, Cuit, Descripcion, Direccion);
             }
             else
             {
@@ -86,7 +86,7 @@ string nuevoNombreMandataria = "";
             BD.EliminarMandataria(IdMandataria);
         }
     
-        return RedirectToAction("IrAAltasModificacionesMandatarias");
+        return RedirectToAction("IrAAltasModificacionesMandatarias", "Home");
     }
 
 

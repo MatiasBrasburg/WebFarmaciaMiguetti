@@ -12,12 +12,16 @@ public class Mandatarias
     public string RazonSocial { get; set; }
     
    [JsonProperty]
-    public string Cuit { get; set; }
+    public long Cuit { get; set; }
 
     [JsonProperty]
     public bool Activa { get; set; }
 
+ [JsonProperty]
+    public string? Descripcion { get; set; }
     
+     [JsonProperty]
+    public string? Direccion { get; set; }
     public Mandatarias()
     {
         
