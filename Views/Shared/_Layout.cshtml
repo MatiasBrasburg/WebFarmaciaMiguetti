@@ -62,6 +62,14 @@
                                 <i class="bi bi-cart4"></i> VENTA
                             </a>
                         </li>
+                       <a  href= '@Url.Action("IrAAltasModificacionesMandatarias", "Home")' alt = "Ir al ">  Altas M</a>
+                            <li class="nav-item">
+                            <a class="btn btn-outline-light btn-sm px-3 fw-bold rounded-pill" asp-controller="IrAAltasModificacionesMandatarias" asp-action="Home">
+                                <i class="bi bi-grid-fill"></i> Altas M
+                            </a>
+                            <a class="nav-link @(controlador == "Facturas" ? "active" : "")" asp-controller="Facturas" asp-action="Create">
+                                <i class="bi bi-cart4"></i> VENTA
+                            </a>
                         <li class="nav-item">
                             <a class="nav-link @(controlador == "Socios" ? "active" : "")" asp-controller="Socios" asp-action="Index">
                                 <i class="bi bi-people"></i> SOCIOS
