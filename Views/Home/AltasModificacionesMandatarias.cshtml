@@ -2,36 +2,39 @@
 @using System.Linq
 @{
     ViewData["Title"] = "Gestión de Mandatarias";
-    var listaMandatarias = (ViewBag.ListaMandatarias as IEnumerable<dynamic>)?.ToList() ?? new List<dynamic>();
-    // Ordenar alfabéticamente por RazonSocial
+    
+    // Recuperamos la lista
+    var listaRaw = ViewBag.ListaMandatarias as IEnumerable<dynamic>;
+    var listaMandatarias = listaRaw?.ToList() ?? new List<dynamic>();
+    
+    // Ordenamos alfabéticamente al inicio
     if (listaMandatarias.Any())
     {
-        listaMandatarias = listaMandatarias.OrderBy(m => m.RazonSocial).ToList();
+        try {
+            listaMandatarias = listaMandatarias.OrderBy(m => m.RazonSocial).ToList();
+        } catch { }
     }
+
+    // SERIALIZACIÓN JSON: Datos para el autocompletado
+    var jsonOpciones = JsonSerializer.Serialize(listaMandatarias.Select(m => new { 
+        id = m.IdMandatarias, 
+        texto = m.RazonSocial + " (CUIT: " + (m.Cuit > 0 ? m.Cuit.ToString() : "-") + ")",
+        nombre = m.RazonSocial, 
+        cuit = m.Cuit.ToString() 
+    }));
 }
 
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body>
-
 <style>
-    /* ========== DISEÑO RESPONSIVO PARA 85 AÑOS ========== */
+    /* ========== ESTILOS GENERALES ========== */
     body {
         font-family: 'Roboto', 'Open Sans', Arial, sans-serif;
-        font-size: clamp(16px, 2vw, 18px);
-        line-height: 1.6;
         background-color: #f8f9fa;
     }
 
     h1 {
         font-size: clamp(2rem, 5vw, 2.8rem);
         font-weight: bold;
-        color: #000000;
+        color: #000;
         margin-bottom: 2rem;
     }
 
@@ -42,55 +45,7 @@
         padding: 1rem;
     }
 
-    /* Tabla con alto contraste - RESPONSIVA */
-    .table {
-        font-size: clamp(1rem, 1.5vw, 1.2rem);
-        border: 3px solid #000000;
-        width: 100%;
-    }
-
-    .table th {
-        background-color: #343a40;
-        color: #ffffff;
-        font-weight: bold;
-        font-size: clamp(1.1rem, 1.8vw, 1.3rem);
-        padding: clamp(0.5rem, 1vw, 0.7rem);
-        border: 2px solid #000000;
-    }
-
-    .table td {
-        padding: clamp(0.5rem, 1vw, 0.7rem);
-        border: 2px solid #dee2e6;
-        color: #000000;
-        background-color: #ffffff;
-        vertical-align: middle;
-        word-wrap: break-word;
-    }
-
-    /* Buscador arriba a la derecha */
-    .buscador-container {
-        margin-bottom: 1.5rem;
-        display: flex;
-        justify-content: flex-end;
-        align-items: center;
-        gap: 1rem;
-    }
-
-    .input-buscador {
-        font-size: clamp(1.1rem, 1.8vw, 1.3rem);
-        padding: clamp(0.6rem, 1vw, 0.8rem);
-        border: 3px solid #0d6efd;
-        font-weight: bold;
-        width: 100%;
-        max-width: 400px;
-    }
-
-    .input-buscador:focus {
-        border-color: #0d6efd;
-        box-shadow: 0 0 0 0.4rem rgba(13, 110, 253, 0.3);
-    }
-
-    /* Botones GIGANTES - RESPONSIVOS */
+    /* ========== BOTONES GIGANTES ========== */
     .btn-giant {
         font-size: clamp(1rem, 2vw, 1.4rem);
         padding: clamp(0.8rem, 1.5vw, 1rem) clamp(1rem, 2vw, 2rem);
@@ -99,288 +54,153 @@
         margin: 0.3rem;
         white-space: nowrap;
     }
+    .btn-success { background-color: #198754; border-color: #198754; color: #fff; }
+    .btn-warning { background-color: #ffc107; border-color: #ffc107; color: #000; }
+    .btn-danger { background-color: #dc3545; border-color: #dc3545; color: #fff; }
+    .btn-secondary { background-color: #6c757d; border-color: #6c757d; color: #fff; }
 
-    .btn-success {
-        background-color: #198754;
-        border-color: #198754;
-        color: #ffffff;
-    }
-
-    .btn-warning {
-        background-color: #ffc107;
-        border-color: #ffc107;
-        color: #000000;
-    }
-
-    .btn-danger {
-        background-color: #dc3545;
-        border-color: #dc3545;
-        color: #ffffff;
-    }
-
-    .btn-secondary {
-        background-color: #6c757d;
-        border-color: #6c757d;
-        color: #ffffff;
-    }
-
-    /* Inputs de formulario con bordes gruesos */
-    .form-control {
-        font-size: clamp(1.1rem, 2vw, 1.3rem);
-        padding: clamp(0.8rem, 1.5vw, 1rem);
-        border: 3px solid #6c757d;
-    }
-
-    .form-control:focus {
-        border-color: #0d6efd;
-        box-shadow: 0 0 0 0.3rem rgba(13, 110, 253, 0.5);
-        outline: none;
-    }
-
-    .form-label {
-        font-size: clamp(1.1rem, 2vw, 1.3rem);
-        font-weight: bold;
-        color: #000000;
-        margin-bottom: 0.5rem;
-    }
-
-    /* Alertas GRANDES para feedback visual */
-    .alert {
-        font-size: clamp(1.2rem, 2vw, 1.4rem);
-        padding: 1.5rem;
-        border: 3px solid;
-        font-weight: bold;
-    }
-
-    .alert-success {
-        background-color: #d1e7dd;
-        border-color: #198754;
-        color: #000000;
-    }
-
-    .alert-danger {
-        background-color: #f8d7da;
-        border-color: #dc3545;
-        color: #000000;
-    }
-
-    /* Modal con contraste alto */
-    .modal-header {
-        background-color: #343a40;
-        color: #ffffff;
-        border-bottom: 3px solid #000000;
-    }
-
-    .modal-title {
-        font-size: clamp(1.4rem, 3vw, 1.8rem);
-        font-weight: bold;
-    }
-
-    .modal-body {
-        font-size: clamp(1rem, 2vw, 1.2rem);
-        padding: clamp(1rem, 2vw, 2rem);
-    }
-
-    .modal-footer {
-        border-top: 3px solid #dee2e6;
-        padding: 1.5rem;
-    }
-
-    .mb-3 {
+    /* ========== BUSCADOR CON AUTOCOMPLETADO ========== */
+    .buscador-wrapper {
+        position: relative; 
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
         margin-bottom: 1.5rem;
     }
 
-    .form-text {
-        font-size: clamp(0.9rem, 1.5vw, 1.1rem);
-        color: #6c757d;
+    .buscador-input-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        max-width: 500px;
     }
 
-    /* Ocultar filas que no coinciden con la búsqueda */
-    .hidden-row {
-        display: none !important;
+    .input-buscador {
+        font-size: 1.3rem;
+        padding: 10px 15px;
+        border: 3px solid #0d6efd;
+        font-weight: bold;
+        width: 100%;
     }
 
-    /* FORZAR que las filas se muestren por defecto */
-    .fila-mandataria {
-        display: table-row !important;
+    /* La lista de sugerencias flotante */
+    .lista-sugerencias {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        width: 100%;
+        max-width: 500px;
+        background: white;
+        border: 3px solid #000;
+        border-top: none;
+        z-index: 1000;
+        display: none;
+        max-height: 300px;
+        overflow-y: auto;
+        box-shadow: 0px 10px 15px rgba(0,0,0,0.2);
     }
 
-    /* ========== MEDIA QUERIES PARA MÓVIL ========== */
-    @@media (max-width: 768px) {
-        h1 {
-            font-size: 1.8rem;
-            margin-bottom: 1rem;
-        }
-
-        .container {
-            padding: 0.5rem;
-        }
-
-        .buscador-container {
-            flex-direction: column;
-            align-items: stretch;
-        }
-
-        .input-buscador {
-            max-width: 100%;
-        }
-
-        /* Tabla en móvil: Convertir a cards */
-        .table thead {
-            display: none;
-        }
-
-        .table, .table tbody, .table tr, .table td {
-            display: block;
-            width: 100%;
-        }
-
-        .table tr {
-            margin-bottom: 1rem;
-            border: 3px solid #000000;
-            background-color: #ffffff;
-            padding: 1rem;
-        }
-
-        .table td {
-            text-align: left;
-            padding: 0.5rem;
-            border: none;
-            border-bottom: 1px solid #dee2e6;
-            position: relative;
-            padding-left: 45%;
-        }
-
-        .table td:last-child {
-            border-bottom: none;
-        }
-
-        .table td::before {
-            content: attr(data-label);
-            position: absolute;
-            left: 0.5rem;
-            font-weight: bold;
-            color: #343a40;
-            width: 40%;
-        }
-
-        .btn-giant {
-            width: 100%;
-            margin: 0.5rem 0;
-            font-size: 1.2rem;
-            padding: 1rem;
-        }
-
-        .modal-dialog {
-            margin: 0.5rem;
-        }
+    .item-sugerencia {
+        padding: 15px;
+        font-size: 1.2rem;
+        border-bottom: 1px solid #ddd;
+        cursor: pointer;
+        color: #000;
+        font-weight: 500;
     }
 
-    /* ========== MEDIA QUERIES PARA TABLET ========== */
-    @@media (min-width: 769px) and (max-width: 1024px) {
-        .btn-giant {
-            font-size: 1.1rem;
-            padding: 0.8rem 1rem;
-            min-width: 140px;
-        }
-
-        .table {
-            font-size: 1rem;
-        }
-
-        .table th {
-            font-size: 1.1rem;
-        }
+    .item-sugerencia:hover {
+        background-color: #0d6efd; 
+        color: white;
     }
 
-    /* ========== MEDIA QUERIES PARA DESKTOP GRANDE ========== */
-    @@media (min-width: 1400px) {
-        .container {
-            max-width: 1600px;
-        }
-
-        .btn-giant {
-            font-size: 1.5rem;
-            padding: 1.2rem 2.5rem;
-        }
-
-        .table {
-            font-size: 1.3rem;
-        }
+    /* ========== TABLA ========== */
+    .table-responsive {
+        border: 3px solid #000;
     }
+    .table th {
+        background-color: #343a40;
+        color: white;
+        font-size: 1.2rem;
+        padding: 15px;
+    }
+    .table td {
+        font-size: 1.1rem;
+        vertical-align: middle;
+        padding: 15px;
+        font-weight: 500;
+    }
+    .fila-mandataria { display: table-row !important; transition: background-color 0.5s ease; }
+
+    /* Inputs Modal */
+    .form-control { border: 2px solid #6c757d; font-size: 1.1rem; padding: 10px; }
+    .form-control:focus { border-color: #ffc107; box-shadow: 0 0 0 0.25rem rgba(255,193,7,0.5); }
 </style>
 
 <div class="container mt-5">
     <h1>📋 GESTIÓN DE MANDATARIAS</h1>
 
-    <!-- MENSAJES DE FEEDBACK -->
-    @if (ViewBag.MensajeExito != null)
+    @if (TempData["MensajeExito"] != null)
     {
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            @ViewBag.MensajeExito
+        <div class="alert alert-success alert-dismissible fade show fs-4 fw-bold" role="alert">
+            ✅ @TempData["MensajeExito"]
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
         </div>
     }
 
-    @if (TempData["MensajeError"] != null)
-    {
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            @TempData["MensajeError"]
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
-        </div>
-    }
-
-    <!-- BOTÓN AGREGAR NUEVA MANDATARIA -->
-    <div class="mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
         <button type="button" class="btn btn-success btn-giant" onclick="abrirModalAgregar()">
             ➕ AGREGAR NUEVA
         </button>
+
+        <div class="buscador-wrapper">
+            <div class="buscador-input-group">
+                <label for="inputBuscador" class="fs-4 fw-bold">🔍 BUSCAR:</label>
+                <input type="text" class="form-control input-buscador" id="inputBuscador" 
+                       placeholder="Escriba nombre o CUIT..." autocomplete="off">
+            </div>
+            <div id="listaSugerencias" class="lista-sugerencias"></div>
+        </div>
     </div>
 
-    <!-- BUSCADOR ARRIBA A LA DERECHA DE LA TABLA -->
-    <div class="buscador-container">
-        <label for="inputBuscador" style="font-size: clamp(1.1rem, 2vw, 1.3rem); font-weight: bold; white-space: nowrap;">🔍 BUSCAR:</label>
-        <input type="text" 
-               class="form-control input-buscador" 
-               id="inputBuscador" 
-               placeholder="Escriba para filtrar..." 
-               onkeyup="filtrarTabla()"
-               oninput="filtrarTabla()"
-               onchange="filtrarTabla()">
-    </div>
-
-    <!-- TABLA DE MANDATARIAS (ORDENADA ALFABÉTICAMENTE) -->
     <div class="table-responsive">
-        <table class="table table-bordered table-hover" id="tablaMandatarias">
+        <table class="table table-bordered table-hover table-striped">
             <thead>
                 <tr>
-                    <th style="width: 8%;">ID</th>
-                    <th style="width: 25%;">RAZÓN SOCIAL</th>
-                    <th style="width: 15%;">CUIT</th>
-                    <th style="width: 20%;">DESCRIPCIÓN</th>
-                    <th style="width: 17%;">DIRECCIÓN</th>
-                    <th style="width: 15%;">ACCIONES</th>
+          
+
+                    <th>NOMBRE</th>
+                    <th>CUIT</th>
+                    <th>DESCRIPCIÓN</th>
+                    <th>UBICACIÓN</th>
+                    <th>ACCIONES</th>
                 </tr>
             </thead>
             <tbody id="tbodyMandatarias">
                 @if (listaMandatarias != null && listaMandatarias.Count > 0)
                 {
-                    @foreach (var mandataria in listaMandatarias)
+                    @foreach (var m in listaMandatarias)
                     {
-                        <tr class="fila-mandataria" style="display: table-row;">
-                            <td data-label="ID">@mandataria.IdMandatarias</td>
-                            <td data-label="RAZÓN SOCIAL">@mandataria.RazonSocial</td>
-                            <td data-label="CUIT">@(mandataria.Cuit > 0 ? mandataria.Cuit.ToString() : "-")</td>
-                            <td data-label="DESCRIPCIÓN">@(string.IsNullOrEmpty(mandataria.Descripcion) ? "-" : mandataria.Descripcion)</td>
-                            <td data-label="DIRECCIÓN">@(string.IsNullOrEmpty(mandataria.Direccion) ? "-" : mandataria.Direccion)</td>
-                            <td data-label="ACCIONES">
+                        <tr class="fila-mandataria" data-id="@m.IdMandatarias">
+                          
+                            <td class="col-nombre">@m.RazonSocial</td>
+                            <td class="col-cuit">@(m.Cuit > 0 ? m.Cuit.ToString() : "-")</td>
+                            <td class="col-descripcion">@(string.IsNullOrEmpty(m.Descripcion) ? "-" : m.Descripcion)</td>
+                            <td class="col-direccion">@(string.IsNullOrEmpty(m.Direccion) ? "-" : m.Direccion)</td>
+                            <td>
                                 <button type="button" class="btn btn-warning btn-giant" 
-                                        onclick='abrirModalModificar(@mandataria.IdMandatarias, "@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(mandataria.RazonSocial))", @(mandataria.Cuit), "@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(mandataria.Descripcion ?? ""))", "@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(mandataria.Direccion ?? ""))")'>
-                                    ✏️ MODIFICAR
+                                        onclick='abrirModalModificar(@m.IdMandatarias, 
+                                        "@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(m.RazonSocial))", 
+                                        @(m.Cuit), 
+                                        "@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(m.Descripcion ?? ""))", 
+                                        "@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(m.Direccion ?? ""))")'>
+                                    ✏️
                                 </button>
                                 <button type="button" class="btn btn-danger btn-giant" 
-                                        onclick='abrirModalEliminar(@mandataria.IdMandatarias, "@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(mandataria.RazonSocial))")'>
-                                    🗑️ ELIMINAR
+                                        onclick='abrirModalEliminar(@m.IdMandatarias, 
+                                        "@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(m.RazonSocial))")'>
+                                    🗑️
                                 </button>
                             </td>
                         </tr>
@@ -388,225 +208,210 @@
                 }
                 else
                 {
-                    <tr style="display: table-row;">
-                        <td colspan="6" class="text-center">No hay mandatarias registradas.</td>
-                    </tr>
+                    <tr><td colspan="6" class="text-center fs-4">No hay datos cargados.</td></tr>
                 }
             </tbody>
         </table>
     </div>
 </div>
 
-<!-- MODAL REUTILIZABLE (UN SOLO MODAL PARA TODO) -->
-<div class="modal fade" id="modalMandataria" tabindex="-1" aria-labelledby="modalTitulo" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
+<div class="modal fade" id="modalMandataria" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-3 border-dark">
             <form method="post" asp-controller="Home" asp-action="ModificarMandataria">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="modalTitulo">TÍTULO DEL MODAL</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title fw-bold" id="modalTitulo">GESTIÓN</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body">
-                    <!-- Campo oculto para el ID (solo para Modificar/Eliminar) -->
+                <div class="modal-body p-4">
                     <input type="hidden" name="IdMandataria" id="inputIdMandataria" value="0">
-                    
-                    <!-- Campo oculto para saber qué acción ejecutar -->
                     <input type="hidden" name="QueToco" id="inputQueToco" value="">
 
-                    <!-- Formulario de Agregar/Modificar -->
                     <div id="divFormulario">
-                        <!-- Campo 1: Razón Social (OBLIGATORIO) -->
                         <div class="mb-3">
-                            <label for="inputNombreMandataria" class="form-label">📝 RAZÓN SOCIAL: *</label>
-                            <input type="text" class="form-control" name="NombreMandataria" id="inputNombreMandataria" 
-                                   placeholder="Escriba la razón social..." maxlength="200" required>
+                            <label class="form-label fs-5 fw-bold">📝 NOMBRE </label>
+                            <input type="text" class="form-control" name="NombreMandataria" id="inputNombreMandataria" required>
                         </div>
-
-                        <!-- Campo 2: CUIT (OPCIONAL) -->
                         <div class="mb-3">
-                            <label for="inputCuit" class="form-label">🔢 CUIT:</label>
-                            <input type="number" class="form-control" name="Cuit" id="inputCuit" 
-                                   placeholder="Escriba el CUIT (solo números)..." min="0" max="99999999999">
-                            <small class="form-text">Campo opcional. Deje vacío o en cero si no aplica.</small>
+                            <label class="form-label fs-5 fw-bold">🔢 CUIT</label>
+                            <input type="number" class="form-control" name="Cuit" id="inputCuit">
                         </div>
-
-                        <!-- Campo 3: Descripción (OPCIONAL) -->
                         <div class="mb-3">
-                            <label for="inputDescripcion" class="form-label">📄 DESCRIPCIÓN:</label>
-                            <textarea class="form-control" name="Descripcion" id="inputDescripcion" 
-                                      placeholder="Escriba una descripción..." rows="3" maxlength="500"></textarea>
-                            <small class="form-text">Campo opcional. Puede dejarlo vacío.</small>
+                            <label class="form-label fs-5 fw-bold">📄 DESCRIPCIÓN</label>
+                            <textarea class="form-control" name="Descripcion" id="inputDescripcion" rows="2"></textarea>
                         </div>
-
-                        <!-- Campo 4: Dirección (OPCIONAL) -->
                         <div class="mb-3">
-                            <label for="inputDireccion" class="form-label">📍 DIRECCIÓN:</label>
-                            <input type="text" class="form-control" name="Direccion" id="inputDireccion" 
-                                   placeholder="Escriba la dirección..." maxlength="300">
-                            <small class="form-text">Campo opcional. Puede dejarlo vacío.</small>
+                            <label class="form-label fs-5 fw-bold">📍 UBICACIÓN</label>
+                            <input type="text" class="form-control" name="Direccion" id="inputDireccion">
                         </div>
                     </div>
-
-                    <!-- Mensaje de confirmación (visible solo en Eliminar) -->
-                    <div id="divMensajeEliminar" style="display: none;">
-                        <p style="font-size: clamp(1.2rem, 2vw, 1.4rem); color: #dc3545; font-weight: bold;">
-                            ⚠️ ¿Está seguro que desea eliminar la mandataria <strong id="spanNombreEliminar"></strong>?
-                        </p>
-                        <p style="font-size: clamp(1rem, 1.8vw, 1.2rem);">Esta acción no se puede deshacer.</p>
+                    <div id="divMensajeEliminar" class="alert alert-danger text-center fw-bold fs-4" style="display:none;">
+                        ⚠️ ¿ELIMINAR <span id="spanNombreEliminar"></span>?
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary btn-giant" data-bs-dismiss="modal">
-                        ❌ CANCELAR
-                    </button>
-                    <button type="submit" class="btn btn-giant" id="btnConfirmarModal">
-                        CONFIRMAR
-                    </button>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary btn-giant" data-bs-dismiss="modal">❌ NO</button>
+                    <button type="submit" class="btn btn-success btn-giant" id="btnConfirmarModal">✅ SÍ, CONFIRMAR</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
-</body>
-</html>
-
 @section Scripts {
 <script>
-    console.log('Script cargado correctamente');
+    // 1. OBTENEMOS LOS DATOS DE C# PARA USARLOS EN JS
+    var datosOpciones = @Html.Raw(jsonOpciones);
 
-    // ========== FILTRAR TABLA EN TIEMPO REAL (ESTILO SPOTIFY) ==========
-    function filtrarTabla() {
-        console.log('filtrarTabla ejecutándose...');
-        
-        // Obtener el valor del input y convertir a minúsculas
-        var input = document.getElementById('inputBuscador');
-        
-        if (!input) {
-            console.error('NO SE ENCONTRÓ EL INPUT CON ID inputBuscador');
-            return;
+    // ELEMENTOS DEL BUSCADOR
+    var inputBuscador = document.getElementById('inputBuscador');
+    var listaSugerencias = document.getElementById('listaSugerencias');
+    var tbody = document.getElementById('tbodyMandatarias');
+
+    // EVENTO: AL ESCRIBIR
+    inputBuscador.addEventListener('input', function() {
+        var texto = this.value.toLowerCase().trim();
+        listaSugerencias.innerHTML = ''; 
+
+        if (texto.length === 0) {
+            listaSugerencias.style.display = 'none';
+            return; // Si borra, no hacemos nada (la tabla ya muestra todo)
         }
-        
-        var filtro = input.value.toLowerCase();
-        console.log('Texto buscado: "' + filtro + '"');
-        
-        // Obtener todas las filas con clase 'fila-mandataria'
-        var filas = document.querySelectorAll('.fila-mandataria');
-        console.log('Total de filas encontradas: ' + filas.length);
-        
-        // Si el input está vacío, mostrar TODAS las filas
-        if (filtro === '') {
-            console.log('Input vacío - mostrando todas las filas');
-            filas.forEach(function(fila) {
-                fila.style.display = 'table-row';
-            });
-            return;
-        }
-        
-        var filasVisibles = 0;
-        var filasOcultas = 0;
-        
-        // Recorrer cada fila y buscar coincidencias
-        filas.forEach(function(fila) {
-            // Obtener todo el texto de la fila (todas las celdas)
-            var textoCompleto = fila.textContent.toLowerCase();
-            
-            // Si el texto de la fila incluye lo que estoy buscando, mostrarla
-            if (textoCompleto.indexOf(filtro) !== -1) {
-                fila.style.display = 'table-row';
-                filasVisibles++;
-            } else {
-                fila.style.display = 'none';
-                filasOcultas++;
-            }
+
+        // Filtrar opciones (Busca en Nombre O en Cuit)
+        var coincidencias = datosOpciones.filter(function(item) {
+            return (item.nombre && item.nombre.toLowerCase().includes(texto)) || 
+                   (item.cuit && item.cuit.includes(texto));
         });
-        
-        console.log('Filas visibles: ' + filasVisibles + ' | Filas ocultas: ' + filasOcultas);
-    }
 
-    // Verificar que el input existe cuando carga la página
-    document.addEventListener('DOMContentLoaded', function() {
-        var input = document.getElementById('inputBuscador');
-        if (input) {
-            console.log('✅ Input del buscador encontrado correctamente');
-            // Agregar listener por si acaso
-            input.addEventListener('input', filtrarTabla);
-        } else {
-            console.error('❌ NO SE ENCONTRÓ EL INPUT DEL BUSCADOR');
+        // Si no hay coincidencias, ocultar lista
+        if (coincidencias.length === 0) {
+            listaSugerencias.style.display = 'none';
+            return;
+        }
+
+        // Generar HTML de las sugerencias
+        coincidencias.forEach(function(item) {
+            var div = document.createElement('div');
+            div.className = 'item-sugerencia';
+            div.innerHTML = item.texto; 
+            
+            // EVENTO: CLIC EN UNA OPCIÓN
+            div.addEventListener('click', function() {
+                // 1. Poner el nombre en el buscador
+                inputBuscador.value = item.nombre;
+                // 2. Ocultar la lista
+                listaSugerencias.style.display = 'none';
+                // 3. MOVER LA FILA AL PRINCIPIO (La Magia)
+                moverFilaAlPrincipio(item.id);
+            });
+
+            listaSugerencias.appendChild(div);
+        });
+
+        listaSugerencias.style.display = 'block'; 
+    });
+
+    // CERRAR LISTA AL CLICKEAR AFUERA
+    document.addEventListener('click', function(e) {
+        if (e.target !== inputBuscador && e.target !== listaSugerencias) {
+            listaSugerencias.style.display = 'none';
         }
     });
 
+    // ==============================================================
+    // FUNCIÓN CLAVE: MUEVE LA FILA AL TOPE Y LA RESALTA
+    // ==============================================================
+    function moverFilaAlPrincipio(idSeleccionado) {
+        // Buscamos la fila en todo el documento
+        var fila = document.querySelector('.fila-mandataria[data-id="' + idSeleccionado + '"]');
+        
+        if (fila) {
+            // 1. Mostrar todas las filas primero (por si había algún filtro viejo)
+            document.querySelectorAll('.fila-mandataria').forEach(f => f.style.display = 'table-row');
 
-    // REFERENCIAS AL MODAL Y SUS ELEMENTOS
-    const modal = new bootstrap.Modal(document.getElementById('modalMandataria'));
-    const modalTitulo = document.getElementById('modalTitulo');
-    const inputIdMandataria = document.getElementById('inputIdMandataria');
-    const inputQueToco = document.getElementById('inputQueToco');
-    const inputNombreMandataria = document.getElementById('inputNombreMandataria');
-    const inputCuit = document.getElementById('inputCuit');
-    const inputDescripcion = document.getElementById('inputDescripcion');
-    const inputDireccion = document.getElementById('inputDireccion');
-    const divFormulario = document.getElementById('divFormulario');
-    const divMensajeEliminar = document.getElementById('divMensajeEliminar');
-    const spanNombreEliminar = document.getElementById('spanNombreEliminar');
-    const btnConfirmarModal = document.getElementById('btnConfirmarModal');
+            // 2. MOVER AL PRIMER LUGAR DEL TBODY
+            tbody.prepend(fila);
 
-    // FUNCIÓN 1: ABRIR MODAL PARA AGREGAR (todos los campos vacíos)
+            // 3. Efecto Visual de "Aquí estoy"
+            fila.style.backgroundColor = '#fff3cd'; // Amarillo fuerte
+            fila.scrollIntoView({ behavior: 'smooth', block: 'center' }); // Asegurar que se vea
+
+            // 4. Quitar el color suavemente después de 3 segundos
+            setTimeout(function() {
+                fila.style.backgroundColor = ''; 
+            }, 3000);
+        }
+    }
+
+
+    // ==========================================
+    // LÓGICA DE MODALES (CORREGIDA LA ELIMINACIÓN)
+    // ==========================================
+    var modalElement = document.getElementById('modalMandataria');
+    var modal = new bootstrap.Modal(modalElement);
+    var modalTitulo = document.getElementById('modalTitulo');
+    var inputIdMandataria = document.getElementById('inputIdMandataria');
+    var inputQueToco = document.getElementById('inputQueToco');
+    var inputNombreMandataria = document.getElementById('inputNombreMandataria');
+    var inputCuit = document.getElementById('inputCuit');
+    var inputDescripcion = document.getElementById('inputDescripcion');
+    var inputDireccion = document.getElementById('inputDireccion');
+    var divFormulario = document.getElementById('divFormulario');
+    var divMensajeEliminar = document.getElementById('divMensajeEliminar');
+    var spanNombreEliminar = document.getElementById('spanNombreEliminar');
+    var btnConfirmarModal = document.getElementById('btnConfirmarModal');
+
     function abrirModalAgregar() {
-        modalTitulo.textContent = '➕ AGREGAR NUEVA MANDATARIA';
-        btnConfirmarModal.textContent = '💾 GUARDAR';
+        modalTitulo.textContent = '➕ AGREGAR';
         btnConfirmarModal.className = 'btn btn-success btn-giant';
-
         inputQueToco.value = 'Agregar';
         inputIdMandataria.value = '0';
         inputNombreMandataria.value = '';
         inputCuit.value = '';
         inputDescripcion.value = '';
         inputDireccion.value = '';
+        
+        // ACTIVAR REQUIRED
         inputNombreMandataria.required = true;
 
         divFormulario.style.display = 'block';
         divMensajeEliminar.style.display = 'none';
-
         modal.show();
+        setTimeout(() => inputNombreMandataria.focus(), 500);
     }
 
-    // FUNCIÓN 2: ABRIR MODAL PARA MODIFICAR (TODOS los campos pre-llenados con datos actuales)
-    function abrirModalModificar(id, nombreActual, cuitActual, descripcionActual, direccionActual) {
-        modalTitulo.textContent = '✏️ MODIFICAR MANDATARIA';
-        btnConfirmarModal.textContent = '💾 GUARDAR CAMBIOS';
+    function abrirModalModificar(id, nombre, cuit, desc, dir) {
+        modalTitulo.textContent = '✏️ MODIFICAR';
         btnConfirmarModal.className = 'btn btn-warning btn-giant';
-
         inputQueToco.value = 'Modificar';
         inputIdMandataria.value = id;
-        inputNombreMandataria.value = nombreActual;
-        inputCuit.value = (cuitActual > 0) ? cuitActual : '';
-        inputDescripcion.value = descripcionActual === '-' ? '' : descripcionActual || '';
-        inputDireccion.value = direccionActual === '-' ? '' : direccionActual || '';
+        inputNombreMandataria.value = nombre;
+        inputCuit.value = (cuit > 0) ? cuit : '';
+        inputDescripcion.value = desc;
+        inputDireccion.value = dir;
+
+        // ACTIVAR REQUIRED
         inputNombreMandataria.required = true;
 
         divFormulario.style.display = 'block';
         divMensajeEliminar.style.display = 'none';
-
         modal.show();
+        setTimeout(() => inputNombreMandataria.focus(), 500);
     }
 
-    // FUNCIÓN 3: ABRIR MODAL PARA ELIMINAR (sin formulario, solo confirmación)
     function abrirModalEliminar(id, nombre) {
-        modalTitulo.textContent = '🗑️ ELIMINAR MANDATARIA';
-        btnConfirmarModal.textContent = '🗑️ SÍ, ELIMINAR';
+        modalTitulo.textContent = '🗑️ ELIMINAR';
         btnConfirmarModal.className = 'btn btn-danger btn-giant';
-
         inputQueToco.value = 'Eliminar';
         inputIdMandataria.value = id;
-        inputNombreMandataria.required = false;
         spanNombreEliminar.textContent = nombre;
+
+        // 🛑 EL FIX: DESACTIVAR REQUIRED PORQUE EL INPUT ESTÁ OCULTO
+        inputNombreMandataria.required = false;
 
         divFormulario.style.display = 'none';
         divMensajeEliminar.style.display = 'block';
-
         modal.show();
     }
 </script>
