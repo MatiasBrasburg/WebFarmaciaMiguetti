@@ -32,6 +32,6 @@ public class HomeController : Controller
 }
     public IActionResult Home()
     {
-        return View("Home");
+        return View("Index");
     }
 }

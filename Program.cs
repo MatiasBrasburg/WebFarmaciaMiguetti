@@ -12,6 +12,13 @@ builder.Services.AddSession(options =>
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
+// ====================================================================
+// ✅ AGREGADO POR EL ARQUITECTO:
+// Esto habilita la inyección de IHttpContextAccessor en el Layout
+// para poder leer la URL y poner los títulos bonitos.
+builder.Services.AddHttpContextAccessor();
+// ====================================================================
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
