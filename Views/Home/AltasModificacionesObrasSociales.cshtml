@@ -1,0 +1,555 @@
+@using System.Text.Json
+@using System.Linq
+@using WebFarmaciaMiguetti.Models 
+
+@{
+    ViewData["Title"] = "Gestión de Obras Sociales";
+
+    // 1. RECUPERACIÓN DE DATOS (Sin tocar el Controller)
+    // Convertimos a listas dinámicas o tipadas si el namespace es correcto
+    var listaOS = (ViewBag.ListaObrasSociales as IEnumerable<dynamic>)?.ToList() ?? new List<dynamic>();
+    var listaMandatarias = (ViewBag.ListaMandatarias as IEnumerable<dynamic>)?.ToList() ?? new List<dynamic>();
+
+    // 2. ORDENAMIENTO INICIAL
+    if (listaOS.Any())
+    {
+        // Ordenamos por Nombre para que la tabla arranque prolija
+        try { listaOS = listaOS.OrderBy(x => x.NombreOS).ToList(); } catch { }
+    }
+
+    // 3. PREPARACIÓN DE DATOS PARA JAVASCRIPT (Serialización)
+    
+    // A. DATOS PARA EL BUSCADOR PRINCIPAL (Buscamos OS por Nombre o por su Mandataria)
+    // Truco: Cruzamos los datos aquí mismo para tener el nombre de la mandataria en el buscador
+    var datosBuscadorPrincipal = listaOS.Select(os => {
+        string nombreMand = "Sin Asignar";
+        // Buscamos manualmente la mandataria en la lista auxiliar
+        var mand = listaMandatarias.FirstOrDefault(m => m.IdMandatarias == os.IdMandataria);
+        if (mand != null) { nombreMand = mand.RazonSocial; }
+
+        return new {
+            id = os.IdOS,
+            texto = os.NombreOS + " (Mandataria: " + nombreMand + ")",
+            nombre = os.NombreOS
+        };
+    });
+    var jsonOS = JsonSerializer.Serialize(datosBuscadorPrincipal);
+
+    // B. DATOS PARA EL BUSCADOR DEL MODAL (Para elegir Mandataria)
+    var datosBuscadorModal = listaMandatarias.Select(m => new {
+        id = m.IdMandatarias,
+        texto = m.RazonSocial + " (CUIT: " + (m.Cuit > 0 ? m.Cuit.ToString() : "-") + ")",
+        nombre = m.RazonSocial
+    });
+    var jsonMandatarias = JsonSerializer.Serialize(datosBuscadorModal);
+}
+
+<style>
+    /* ========== ESTILOS "UX 85 AÑOS" (Idéntico a Mandatarias) ========== */
+    body {
+        font-family: 'Roboto', 'Open Sans', Arial, sans-serif;
+        background-color: #f8f9fa;
+    }
+
+    h1 {
+        font-size: clamp(2rem, 5vw, 2.8rem);
+        font-weight: bold;
+        color: #000;
+        margin-bottom: 2rem;
+    }
+
+    .container {
+        width: 95%;
+        max-width: 1600px; /* Un poco más ancho para esta tabla */
+        margin: 0 auto;
+        padding: 1rem;
+    }
+
+    /* BOTONES GIGANTES */
+    .btn-giant {
+        font-size: clamp(1rem, 2vw, 1.4rem);
+        padding: clamp(0.8rem, 1.5vw, 1rem) clamp(1rem, 2vw, 2rem);
+        font-weight: bold;
+        border: 3px solid;
+        margin: 0.3rem;
+        white-space: nowrap;
+    }
+    .btn-success { background-color: #198754; border-color: #198754; color: #fff; }
+    .btn-warning { background-color: #ffc107; border-color: #ffc107; color: #000; }
+    .btn-danger { background-color: #dc3545; border-color: #dc3545; color: #fff; }
+    .btn-info { background-color: #0dcaf0; border-color: #0dcaf0; color: #000; }
+    .btn-secondary { background-color: #6c757d; border-color: #6c757d; color: #fff; }
+
+    /* BUSCADOR TIPO SPOTIFY */
+    .buscador-wrapper {
+        position: relative; 
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        margin-bottom: 1.5rem;
+    }
+
+    .buscador-input-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        max-width: 500px;
+    }
+
+    .input-buscador {
+        font-size: 1.3rem;
+        padding: 10px 15px;
+        border: 3px solid #0d6efd;
+        font-weight: bold;
+        width: 100%;
+    }
+
+    /* LISTAS DE SUGERENCIAS FLOTANTES */
+    .lista-sugerencias {
+        position: absolute;
+        top: 100%;
+        right: 0; /* Alineado a la derecha para el principal */
+        width: 100%;
+        max-width: 500px;
+        background: white;
+        border: 3px solid #000;
+        border-top: none;
+        z-index: 1055; /* Z-Index alto para estar sobre Modals */
+        display: none;
+        max-height: 300px;
+        overflow-y: auto;
+        box-shadow: 0px 10px 15px rgba(0,0,0,0.2);
+    }
+    
+    /* Ajuste para la lista dentro del modal (alineada a la izquierda del input) */
+    .lista-sugerencias-modal {
+        right: auto; 
+        left: 0;
+    }
+
+    .item-sugerencia {
+        padding: 15px;
+        font-size: 1.2rem;
+        border-bottom: 1px solid #ddd;
+        cursor: pointer;
+        color: #000;
+        font-weight: 500;
+    }
+
+    .item-sugerencia:hover {
+        background-color: #0d6efd; 
+        color: white;
+    }
+
+    /* TABLA */
+    .table-responsive {
+        border: 3px solid #000;
+        background-color: white;
+    }
+    .table th {
+        background-color: #343a40;
+        color: white;
+        font-size: 1.2rem;
+        padding: 15px;
+        vertical-align: middle;
+    }
+    .table td {
+        font-size: 1.1rem;
+        vertical-align: middle;
+        padding: 15px;
+        font-weight: 500;
+        border-bottom: 2px solid #dee2e6;
+    }
+    .fila-os { display: table-row !important; transition: background-color 0.5s ease; }
+
+    /* INPUTS FORMULARIO */
+    .form-control { border: 2px solid #6c757d; font-size: 1.1rem; padding: 10px; }
+    .form-control:focus { border-color: #ffc107; box-shadow: 0 0 0 0.25rem rgba(255,193,7,0.5); }
+    .form-label { font-weight: bold; font-size: 1.1rem; }
+    
+    /* CHECKBOXES GIGANTES */
+    .form-check-input { width: 2em; height: 2em; margin-top: 0; border: 2px solid #555; }
+    .form-check-label { font-size: 1.2rem; margin-left: 10px; padding-top: 5px; cursor: pointer;}
+    .form-check { display: flex; align-items: center; padding: 10px; background-color: #e9ecef; border-radius: 5px; margin-bottom: 10px;}
+</style>
+
+<div class="container mt-5">
+    <h1>🏥 GESTIÓN DE OBRAS SOCIALES</h1>
+
+    @if (TempData["MensajeExito"] != null) {
+        <div class="alert alert-success alert-dismissible fade show fs-4 fw-bold" role="alert">
+            ✅ @TempData["MensajeExito"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (TempData["MensajeError"] != null) {
+        <div class="alert alert-danger alert-dismissible fade show fs-4 fw-bold" role="alert">
+            ❌ @TempData["MensajeError"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
+        <button type="button" class="btn btn-success btn-giant" onclick="abrirModalAgregar()">
+            ➕ AGREGAR O. SOCIAL
+        </button>
+
+        <div class="buscador-wrapper">
+            <div class="buscador-input-group">
+                <label for="inputBuscadorMain" class="fs-4 fw-bold">🔍 BUSCAR:</label>
+                <input type="text" class="form-control input-buscador" id="inputBuscadorMain" 
+                       placeholder="Nombre O.S. o Mandataria..." autocomplete="off">
+            </div>
+            <div id="listaSugerenciasMain" class="lista-sugerencias"></div>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>NOMBRE O.S.</th>
+                    <th>MANDATARIA</th>
+                    <th>CÓD. BONIF.</th>
+                    <th>NOMBRE PLAN</th>
+                    <th>PREPAGA</th>
+                    <th>ACTIVA</th>
+                    <th>ACCIONES</th>
+                </tr>
+            </thead>
+            <tbody id="tbodyOS">
+                @if (listaOS != null && listaOS.Count > 0)
+                {
+                    @foreach (var os in listaOS)
+                    {
+                        // LÓGICA DE VISTA: Buscar el nombre de la Mandataria "on the fly"
+                        // No tocamos el modelo, lo resolvemos aquí.
+                        string nombreMandataria = "-";
+                        int idMand = os.IdMandataria;
+                        var objMand = listaMandatarias.FirstOrDefault(m => m.IdMandatarias == idMand);
+                        if(objMand != null) { nombreMandataria = objMand.RazonSocial; }
+
+                        // Variables para JS (escapando comillas para seguridad)
+                        string nombreOsJs = System.Web.HttpUtility.JavaScriptStringEncode(os.NombreOS);
+                        string nombreMandJs = System.Web.HttpUtility.JavaScriptStringEncode(nombreMandataria);
+                        string nombrePlanJs = System.Web.HttpUtility.JavaScriptStringEncode(os.NombreCodigoBonificacion ?? "");
+                        
+                        <tr class="fila-os" data-id="@os.IdOS">
+                            <td class="fw-bold">@os.IdOS</td>
+                            <td>@os.NombreOS</td>
+                            <td>@nombreMandataria</td>
+                            <td>@(os.CodigoBonificacion > 0 ? os.CodigoBonificacion.ToString() : "-")</td>
+                            <td>@(string.IsNullOrEmpty(os.NombreCodigoBonificacion) ? "-" : os.NombreCodigoBonificacion)</td>
+                            <td>@((os.EsPrepaga == true) ? "SÍ" : "NO")</td>
+                            <td>@((os.Activa == true) ? "SÍ" : "NO")</td>
+                            <td>
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-warning btn-giant"
+                                            onclick="abrirModalModificar(@os.IdOS, '@nombreOsJs', @os.IdMandataria, '@nombreMandJs', @((os.EsPrepaga == true).ToString().ToLower()), @((os.Activa == true).ToString().ToLower()))">
+                                        ✏️
+                                    </button>
+                                    
+                                    <button type="button" class="btn btn-info btn-giant"
+                                            onclick="abrirModalPlanes(@os.IdOS, '@nombreOsJs', '@(os.CodigoBonificacion ?? 0)', '@nombrePlanJs')">
+                                        📋
+                                    </button>
+
+                                    <button type="button" class="btn btn-danger btn-giant"
+                                            onclick="abrirModalEliminar(@os.IdOS, '@nombreOsJs')">
+                                        🗑️
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="8" class="text-center fs-4">No hay Obras Sociales cargadas.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="modal fade" id="modalOS" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-3 border-dark">
+            <form method="post" asp-controller="Home" asp-action="ABM_OS">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title fw-bold" id="modalTitulo">GESTIÓN</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <input type="hidden" name="IdOS" id="inputIdOS" value="0">
+                    <input type="hidden" name="QueToco" id="inputQueToco" value="">
+                    <input type="hidden" name="IdMandataria" id="inputIdMandatariaHidden" value="0">
+
+                    <div id="divFormulario">
+                        <div class="mb-3">
+                            <label class="form-label">🏥 NOMBRE OBRA SOCIAL</label>
+                            <input type="text" class="form-control" name="NombreOS" id="inputNombreOS" required>
+                        </div>
+
+                        <div class="mb-3 position-relative">
+                            <label class="form-label">🏢 MANDATARIA ASOCIADA</label>
+                            <input type="text" class="form-control" id="inputMandatariaModal" 
+                                   placeholder="Escriba para buscar mandataria..." autocomplete="off" required>
+                            <div id="listaSugerenciasModal" class="lista-sugerencias lista-sugerencias-modal"></div>
+                        </div>
+
+                        <div class="row mt-4">
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="EsPrepaga" id="chkEsPrepaga" value="true">
+                                    <label class="form-check-label" for="chkEsPrepaga">Es Prepaga / Mutual</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="Activa" id="chkActiva" value="true" checked>
+                                    <label class="form-check-label" for="chkActiva">Está Activa</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="divMensajeEliminar" class="alert alert-danger text-center fw-bold fs-4" style="display:none;">
+                        ⚠️ ¿ELIMINAR <span id="spanNombreEliminar"></span>?
+                        <br><small>Esta acción es irreversible.</small>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary btn-giant" data-bs-dismiss="modal">❌ NO</button>
+                    <button type="submit" class="btn btn-success btn-giant" id="btnConfirmarModal">✅ SÍ, CONFIRMAR</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalPlanes" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-3 border-info">
+            <form method="post" asp-controller="Home" asp-action="ABM_OS">
+                <div class="modal-header bg-info text-dark">
+                    <h5 class="modal-title fw-bold">📋 PLANES DE: <span id="spanNombreOSPlan"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <input type="hidden" name="IdOS" id="inputIdOSPlan" value="0">
+                    <input type="hidden" name="QueToco" value="Planes">
+
+                    <div class="mb-3">
+                        <label class="form-label">📝 NOMBRE DEL PLAN</label>
+                        <input type="text" class="form-control" name="NombreCodigoBonificacion" id="inputNombrePlan" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">🔢 CÓDIGO BONIFICACIÓN</label>
+                        <input type="number" class="form-control" name="CodigoBonificacion" id="inputCodigoPlan" required>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary btn-giant" data-bs-dismiss="modal">❌ CANCELAR</button>
+                    <button type="submit" class="btn btn-info btn-giant">💾 GUARDAR PLAN</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    // ============================================================
+    // 1. CARGA DE DATOS DESDE RAZOR (SERIALIZADOS A JSON)
+    // ============================================================
+    var datosBuscadorMain = @Html.Raw(jsonOS);        // Para el buscador principal
+    var datosBuscadorModal = @Html.Raw(jsonMandatarias); // Para elegir mandataria
+
+    // ============================================================
+    // 2. LÓGICA BUSCADOR PRINCIPAL (TABLA) - "SPOTIFY LITE"
+    // ============================================================
+    var inputMain = document.getElementById('inputBuscadorMain');
+    var listaMain = document.getElementById('listaSugerenciasMain');
+    var tbody = document.getElementById('tbodyOS');
+
+    inputMain.addEventListener('input', function() {
+        var texto = this.value.toLowerCase().trim();
+        listaMain.innerHTML = ''; 
+
+        if (texto.length === 0) { listaMain.style.display = 'none'; return; }
+
+        // Filtrar coincidencias
+        var coincidencias = datosBuscadorMain.filter(function(item) {
+            return (item.texto && item.texto.toLowerCase().includes(texto));
+        });
+
+        if (coincidencias.length === 0) { listaMain.style.display = 'none'; return; }
+
+        // Crear lista visual
+        coincidencias.forEach(function(item) {
+            var div = document.createElement('div');
+            div.className = 'item-sugerencia';
+            div.innerHTML = item.texto; 
+            div.addEventListener('click', function() {
+                inputMain.value = item.nombre;
+                listaMain.style.display = 'none';
+                moverFilaAlPrincipio(item.id); // La magia
+            });
+            listaMain.appendChild(div);
+        });
+        listaMain.style.display = 'block'; 
+    });
+
+    // Función para mover la fila y resaltarla
+    function moverFilaAlPrincipio(id) {
+        var fila = document.querySelector('.fila-os[data-id="' + id + '"]');
+        if (fila) {
+            tbody.prepend(fila); // Mueve al tope
+            fila.style.backgroundColor = '#fff3cd'; // Amarillo
+            fila.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(function() { fila.style.backgroundColor = ''; }, 3000);
+        }
+    }
+
+    // ============================================================
+    // 3. LÓGICA BUSCADOR MODAL (MANDATARIAS) - AUTOCOMPLETADO
+    // ============================================================
+    var inputMandModal = document.getElementById('inputMandatariaModal');
+    var inputIdMandHidden = document.getElementById('inputIdMandatariaHidden');
+    var listaModal = document.getElementById('listaSugerenciasModal');
+
+    inputMandModal.addEventListener('input', function() {
+        var texto = this.value.toLowerCase().trim();
+        listaModal.innerHTML = '';
+        inputIdMandHidden.value = "0"; // Resetear ID si escribe de nuevo
+
+        if (texto.length === 0) { listaModal.style.display = 'none'; return; }
+
+        var coincidencias = datosBuscadorModal.filter(function(item) {
+            return (item.texto && item.texto.toLowerCase().includes(texto));
+        });
+
+        if (coincidencias.length === 0) { listaModal.style.display = 'none'; return; }
+
+        coincidencias.forEach(function(item) {
+            var div = document.createElement('div');
+            div.className = 'item-sugerencia';
+            div.innerHTML = item.texto; 
+            div.addEventListener('click', function() {
+                inputMandModal.value = item.nombre; // Texto visible
+                inputIdMandHidden.value = item.id;  // ID Oculto para el Controller
+                listaModal.style.display = 'none';
+            });
+            listaModal.appendChild(div);
+        });
+        listaModal.style.display = 'block'; 
+    });
+
+    // Cerrar listas al hacer clic afuera
+    document.addEventListener('click', function(e) {
+        if (e.target !== inputMain && e.target !== listaMain) { listaMain.style.display = 'none'; }
+        if (e.target !== inputMandModal && e.target !== listaModal) { listaModal.style.display = 'none'; }
+    });
+
+    // ============================================================
+    // 4. LÓGICA DE APERTURA DE MODALES
+    // ============================================================
+    var modalOS = new bootstrap.Modal(document.getElementById('modalOS'));
+    var modalPlanes = new bootstrap.Modal(document.getElementById('modalPlanes'));
+    
+    // Elementos Modal ABM
+    var modalTitulo = document.getElementById('modalTitulo');
+    var inputIdOS = document.getElementById('inputIdOS');
+    var inputQueToco = document.getElementById('inputQueToco');
+    var inputNombreOS = document.getElementById('inputNombreOS');
+    var chkEsPrepaga = document.getElementById('chkEsPrepaga');
+    var chkActiva = document.getElementById('chkActiva');
+    var divFormulario = document.getElementById('divFormulario');
+    var divMensajeEliminar = document.getElementById('divMensajeEliminar');
+    var spanNombreEliminar = document.getElementById('spanNombreEliminar');
+    var btnConfirmarModal = document.getElementById('btnConfirmarModal');
+
+    function abrirModalAgregar() {
+        modalTitulo.textContent = '➕ AGREGAR OBRA SOCIAL';
+        btnConfirmarModal.className = 'btn btn-success btn-giant';
+        btnConfirmarModal.textContent = '💾 GUARDAR';
+
+        // Resetear Form
+        inputQueToco.value = 'Agregar';
+        inputIdOS.value = '0';
+        inputNombreOS.value = '';
+        inputMandModal.value = '';
+        inputIdMandHidden.value = '0'; // Importante resetear el ID Mandataria
+        chkEsPrepaga.checked = false;
+        chkActiva.checked = true;
+
+        inputNombreOS.required = true;
+        inputMandModal.required = true;
+
+        divFormulario.style.display = 'block';
+        divMensajeEliminar.style.display = 'none';
+        modalOS.show();
+        setTimeout(() => inputNombreOS.focus(), 500);
+    }
+
+    function abrirModalModificar(id, nombre, idMand, nombreMand, esPrepaga, activa) {
+        modalTitulo.textContent = '✏️ MODIFICAR OBRA SOCIAL';
+        btnConfirmarModal.className = 'btn btn-warning btn-giant';
+        btnConfirmarModal.textContent = '💾 GUARDAR CAMBIOS';
+
+        inputQueToco.value = 'Modificar';
+        inputIdOS.value = id;
+        inputNombreOS.value = nombre;
+        
+        // Cargar Mandataria actual
+        inputIdMandHidden.value = idMand;
+        inputMandModal.value = nombreMand;
+
+        chkEsPrepaga.checked = esPrepaga;
+        chkActiva.checked = activa;
+
+        inputNombreOS.required = true;
+        inputMandModal.required = true;
+
+        divFormulario.style.display = 'block';
+        divMensajeEliminar.style.display = 'none';
+        modalOS.show();
+    }
+
+    function abrirModalEliminar(id, nombre) {
+        modalTitulo.textContent = '🗑️ ELIMINAR OBRA SOCIAL';
+        btnConfirmarModal.className = 'btn btn-danger btn-giant';
+        btnConfirmarModal.textContent = '🗑️ CONFIRMAR ELIMINACIÓN';
+
+        inputQueToco.value = 'Eliminar';
+        inputIdOS.value = id;
+        spanNombreEliminar.textContent = nombre;
+
+        // Desactivar validación HTML5 para campos ocultos
+        inputNombreOS.required = false;
+        inputMandModal.required = false;
+
+        divFormulario.style.display = 'none';
+        divMensajeEliminar.style.display = 'block';
+        modalOS.show();
+    }
+
+    // Elementos Modal Planes
+    var inputIdOSPlan = document.getElementById('inputIdOSPlan');
+    var spanNombreOSPlan = document.getElementById('spanNombreOSPlan');
+    var inputNombrePlan = document.getElementById('inputNombrePlan');
+    var inputCodigoPlan = document.getElementById('inputCodigoPlan');
+
+    function abrirModalPlanes(id, nombreOS, codigo, nombrePlan) {
+        inputIdOSPlan.value = id;
+        spanNombreOSPlan.textContent = nombreOS;
+        inputCodigoPlan.value = (codigo == '0') ? '' : codigo;
+        inputNombrePlan.value = nombrePlan;
+        modalPlanes.show();
+        setTimeout(() => inputNombrePlan.focus(), 500);
+    }
+</script>
+}

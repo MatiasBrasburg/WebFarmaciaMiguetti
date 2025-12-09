@@ -21,7 +21,9 @@ public class ObrasSociales
     public bool? EsPrepaga { get; set; }
      [JsonProperty]
     public bool Activa { get; set; }
-    
+
+    [JsonProperty]
+    public string NombreCodigoBonificacion { get; set; }
     public ObrasSociales()
     {
         

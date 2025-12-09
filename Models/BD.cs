@@ -10,7 +10,7 @@ private static string _connectionString = @"Server=.\SQLEXPRESS01;DataBase=Farma
 
 
 
-
+//-- Codigo Mandatarias --///
 
      public static Mandatarias TraerMandatariaPorNombre  (string nombreMandataria)
     {
@@ -76,5 +76,163 @@ private static string _connectionString = @"Server=.\SQLEXPRESS01;DataBase=Farma
         }
         return ListMandatarias;
     }
+
+
+
+
+
+//-- Codigo Obras Sociales --///
+      public static List<ObrasSociales> TraerListaOS()
+    {
+        List<ObrasSociales> ListOS = new List<ObrasSociales>();
+        using (SqlConnection connection = new SqlConnection(_connectionString))
+        {
+            string query = "SELECT * FROM ObrasSociales";
+            ListOS = connection.Query<ObrasSociales>(query).ToList();
+        }
+        return ListOS;
+    }
+ public static void ModificarOS  (int IdOS, string nuevoNombre, int IdMandataria)
+    {
+     ObrasSociales ObjOS = null;
+        using (SqlConnection connection = new SqlConnection(_connectionString))
+        {
+            string query = "UPDATE ObrasSociales SET IdMandataria = @pIdMandataria, NombreOS = @pNuevoNombre where IdObrasSociales = @pIdOS"; 
+            connection.Execute(query, new {pIdOS = IdOS, pNuevoNombre = nuevoNombre, pIdMandataria = IdMandataria});
+         }
+    
+    }
+ public static ObrasSociales TraerOSPorId  (int IdOS)
+    {
+     ObrasSociales ObjOS = null;
+        using (SqlConnection connection = new SqlConnection(_connectionString))
+        {
+            string query = "SELECT * FROM ObrasSociales where IdObrasSociales = @pIdOS"; 
+            ObjOS = connection.QueryFirstOrDefault<ObrasSociales>(query, new {pIdOS = IdOS});
+         }
+    
+         return ObjOS;
+    }
+
+  public static void AgregarOS  (int IdOS, int IdMandataria, string NombreOS, bool? EsPrepaga, bool? Activa)
+    {
+     ObrasSociales ObjOS = null;
+        using (SqlConnection connection = new SqlConnection(_connectionString))
+                {
+                    string query = "INSERT INTO ObrasSociales (IdObrasSociales, IdMandataria, NombreOS, EsPrepaga, Activa) VALUES (@pIdOS, @pIdMandataria, @pNombreOS, @pEsPrepaga, @pActiva)"; 
+            connection.Execute(query, new {pIdOS = IdOS, pIdMandataria = IdMandataria, pNombreOS = NombreOS, pEsPrepaga = EsPrepaga, pActiva = Activa});
+         }
+    
+    }
+
+
+         public static void EliminarOS (int IdOS)
+    {
+     ObrasSociales ObjOS = null;
+        using (SqlConnection connection = new SqlConnection(_connectionString))
+                {
+                    string query = "DELETE FROM ObrasSociales WHERE IdObrasSociales = @pIdOS"; 
+            connection.Execute(query, new {pIdOS = IdOS});
+         }
+    
+    }
+
+ public static void AgregarBonificaciones  (int IdOS, string NombreCodigoBonificacion, int? CodigoBonificacion)
+    {
+     ObrasSociales ObjOS = null;
+        using (SqlConnection connection = new SqlConnection(_connectionString))
+                {
+                    string query = "INSERT INTO ObrasSociales (IdObrasSociales, NombreCodigoBonificacion, CodigoBonificacion) VALUES (@pIdOS, @pNombreCodigoBonificacion, @pCodigoBonificacion)"; 
+            connection.Execute(query, new {pIdOS = IdOS, pNombreCodigoBonificacion = NombreCodigoBonificacion, pCodigoBonificacion = CodigoBonificacion});
+         }
+    
+    }
+     public static void ModificarBonificaciones  (int IdOS, int? CodigoBonificacion, string? NombreCodigoBonificacion)
+    {
+     ObrasSociales ObjOS = null;
+        using (SqlConnection connection = new SqlConnection(_connectionString))
+        {
+            string query = "UPDATE ObrasSociales SET CodigoBonificacion = @pCodigoBonificacion, NombreCodigoBonificacion = @pNombreCodigoBonificacion where IdObrasSociales = @pIdOS"; 
+            connection.Execute(query, new {pIdOS = IdOS, pCodigoBonificacion = CodigoBonificacion, pNombreCodigoBonificacion = NombreCodigoBonificacion});
+         }
+    
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 }
