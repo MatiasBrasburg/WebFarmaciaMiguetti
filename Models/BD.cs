@@ -9,25 +9,33 @@ namespace WebFarmaciaMiguetti.Models;
 public static class BD
 {
     // Método CRÍTICO: Obtiene la conexión construyéndola a partir de variables separadas.
-    private static string GetConnectionString()
+   private static string GetConnectionString()
+{
+    // 1. Intenta leer las variables de entorno separadas (Las que Railway debe inyectar)
+    string host = Environment.GetEnvironmentVariable("PGHOST");
+    string port = Environment.GetEnvironmentVariable("PGPORT") ?? "5432"; // Usa 5432 si no se encuentra
+    string user = Environment.GetEnvironmentVariable("PGUSER");
+    string password = Environment.GetEnvironmentVariable("PGPASSWORD");
+    string database = Environment.GetEnvironmentVariable("PGDATABASE");
+    
+    // Si encontramos todos los componentes clave de la nube, construimos la cadena
+    if (!string.IsNullOrEmpty(host) && !string.IsNullOrEmpty(user) && !string.IsNullOrEmpty(password) && !string.IsNullOrEmpty(database))
     {
-        // 1. Intenta leer las variables de entorno separadas (Las que Railway debe inyectar)
-        string host = Environment.GetEnvironmentVariable("PGHOST");
-        string port = Environment.GetEnvironmentVariable("PGPORT") ?? "5432"; // Usa 5432 si no se encuentra
-        string user = Environment.GetEnvironmentVariable("PGUSER");
-        string password = Environment.GetEnvironmentVariable("PGPASSWORD");
-        string database = Environment.GetEnvironmentVariable("PGDATABASE");
+        // Cadena de conexión construida manualmente para mayor control
+        string connectionString = $"Host={host};Port={port};Database={database};Username={user};Password={password};Pooling=true;Timeout=15;";
         
-        // Si encontramos todos los componentes clave de la nube, construimos la cadena
-        if (!string.IsNullOrEmpty(host) && !string.IsNullOrEmpty(user) && !string.IsNullOrEmpty(password) && !string.IsNullOrEmpty(database))
-        {
-            // Cadena de conexión construida manualmente para mayor control
-            return $"Host={host};Port={port};Database={database};Username={user};Password={password};Pooling=true;Timeout=15;";
-        }
-
-        // 2. FALLBACK LOCAL (Causará error si no tienes Postgres local, pero asegura que en la nube NO caiga aquí)
-        return "Server=localhost;Port=5432;Database=FarmaciaNet;User Id=postgres;Password=tu_password_local;"; 
+        // <<< LÍNEA DE DEBUG CRÍTICA 1 >>>
+        Console.WriteLine($"DEBUG: Attempting Cloud DB connection with Host: {host}"); 
+        
+        return connectionString;
     }
+
+    // 2. FALLBACK LOCAL (Causará error si no tienes Postgres local, pero asegura que en la nube NO caiga aquí)
+    // <<< LÍNEA DE DEBUG CRÍTICA 2 >>>
+    Console.WriteLine("DEBUG: Using Localhost Fallback (127.0.0.1:5432)"); 
+
+    return "Server=localhost;Port=5432;Database=FarmaciaNet;User Id=postgres;Password=tu_password_local;"; 
+}
 
     // -- HELPER PARA OBTENER CONEXIÓN --
     private static IDbConnection GetConnection()
