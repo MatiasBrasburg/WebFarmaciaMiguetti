@@ -92,13 +92,13 @@ private static string _connectionString = @"Server=.\SQLEXPRESS01;DataBase=Farma
         }
         return ListOS;
     }
- public static void ModificarOS  (int IdOS, string nuevoNombre, int IdMandataria)
+ public static void ModificarOS  (int IdOS, string nuevoNombre, int IdMandatarias,  bool? EsPrepaga, bool? Activa)
     {
      ObrasSociales ObjOS = null;
         using (SqlConnection connection = new SqlConnection(_connectionString))
         {
-            string query = "UPDATE ObrasSociales SET IdMandataria = @pIdMandataria, NombreOS = @pNuevoNombre where IdObrasSociales = @pIdOS"; 
-            connection.Execute(query, new {pIdOS = IdOS, pNuevoNombre = nuevoNombre, pIdMandataria = IdMandataria});
+            string query = "UPDATE ObrasSociales SET IdMandatarias = @pIdMandatarias, Nombre = @pNuevoNombre, EsPrepaga = @pEsPrepaga, Activa = @pActiva where IdObrasSociales = @pIdOS"; 
+            connection.Execute(query, new {pIdMandatarias = IdMandatarias, pNuevoNombre = nuevoNombre, pEsPrepaga = EsPrepaga, pActiva = Activa, pIdOS = IdOS });
          }
     
     }
@@ -114,13 +114,13 @@ private static string _connectionString = @"Server=.\SQLEXPRESS01;DataBase=Farma
          return ObjOS;
     }
 
-  public static void AgregarOS  (int IdOS, int IdMandataria, string NombreOS, bool? EsPrepaga, bool? Activa)
+  public static void AgregarOS  (int IdOS, int IdMandataria, string Nombre, bool? EsPrepaga, bool? Activa)
     {
      ObrasSociales ObjOS = null;
         using (SqlConnection connection = new SqlConnection(_connectionString))
                 {
-                    string query = "INSERT INTO ObrasSociales (IdObrasSociales, IdMandataria, NombreOS, EsPrepaga, Activa) VALUES (@pIdOS, @pIdMandataria, @pNombreOS, @pEsPrepaga, @pActiva)"; 
-            connection.Execute(query, new {pIdOS = IdOS, pIdMandataria = IdMandataria, pNombreOS = NombreOS, pEsPrepaga = EsPrepaga, pActiva = Activa});
+                    string query = "INSERT INTO ObrasSociales (IdObrasSociales, IdMandatarias, Nombre, EsPrepaga, Activa) VALUES (@pIdOS, @pIdMandataria, @pNombre, @pEsPrepaga, @pActiva)"; 
+            connection.Execute(query, new {pIdOS = IdOS, pIdMandataria = IdMandataria, pNombre = Nombre, pEsPrepaga = EsPrepaga, pActiva = Activa});
          }
     
     }

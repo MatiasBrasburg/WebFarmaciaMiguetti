@@ -1,0 +1,63 @@
+@model ErrorViewModel
+@{
+    ViewData["Title"] = "Error";
+}
+
+<style>
+    .error-container {
+        text-align: center;
+        padding: 50px 20px;
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    .icon-error {
+        font-size: 5rem;
+        color: #dc3545;
+        margin-bottom: 20px;
+    }
+    .text-error-main {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: #333;
+        margin-bottom: 20px;
+    }
+    .text-error-sub {
+        font-size: 1.5rem;
+        color: #555;
+        margin-bottom: 30px;
+    }
+    .card-tecnica {
+        background-color: #f8d7da;
+        border: 2px solid #dc3545;
+        color: #842029;
+        padding: 20px;
+        text-align: left;
+        margin-top: 30px;
+        border-radius: 10px;
+    }
+</style>
+
+<div class="container error-container">
+    <div class="icon-error">⚠️</div>
+    
+    <h1 class="text-error-main">OCURRIÓ UN PROBLEMA</h1>
+    
+    <p class="text-error-sub">
+        No se pudo completar la operación solicitada.<br>
+        Por favor, intente nuevamente o contacte al soporte técnico.
+    </p>
+
+    <a href="/" class="btn btn-primary btn-lg py-3 px-5 fs-4 fw-bold mt-3">
+        🏠 VOLVER AL INICIO
+    </a>
+
+    @if (Model.ShowRequestId)
+    {
+        <div class="card-tecnica">
+            <h4 class="fw-bold">🛠️ INFORMACIÓN TÉCNICA </h4>
+            <p class="mb-0 fs-5">
+                <strong>ID de Solicitud (Request ID):</strong> <code>@Model.RequestId</code>
+            </p>
+        </div>
+    }
+</div>
