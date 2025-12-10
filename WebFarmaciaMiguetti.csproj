@@ -13,9 +13,5 @@
     <PackageReference Include="NewtonSoft.Json" Version="13.0.4" />
     <PackageReference Include="Npgsql" Version="10.0.0" />
   </ItemGroup>
-<ItemGroup>
-  <Content Include="wwwroot\**">
-    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-  </Content>
-</ItemGroup>
+
 </Project>
