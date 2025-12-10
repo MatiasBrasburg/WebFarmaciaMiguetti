@@ -9,39 +9,30 @@ namespace WebFarmaciaMiguetti.Models;
 public static class BD
 {
     // Método CRÍTICO: Obtiene la conexión construyéndola a partir de variables separadas.
-   private static string GetConnectionString()
+   // Models/BD.cs
+
+// Método CRÍTICO: Obtiene la conexión construyéndola a partir de variables fijas.
+private static string GetConnectionString()
 {
-    // 1. Intenta leer las variables de entorno separadas (Las que Railway debe inyectar)
-    string host = Environment.GetEnvironmentVariable("PGHOST");
-    string port = Environment.GetEnvironmentVariable("PGPORT") ?? "5432"; // Usa 5432 si no se encuentra
-    string user = Environment.GetEnvironmentVariable("PGUSER");
-    string password = Environment.GetEnvironmentVariable("PGPASSWORD");
-    string database = Environment.GetEnvironmentVariable("PGDATABASE");
+    // === ¡ESTA ES LA CADENA DE CONEXIÓN FORZADA EN RAILWAY! ===
+    // Hemos eliminado la lógica de Environment.GetEnvironmentVariable
+    // para garantizar que la aplicación siempre use el host interno.
+
+    // Host=postgresql (nombre del servicio); Port=5432; Database=railway (nombre de la DB);
+    // User Id=postgres (usuario); Password=pGMLTKlSAGfOhdHOVLBPlvXpZSEeJgKL (tu contraseña literal)
     
-    // Si encontramos todos los componentes clave de la nube, construimos la cadena
-    if (!string.IsNullOrEmpty(host) && !string.IsNullOrEmpty(user) && !string.IsNullOrEmpty(password) && !string.IsNullOrEmpty(database))
-    {
-        // Cadena de conexión construida manualmente para mayor control
-        string connectionString = $"Host={host};Port={port};Database={database};Username={user};Password={password};Pooling=true;Timeout=15;";
-        
-        // <<< LÍNEA DE DEBUG CRÍTICA 1 >>>
-        Console.WriteLine($"DEBUG: Attempting Cloud DB connection with Host: {host}"); 
-        
-        return connectionString;
-    }
-
-    // 2. FALLBACK LOCAL (Causará error si no tienes Postgres local, pero asegura que en la nube NO caiga aquí)
-    // <<< LÍNEA DE DEBUG CRÍTICA 2 >>>
-    Console.WriteLine("DEBUG: Using Localhost Fallback (127.0.0.1:5432)"); 
-
-    return "Server=localhost;Port=5432;Database=FarmaciaNet;User Id=postgres;Password=tu_password_local;"; 
+    // **Si cambias de plataforma o cambias la contraseña en Railway,
+    // DEBES actualizar el valor de "Password" aquí.**
+    
+    return "Host=postgresql;Port=5432;Database=railway;Username=postgres;Password=pGMLTKlSAGfOhdHOVLBPlvXpZSEeJgKL;Pooling=true;Timeout=15;";
 }
 
-    // -- HELPER PARA OBTENER CONEXIÓN --
-    private static IDbConnection GetConnection()
-    {
-        return new NpgsqlConnection(GetConnectionString());
-    }
+// -- HELPER PARA OBTENER CONEXIÓN --
+private static IDbConnection GetConnection()
+{
+    return new NpgsqlConnection(GetConnectionString());
+}
+// ... (el resto del código sigue igual)
 
     // A partir de aquí, el resto de tus métodos son iguales y funcionales
     // (TraerMandatariaPorNombre, ModificarMandataria, etc. permanecen sin cambios)
