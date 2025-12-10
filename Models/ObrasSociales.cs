@@ -13,7 +13,8 @@ public class ObrasSociales
     
     [JsonProperty]
     public string Nombre { get; set; }
-
+ [JsonProperty]
+    public string NombreMandataria { get; set; }
   [JsonProperty]
     public int CodigoBonificacion { get; set; }
 

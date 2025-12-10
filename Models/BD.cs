@@ -114,13 +114,13 @@ private static string _connectionString = @"Server=.\SQLEXPRESS01;DataBase=Farma
          return ObjOS;
     }
 
-  public static void AgregarOS  ( int IdMandataria, string Nombre, bool? EsPrepaga, bool? Activa)
+  public static void AgregarOS  ( int IdMandataria, string Nombre, string NombreMandataria, bool? EsPrepaga, bool? Activa)
     {
      ObrasSociales ObjOS = null;
         using (SqlConnection connection = new SqlConnection(_connectionString))
                 {
-                    string query = "INSERT INTO ObrasSociales ( IdMandatarias, Nombre, EsPrepaga, Activa) VALUES (@pIdMandataria, @pNombre, @pEsPrepaga, @pActiva)"; 
-            connection.Execute(query, new {pIdMandataria = IdMandataria, pNombre = Nombre, pEsPrepaga = EsPrepaga, pActiva = Activa});
+                    string query = "INSERT INTO ObrasSociales ( IdMandatarias, Nombre, NombreMandataria, EsPrepaga, Activa) VALUES (@pIdMandataria, @pNombre, @pNombreMandataria, @pEsPrepaga, @pActiva)"; 
+            connection.Execute(query, new {pIdMandataria = IdMandataria, pNombre = Nombre, pNombreMandataria = NombreMandataria, pEsPrepaga = EsPrepaga, pActiva = Activa});
          }
     
     }

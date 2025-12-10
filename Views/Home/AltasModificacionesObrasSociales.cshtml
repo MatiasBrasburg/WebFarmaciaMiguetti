@@ -238,7 +238,7 @@
                         string nombreMandataria = "-";
                         int idMand = os.IdMandataria;
                         var objMand = listaMandatarias.FirstOrDefault(m => m.IdMandatarias == idMand);
-                        if(objMand != null) { nombreMandataria = objMand.RazonSocial; }
+                        if(objMand != null) { nombreMandataria = os.NombreMandataria; }
 
                         // JS Safe Strings
                         string nombreOsJs = System.Web.HttpUtility.JavaScriptStringEncode(os.Nombre);
