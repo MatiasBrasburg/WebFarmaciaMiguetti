@@ -137,16 +137,24 @@ private static string _connectionString = @"Server=.\SQLEXPRESS01;DataBase=Farma
     
     }
 
- public static void AgregarBonificaciones  (int IdOS, string? NombreCodigoBonificacion, int? CodigoBonificacion)
+ // Models/BD.cs
+
+public static void AgregarBonificaciones(int IdOS, string? NombreCodigoBonificacion, int? CodigoBonificacion)
+{
+    // No necesitamos crear una instancia de ObrasSociales aquí
+    using (SqlConnection connection = new SqlConnection(_connectionString))
     {
-     ObrasSociales ObjOS = null;
-        using (SqlConnection connection = new SqlConnection(_connectionString))
-                {
-                    string query = "INSERT INTO ObrasSociales (NombreCodigoBonificacion, CodigoBonificacion) VALUES (@pNombreCodigoBonificacion, @pCodigoBonificacion) where IdObrasSociales = @pIdOS"; 
-            connection.Execute(query, new {pNombreCodigoBonificacion = NombreCodigoBonificacion, pCodigoBonificacion = CodigoBonificacion, pIdOS = IdOS});
-         }
-    
+        // 🚨 CORRECCIÓN: Usamos UPDATE porque la Obra Social YA EXISTE.
+        // El INSERT intentaría crear una fila nueva, pero nosotros queremos modificar la fila del IdOS existente.
+        string query = "UPDATE ObrasSociales SET NombreCodigoBonificacion = @pNombreCodigoBonificacion, CodigoBonificacion = @pCodigoBonificacion WHERE IdObrasSociales = @pIdOS"; 
+        
+        connection.Execute(query, new { 
+            pNombreCodigoBonificacion = NombreCodigoBonificacion, 
+            pCodigoBonificacion = CodigoBonificacion, 
+            pIdOS = IdOS 
+        });
     }
+}
      public static void ModificarBonificaciones  (int IdOS, int? CodigoBonificacion, string? NombreCodigoBonificacion)
     {
      ObrasSociales ObjOS = null;

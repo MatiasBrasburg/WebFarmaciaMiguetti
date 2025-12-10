@@ -104,7 +104,7 @@ public IActionResult ABM_OS(int IdOS, string QueToco, int? IdMandatarias, string
 {
     
     bool valorEsPrepaga = EsPrepaga ?? false;
-    bool valorActiva = Activa ?? true; 
+    bool valorActiva = Activa ?? false; 
     int nuevoIdMandataria = 0;
     string nuevoNombreOS = "";
 
