@@ -114,13 +114,13 @@ private static string _connectionString = @"Server=.\SQLEXPRESS01;DataBase=Farma
          return ObjOS;
     }
 
-  public static void AgregarOS  (int IdOS, int IdMandataria, string Nombre, bool? EsPrepaga, bool? Activa)
+  public static void AgregarOS  ( int IdMandataria, string Nombre, bool? EsPrepaga, bool? Activa)
     {
      ObrasSociales ObjOS = null;
         using (SqlConnection connection = new SqlConnection(_connectionString))
                 {
-                    string query = "INSERT INTO ObrasSociales (IdObrasSociales, IdMandatarias, Nombre, EsPrepaga, Activa) VALUES (@pIdOS, @pIdMandataria, @pNombre, @pEsPrepaga, @pActiva)"; 
-            connection.Execute(query, new {pIdOS = IdOS, pIdMandataria = IdMandataria, pNombre = Nombre, pEsPrepaga = EsPrepaga, pActiva = Activa});
+                    string query = "INSERT INTO ObrasSociales ( IdMandatarias, Nombre, EsPrepaga, Activa) VALUES (@pIdMandataria, @pNombre, @pEsPrepaga, @pActiva)"; 
+            connection.Execute(query, new {pIdMandataria = IdMandataria, pNombre = Nombre, pEsPrepaga = EsPrepaga, pActiva = Activa});
          }
     
     }
@@ -137,13 +137,13 @@ private static string _connectionString = @"Server=.\SQLEXPRESS01;DataBase=Farma
     
     }
 
- public static void AgregarBonificaciones  (int IdOS, string NombreCodigoBonificacion, int? CodigoBonificacion)
+ public static void AgregarBonificaciones  (int IdOS, string? NombreCodigoBonificacion, int? CodigoBonificacion)
     {
      ObrasSociales ObjOS = null;
         using (SqlConnection connection = new SqlConnection(_connectionString))
                 {
-                    string query = "INSERT INTO ObrasSociales (IdObrasSociales, NombreCodigoBonificacion, CodigoBonificacion) VALUES (@pIdOS, @pNombreCodigoBonificacion, @pCodigoBonificacion)"; 
-            connection.Execute(query, new {pIdOS = IdOS, pNombreCodigoBonificacion = NombreCodigoBonificacion, pCodigoBonificacion = CodigoBonificacion});
+                    string query = "INSERT INTO ObrasSociales (NombreCodigoBonificacion, CodigoBonificacion) VALUES (@pNombreCodigoBonificacion, @pCodigoBonificacion) where IdObrasSociales = @pIdOS"; 
+            connection.Execute(query, new {pNombreCodigoBonificacion = NombreCodigoBonificacion, pCodigoBonificacion = CodigoBonificacion, pIdOS = IdOS});
          }
     
     }

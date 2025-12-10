@@ -157,7 +157,7 @@ public IActionResult ABM_OS(int IdOS, string QueToco, int? IdMandatarias, string
             if (mandataria != null)
             {
                 // Aquí usamos mandataria.IdMandatarias SOLO si estamos seguros que no es null
-                BD.AgregarOS(IdOS, mandataria.IdMandatarias, nombre, valorEsPrepaga, valorActiva);
+                BD.AgregarOS( mandataria.IdMandatarias, nombre, valorEsPrepaga, valorActiva);
             }
             else
             {
