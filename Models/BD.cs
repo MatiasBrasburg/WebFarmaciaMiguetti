@@ -23,7 +23,8 @@ private static string GetConnectionString()
     string database = Environment.GetEnvironmentVariable("PGDATABASE");
 
     // Construimos la cadena dinámicamente
-    return $"Host={host};Port={port};Database={database};Username={user};Password={password};Pooling=true;Timeout=15;";
+  // Nuevo return con SSL activado:
+return $"Host={host};Port={port};Database={database};Username={user};Password={password};Pooling=true;Timeout=15;SSL Mode=Require;Trust Server Certificate=true;";
 }
 
 // -- HELPER PARA OBTENER CONEXIÓN --
