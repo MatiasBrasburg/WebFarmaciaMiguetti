@@ -12,19 +12,18 @@ public static class BD
    // Models/BD.cs
 
 // Método CRÍTICO: Obtiene la conexión construyéndola a partir de variables fijas.
+// Models/BD.cs
 private static string GetConnectionString()
 {
-    // === ¡ESTA ES LA CADENA DE CONEXIÓN FORZADA EN RAILWAY! ===
-    // Hemos eliminado la lógica de Environment.GetEnvironmentVariable
-    // para garantizar que la aplicación siempre use el host interno.
+    // Leemos las variables que Railway nos inyecta gracias al "hilo"
+    string host = Environment.GetEnvironmentVariable("PGHOST");
+    string port = Environment.GetEnvironmentVariable("PGPORT");
+    string user = Environment.GetEnvironmentVariable("PGUSER");
+    string password = Environment.GetEnvironmentVariable("PGPASSWORD");
+    string database = Environment.GetEnvironmentVariable("PGDATABASE");
 
-    // Host=postgresql (nombre del servicio); Port=5432; Database=railway (nombre de la DB);
-    // User Id=postgres (usuario); Password=pGMLTKlSAGfOhdHOVLBPlvXpZSEeJgKL (tu contraseña literal)
-    
-    // **Si cambias de plataforma o cambias la contraseña en Railway,
-    // DEBES actualizar el valor de "Password" aquí.**
-    
-    return "Host=postgresql;Port=5432;Database=railway;Username=postgres;Password=pGMLTKlSAGfOhdHOVLBPlvXpZSEeJgKL;Pooling=true;Timeout=15;";
+    // Construimos la cadena dinámicamente
+    return $"Host={host};Port={port};Database={database};Username={user};Password={password};Pooling=true;Timeout=15;";
 }
 
 // -- HELPER PARA OBTENER CONEXIÓN --
