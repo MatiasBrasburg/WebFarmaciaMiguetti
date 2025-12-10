@@ -14,7 +14,7 @@ builder.Services.AddControllersWithViews();
 
 // ====================================================================
 // ✅ AGREGADO POR EL ARQUITECTO:
-// Esto habilita la inyección de IHttpContextAccessor en el Layout
+// Esto habilita la inyección de IHttpContextAccessor en el Layouta
 // para poder leer la URL y poner los títulos bonitos.
 builder.Services.AddHttpContextAccessor();
 // ====================================================================
@@ -22,11 +22,11 @@ builder.Services.AddHttpContextAccessor();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (!app.Environment.IsDevelopment())
-{
-    app.UseExceptionHandler("/Home/Error");
-    app.UseHsts();
-}
+// 🚨 CAMBIO TEMPORAL PARA VER EL ERROR REAL EN RAILWAY:
+// Al sacar el "if", forzamos a que muestre el error completo,
+// lo cual es CLAVE para el diagnóstico del HTTP 500.
+app.UseDeveloperExceptionPage(); 
+// 🚨 FIN DEL CAMBIO TEMPORAL
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
