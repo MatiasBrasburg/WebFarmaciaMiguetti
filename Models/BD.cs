@@ -8,24 +8,28 @@ namespace WebFarmaciaMiguetti.Models;
 
 public static class BD
 {
-    // Esta función decide inteligentemente qué conexión usar
+    // Método CRÍTICO: Obtiene la conexión.
+    // PRIORIZA SIEMPRE la variable de entorno de Railway (DATABASE_URL).
     private static string GetConnectionString()
     {
         // 1. Intenta leer la variable de entorno de Railway
         string connectionString = Environment.GetEnvironmentVariable("DATABASE_URL");
 
-        // 2. Si no existe (estás en tu PC), usa tu conexión local (aunque idealmente deberías instalar Postgres local también)
-        if (string.IsNullOrEmpty(connectionString))
+        // 2. Si la conexión de Railway NO está vacía, la usa.
+        if (!string.IsNullOrEmpty(connectionString))
         {
-            // OJO: Si vas a probar en local, necesitarás un Postgres local o cambiar esto temporalmente.
-            return "Server=localhost;Port=5432;Database=FarmaciaNet;User Id=postgres;Password=tu_password_local;"; 
+            // FOUND RAILWAY URL: Retorna la URL de la nube.
+            return connectionString;
         }
-
-        return connectionString;
+        
+        // 3. FALLBACK LOCAL: Esta conexión SOLO se usa si no se encuentra la variable de Railway.
+        // Si tu aplicación en la nube cae en este bloque, es porque la variable no se inyectó.
+        // En tu PC, causará el error 'localhost:5432 refused' si no tienes Postgres local.
+        return "Server=localhost;Port=5432;Database=FarmaciaNet;User Id=postgres;Password=tu_password_local;"; 
     }
 
     // -- HELPER PARA OBTENER CONEXIÓN --
-    // Usamos NpgsqlConnection en lugar de SqlConnection
+    // Usamos NpgsqlConnection para hablar con PostgreSQL
     private static IDbConnection GetConnection()
     {
         return new NpgsqlConnection(GetConnectionString());
@@ -63,7 +67,6 @@ public static class BD
     {
         using (var connection = GetConnection())
         {
-            // En Postgres, para insertar y devolver ID a veces cambia, pero el INSERT simple funciona igual
             string query = "INSERT INTO Mandatarias (RazonSocial, Cuit, Descripcion, Direccion) VALUES (@pNuevoNombre, @pCuit, @pDescripcion, @pDireccion)";
             connection.Execute(query, new { pNuevoNombre = nuevoNombre, pCuit = Cuit, pDescripcion = Descripcion, pDireccion = Direccion });
         }
