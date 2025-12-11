@@ -262,7 +262,71 @@ public static void InsertarPlan(PlanBonificacion plan)
     }
 
 
+public static int InsertarLiquidacionCabecera(Liquidaciones liq)
+{
+    using (SqlConnection connection = new SqlConnection(_connectionString))
+    {
+        // Usamos SCOPE_IDENTITY() para recuperar el ID autogenerado
+        string query = @"
+            INSERT INTO Liquidaciones (IdMandatarias, FechaPresentacion, TotalPresentado, Observaciones, Estado, Periodo) 
+            VALUES (@IdMandatarias, @FechaPresentacion, @TotalPresentado, @Observaciones, 'PRESENTADA', @Periodo);
+            SELECT CAST(SCOPE_IDENTITY() as int);";
+        
+        return connection.QuerySingle<int>(query, liq);
+    }
+}
 
+// 2. INSERTAR DETALLE
+public static void InsertarLiquidacionDetalle(int idLiquidacion, int idOS, int idPlan, int recetas, decimal bruto, decimal cargoOS, decimal bonificacion)
+{
+    using (SqlConnection connection = new SqlConnection(_connectionString))
+    {
+        string query = @"
+            INSERT INTO LiquidacionesDetalles (IdLiquidacion, IdObraSocial, IdPlan, CantidadRecetas, TotalBruto, MontoCargoOS, MontoBonificacion)
+            VALUES (@pIdLiq, @pIdOS, @pIdPlan, @pRecetas, @pBruto, @pCargoOS, @pBoni)";
+
+        connection.Execute(query, new { 
+            pIdLiq = idLiquidacion, 
+            pIdOS = idOS, 
+            pIdPlan = idPlan,
+            pRecetas = recetas,
+            pBruto = bruto,
+            pCargoOS = cargoOS,
+            pBoni = bonificacion
+        });
+    }
+}
+
+// 3. BUSCAR CON FILTROS (MANDATARIA, FECHAS, ID)
+public static List<Liquidaciones> BuscarLiquidaciones(int? idLiq, DateTime? desde, DateTime? hasta, int? idMandataria)
+{
+    using (SqlConnection connection = new SqlConnection(_connectionString))
+    {
+        // Construcción dinámica de la query (básica pero segura)
+        string query = "SELECT * FROM Liquidaciones WHERE 1=1 ";
+        
+        if (idLiq.HasValue && idLiq.Value > 0)
+            query += " AND IdLiquidaciones = @pIdLiq";
+        
+        if (desde.HasValue)
+            query += " AND FechaPresentacion >= @pDesde";
+            
+        if (hasta.HasValue)
+            query += " AND FechaPresentacion <= @pHasta";
+            
+        if (idMandataria.HasValue && idMandataria.Value > 0)
+            query += " AND IdMandatarias = @pIdMand";
+
+        query += " ORDER BY FechaPresentacion DESC";
+
+        return connection.Query<Liquidaciones>(query, new { 
+            pIdLiq = idLiq, 
+            pDesde = desde, 
+            pHasta = hasta, 
+            pIdMand = idMandataria 
+        }).ToList();
+    }
+}
 
 
 

@@ -264,106 +264,97 @@ public class HomeController : Controller
     }
 
 
-  // =========================================================================
-    // FUNCIÓN ÚNICA PARA GESTIÓN DE LIQUIDACIONES (Show, Guardar, Eliminar)
-    // =========================================================================
+  [HttpPost]
     public IActionResult MostrarModificaciones(
         string QueToco, 
         int? IdLiquidacion, 
-        int? IdMandataria, 
+        int? IdMandatarias, 
         DateTime? Fecha, 
         string? Observaciones, 
-        string? DetallesJson // <--- Aquí llega la lista de Obras Sociales convertida en texto
+        string? DetallesJson 
     )
     {
         try 
         {
-            // -----------------------------------------------------------------
-            // CASO 1: GUARDAR (Alta o Edición) - Recibe JSON y guarda todo
-            // -----------------------------------------------------------------
             if (QueToco == "Guardar")
             {
-                // 1. Validaciones básicas
-                if (IdMandataria == null || IdMandataria == 0) 
+                // 1. Validaciones
+                if (IdMandatarias == null || IdMandatarias == 0) 
                     return Json(new { success = false, message = "Debe seleccionar una Mandataria." });
 
                 if (string.IsNullOrEmpty(DetallesJson) || DetallesJson == "[]")
-                    return Json(new { success = false, message = "La liquidación debe tener al menos una Obra Social." });
+                    return Json(new { success = false, message = "La liquidación está vacía." });
 
-                // 2. Deserializar el JSON (Convertir texto a Objetos C#)
+                // 2. Deserializar
                 var opciones = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                List<LiquidacionDetalleDTO> listaDetalles;
-                
+                List<LiquidacionesDetalle> listaDetalles;
                 try {
-                    listaDetalles = JsonSerializer.Deserialize<List<LiquidacionDetalleDTO>>(DetallesJson, opciones);
+                    listaDetalles = System.Text.Json.JsonSerializer.Deserialize<List<LiquidacionesDetalle>>(DetallesJson, opciones);
                 } catch {
-                    return Json(new { success = false, message = "Error al leer los detalles de la liquidación." });
+                    return Json(new { success = false, message = "Error leyendo los detalles JSON." });
                 }
 
-                // 3. Llamar a la Base de Datos (Lógica pendiente en BD.cs)
-                // Aquí deberías tener un método como: BD.GuardarLiquidacion(IdLiquidacion, IdMandataria, Fecha, Observaciones, listaDetalles);
-                
-                // --- SIMULACIÓN DE GUARDADO (Para que pruebes la vista) ---
-                // TODO: Reemplazar esto por tu llamada real a BD.cs
-                bool guardadoExitoso = true; 
+                // 3. Calcular Total General Sumando los detalles
+                decimal totalPresentacion = listaDetalles.Sum(x => x.TotalBruto); // O MontoBonificacion, depende tu regla
 
-                if (guardadoExitoso)
+                // 4. Crear Objeto Cabecera
+                Liquidaciones nuevaLiq = new Liquidaciones
                 {
-                    return Json(new { success = true, message = "¡Presentación guardada correctamente!" });
-                }
-                else
-                {
-                    return StatusCode(500, new { success = false, message = "Error en Base de Datos." });
-                }
-            }
+                    IdMandatarias = IdMandatarias.Value,
+                    FechaPresentacion = Fecha ?? DateTime.Now,
+                    Observaciones = Observaciones,
+                    TotalPresentado = totalPresentacion,
+                    Periodo = (Fecha ?? DateTime.Now).ToString("MM-yyyy")
+                };
 
-            // -----------------------------------------------------------------
-            // CASO 2: ELIMINAR UNA LIQUIDACIÓN ENTERA
-            // -----------------------------------------------------------------
-            else if (QueToco == "Eliminar")
-            {
-                if (IdLiquidacion > 0)
-                {
-                    // TODO: Implementar BD.EliminarLiquidacion(IdLiquidacion.Value);
-                    return Json(new { success = true, message = "Liquidación eliminada." });
-                }
-                return Json(new { success = false, message = "ID de liquidación inválido." });
-            }
+                // 5. GUARDAR EN BD (AQUÍ ESTÁ LA MAGIA QUE FALTABA)
+                // A) Guardamos cabecera y obtenemos ID
+                int nuevoId = BD.InsertarLiquidacionCabecera(nuevaLiq);
 
-            // -----------------------------------------------------------------
-            // CASO 3 (Default): CARGAR LA VISTA INICIAL (Buscadores y Filtros)
-            // -----------------------------------------------------------------
-            else 
-            {
-                // Cargar las listas para los combos (Selects)
-                ViewBag.Mandatarias = BD.TraerListaMandatarias();
-                ViewBag.ObrasSociales = BD.TraerListaOS();
-                
-                return View("MostrarModificaciones");
+                // B) Guardamos cada detalle vinculado a ese ID
+                foreach (var item in listaDetalles)
+                {
+                    BD.InsertarLiquidacionDetalle(
+                        nuevoId, 
+                        item.IdObrasSociales, 
+                        item.IdPlanBonificacion, 
+                        item.CantidadRecetas, 
+                        item.TotalBruto, 
+                        item.MontoCargoOS, 
+                        item.MontoBonificacion
+                    );
+                }
+
+                return Json(new { success = true, message = $"¡Liquidación N° {nuevoId} guardada correctamente!" });
             }
+            // Eliminar y otros casos... (Implementar similar llamando a BD)
+            return Json(new { success = false, message = "Acción no reconocida." });
         }
         catch (Exception ex)
         {
-            // Captura cualquier error fatal y avisa al frontend
-            _logger.LogError(ex, "Error en MostrarModificaciones");
-            return Json(new { success = false, message = "Error interno del servidor: " + ex.Message });
+            _logger.LogError(ex, "Error guardando liquidación");
+            return Json(new { success = false, message = "Error grave: " + ex.Message });
         }
     }
 
     // =========================================================================
-    // CLASES AUXILIARES (DTO) - Pégalas dentro de la clase HomeController 
-    // o al final del archivo (fuera de la clase pero dentro del namespace)
+    // NUEVO: ENDPOINT PARA BUSCAR (AJAX)
     // =========================================================================
-    
-    public class LiquidacionDetalleDTO
+    [HttpGet]
+    public IActionResult BuscarLiquidacionesAjax(int? id, DateTime? desde, DateTime? hasta, int? mandataria)
     {
-        // Estos nombres deben coincidir con lo que enviamos en el JSON del Javascript
-        public int IdObraSocial { get; set; }
-        public int IdPlan { get; set; }
-        public int CantidadRecetas { get; set; }
-        public decimal TotalBruto { get; set; } 
-        public decimal MontoCargoOS { get; set; } 
-        public decimal MontoBonificacion { get; set; } // El Neto calculado
+        try
+        {
+            // Llamamos al nuevo método de BD
+            var lista = BD.BuscarLiquidaciones(id, desde, hasta, mandataria);
+            
+            // Retornamos JSON para que JS dibuje la tabla
+            return Json(new { success = true, data = lista });
+        }
+        catch (Exception ex)
+        {
+             return StatusCode(500, new { success = false, message = ex.Message });
+        }
     }
 
 

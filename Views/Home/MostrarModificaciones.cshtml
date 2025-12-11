@@ -488,16 +488,60 @@
         modalABM.show();
     }
 
-    function buscarLiquidaciones() {
-        // Aquí iría la lógica para llamar a MostrarModificaciones con QueToco="Buscar"
-        // y llenar la tabla de resultados. Por ahora es un placeholder.
+    async function buscarLiquidaciones() {
+        const id = document.getElementById('filtroId').value;
+        const desde = document.getElementById('filtroFechaDesde').value;
+        const hasta = document.getElementById('filtroFechaHasta').value;
+        const mand = document.getElementById('filtroMandataria').value;
+
         const tbody = document.getElementById('tbodyResultados');
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center p-3 text-primary"><div class="spinner-border"></div> Buscando...</td></tr>';
-        
-        // Simulación:
-        setTimeout(() => {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center p-3 text-muted">Funcionalidad de búsqueda pendiente de conexión con BD.</td></tr>';
-        }, 1000);
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center p-3"><div class="spinner-border text-primary"></div> Buscando datos...</td></tr>';
+
+        // Construimos la URL con parámetros query string
+        const url = `@Url.Action("BuscarLiquidacionesAjax", "Home")?id=${id}&desde=${desde}&hasta=${hasta}&mandataria=${mand}`;
+
+        try {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error("Error de red");
+            
+            const resultado = await response.json();
+
+            if (resultado.success && resultado.data.length > 0) {
+                tbody.innerHTML = ''; // Limpiar
+                
+                // Dibujar cada fila
+                resultado.data.forEach(liq => {
+                    // Formatear fecha bonita
+                    const fechaObj = new Date(liq.fechaPresentacion);
+                    const fechaStr = fechaObj.toLocaleDateString('es-AR');
+                    
+                    const fila = `
+                        <tr>
+                            <td class="fw-bold fs-5">${liq.idLiquidaciones}</td>
+                            <td>${fechaStr}</td>
+                            <td>${liq.idMandataria} (Ver Nombre Pendiente)</td> 
+                            <td>${liq.observaciones || '-'}</td>
+                            <td>
+                                <button class="btn btn-info btn-sm">👁️ VER</button>
+                                <button class="btn btn-danger btn-sm">🗑️</button>
+                            </td>
+                        </tr>
+                    `;
+                    tbody.innerHTML += fila;
+                });
+            } else {
+                 tbody.innerHTML = '<tr><td colspan="5" class="text-center p-4 text-muted fw-bold">No se encontraron liquidaciones con esos filtros.</td></tr>';
+            }
+
+        } catch (error) {
+            console.error(error);
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger fw-bold">❌ Error al buscar datos. Intente de nuevo.</td></tr>';
+        }
     }
+    
+    // TRUCO DE UX: Ejecutar búsqueda automática al cargar la página para que no se vea vacía
+    document.addEventListener("DOMContentLoaded", () => {
+        buscarLiquidaciones(); 
+    });
 </script>
 }

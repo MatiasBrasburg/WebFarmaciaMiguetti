@@ -12,7 +12,7 @@ namespace WebFarmaciaMiguetti.Models
         public int IdLiquidaciones { get; set; }
 
    [JsonProperty]
-        public int IdMandataria { get; set; }
+        public int IdMandatarias { get; set; }
 
            [JsonProperty]
         [DataType(DataType.Date)]
