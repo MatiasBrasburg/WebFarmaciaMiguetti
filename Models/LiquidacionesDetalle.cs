@@ -1,30 +1,40 @@
 using Newtonsoft.Json;
-namespace WebFarmaciaMiguetti.Models;
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-public class LiquidacionesDetalle
+
+namespace WebFarmaciaMiguetti.Models
 {
-    [JsonProperty]
-    public int IdLiquidacionesDetalle { get; private set; }
-
-    [JsonProperty]
-    public int IdLiquidaciones { get; private set; }
-
-    [JsonProperty]
-    public int IdFacturaCabecera { get; set; }
-    
-  
-    
-
-        [JsonProperty]
-        [Required]
-        [Column(TypeName = "decimal(18,2)")] // <--- OBLIGATORIO PARA SQL
-        [DataType(DataType.Currency)] // Para que se vea con el signo $ en la vista
-    public decimal ImporteReclamado { get; set; }
-
-    
-    public LiquidacionesDetalle()
+    public class LiquidacionesDetalle
     {
-        
+        [Key]
+            [JsonProperty]
+        public int IdLiquidacionDetalle { get; set; }
+
+            [JsonProperty]
+        public int IdLiquidaciones { get; set; } 
+
+        // Columnas de Relación
+            [JsonProperty]
+        public int IdObrasSociales { get; set; }
+            [JsonProperty]
+        public int IdPlanBonificacion { get; set; } 
+    [JsonProperty]
+        public int CantidadRecetas { get; set; }
+    [JsonProperty]
+        // Columnas de Importes (Con formato Moneda)
+        [Column(TypeName = "decimal(18, 2)")]
+        [DataType(DataType.Currency)] // ✅ RESTAURADO
+        public decimal TotalBruto { get; set; } 
+    [JsonProperty]
+        [Column(TypeName = "decimal(18, 2)")]
+        [DataType(DataType.Currency)] // ✅ RESTAURADO
+        public decimal MontoCargoOS { get; set; }
+    [JsonProperty]
+        [Column(TypeName = "decimal(18, 2)")]
+        [DataType(DataType.Currency)] // ✅ RESTAURADO
+        public decimal MontoBonificacion { get; set; } // (Neto)
+
+        public LiquidacionesDetalle() { }
     }
 }

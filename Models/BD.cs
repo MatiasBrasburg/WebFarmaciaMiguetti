@@ -249,6 +249,20 @@ public static void InsertarPlan(PlanBonificacion plan)
 
 
 
+//-- Codigo Liquidaciones --///
+      public static List<Liquidaciones> TraerListaLiquidacionesCompleta()
+    {
+        List<Liquidaciones> ListLiquidaciones = new List<Liquidaciones>();
+        using (SqlConnection connection = new SqlConnection(_connectionString))
+        {
+            string query = "SELECT * FROM Liquidaciones";
+            ListLiquidaciones = connection.Query<Liquidaciones>(query).ToList();
+        }
+        return ListLiquidaciones;
+    }
+
+
+
 
 
 

@@ -6,6 +6,7 @@ using System;
 using System.Text.Json;
 using System.Collections.Generic;
 using System.Linq; 
+using System.Text.Json; // <--- OBLIGATORIO PARA LEER EL JSON
 
 namespace WebFarmaciaMiguetti.Controllers;
 
@@ -254,11 +255,116 @@ public class HomeController : Controller
 
 
 
+    public IActionResult IrAMostrarModificaciones()
+    {
+        ViewBag.Mandatarias = BD.TraerListaMandatarias();
+        ViewBag.ObrasSociales = BD.TraerListaOS();
+        ViewBag.ListaLiquidaciones = BD.TraerListaLiquidacionesCompleta();
+        return View("MostrarModificaciones");
+    }
 
 
+  // =========================================================================
+    // FUNCIÓN ÚNICA PARA GESTIÓN DE LIQUIDACIONES (Show, Guardar, Eliminar)
+    // =========================================================================
+    public IActionResult MostrarModificaciones(
+        string QueToco, 
+        int? IdLiquidacion, 
+        int? IdMandataria, 
+        DateTime? Fecha, 
+        string? Observaciones, 
+        string? DetallesJson // <--- Aquí llega la lista de Obras Sociales convertida en texto
+    )
+    {
+        try 
+        {
+            // -----------------------------------------------------------------
+            // CASO 1: GUARDAR (Alta o Edición) - Recibe JSON y guarda todo
+            // -----------------------------------------------------------------
+            if (QueToco == "Guardar")
+            {
+                // 1. Validaciones básicas
+                if (IdMandataria == null || IdMandataria == 0) 
+                    return Json(new { success = false, message = "Debe seleccionar una Mandataria." });
 
+                if (string.IsNullOrEmpty(DetallesJson) || DetallesJson == "[]")
+                    return Json(new { success = false, message = "La liquidación debe tener al menos una Obra Social." });
 
+                // 2. Deserializar el JSON (Convertir texto a Objetos C#)
+                var opciones = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                List<LiquidacionDetalleDTO> listaDetalles;
+                
+                try {
+                    listaDetalles = JsonSerializer.Deserialize<List<LiquidacionDetalleDTO>>(DetallesJson, opciones);
+                } catch {
+                    return Json(new { success = false, message = "Error al leer los detalles de la liquidación." });
+                }
 
+                // 3. Llamar a la Base de Datos (Lógica pendiente en BD.cs)
+                // Aquí deberías tener un método como: BD.GuardarLiquidacion(IdLiquidacion, IdMandataria, Fecha, Observaciones, listaDetalles);
+                
+                // --- SIMULACIÓN DE GUARDADO (Para que pruebes la vista) ---
+                // TODO: Reemplazar esto por tu llamada real a BD.cs
+                bool guardadoExitoso = true; 
+
+                if (guardadoExitoso)
+                {
+                    return Json(new { success = true, message = "¡Presentación guardada correctamente!" });
+                }
+                else
+                {
+                    return StatusCode(500, new { success = false, message = "Error en Base de Datos." });
+                }
+            }
+
+            // -----------------------------------------------------------------
+            // CASO 2: ELIMINAR UNA LIQUIDACIÓN ENTERA
+            // -----------------------------------------------------------------
+            else if (QueToco == "Eliminar")
+            {
+                if (IdLiquidacion > 0)
+                {
+                    // TODO: Implementar BD.EliminarLiquidacion(IdLiquidacion.Value);
+                    return Json(new { success = true, message = "Liquidación eliminada." });
+                }
+                return Json(new { success = false, message = "ID de liquidación inválido." });
+            }
+
+            // -----------------------------------------------------------------
+            // CASO 3 (Default): CARGAR LA VISTA INICIAL (Buscadores y Filtros)
+            // -----------------------------------------------------------------
+            else 
+            {
+                // Cargar las listas para los combos (Selects)
+                ViewBag.Mandatarias = BD.TraerListaMandatarias();
+                ViewBag.ObrasSociales = BD.TraerListaOS();
+                
+                return View("MostrarModificaciones");
+            }
+        }
+        catch (Exception ex)
+        {
+            // Captura cualquier error fatal y avisa al frontend
+            _logger.LogError(ex, "Error en MostrarModificaciones");
+            return Json(new { success = false, message = "Error interno del servidor: " + ex.Message });
+        }
+    }
+
+    // =========================================================================
+    // CLASES AUXILIARES (DTO) - Pégalas dentro de la clase HomeController 
+    // o al final del archivo (fuera de la clase pero dentro del namespace)
+    // =========================================================================
+    
+    public class LiquidacionDetalleDTO
+    {
+        // Estos nombres deben coincidir con lo que enviamos en el JSON del Javascript
+        public int IdObraSocial { get; set; }
+        public int IdPlan { get; set; }
+        public int CantidadRecetas { get; set; }
+        public decimal TotalBruto { get; set; } 
+        public decimal MontoCargoOS { get; set; } 
+        public decimal MontoBonificacion { get; set; } // El Neto calculado
+    }
 
 
 
