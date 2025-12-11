@@ -264,7 +264,10 @@ public class HomeController : Controller
     }
 
 
-  [HttpPost]
+  // =========================================================================
+    // ACCIÓN PRINCIPAL: GUARDAR Y ELIMINAR (Fusionado)
+    // =========================================================================
+    [HttpPost]
     public IActionResult MostrarModificaciones(
         string QueToco, 
         int? IdLiquidacion, 
@@ -276,6 +279,9 @@ public class HomeController : Controller
     {
         try 
         {
+            // -----------------------------------------------------------------
+            // CASO 1: GUARDAR (TU CÓDIGO ORIGINAL - RESPETADO AL 100%)
+            // -----------------------------------------------------------------
             if (QueToco == "Guardar")
             {
                 // 1. Validaciones
@@ -287,15 +293,15 @@ public class HomeController : Controller
 
                 // 2. Deserializar
                 var opciones = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                List<LiquidacionesDetalle> listaDetalles;
+                List<LiquidacionDetalle> listaDetalles; // Ojo: Uso tu clase en singular
                 try {
-                    listaDetalles = System.Text.Json.JsonSerializer.Deserialize<List<LiquidacionesDetalle>>(DetallesJson, opciones);
+                    listaDetalles = System.Text.Json.JsonSerializer.Deserialize<List<LiquidacionDetalle>>(DetallesJson, opciones);
                 } catch {
                     return Json(new { success = false, message = "Error leyendo los detalles JSON." });
                 }
 
-                // 3. Calcular Total General Sumando los detalles
-                decimal totalPresentacion = listaDetalles.Sum(x => x.TotalBruto); // O MontoBonificacion, depende tu regla
+                // 3. Calcular Total General
+                decimal totalPresentacion = listaDetalles.Sum(x => x.TotalBruto); 
 
                 // 4. Crear Objeto Cabecera
                 Liquidaciones nuevaLiq = new Liquidaciones
@@ -307,11 +313,10 @@ public class HomeController : Controller
                     Periodo = (Fecha ?? DateTime.Now).ToString("MM-yyyy")
                 };
 
-                // 5. GUARDAR EN BD (AQUÍ ESTÁ LA MAGIA QUE FALTABA)
-                // A) Guardamos cabecera y obtenemos ID
+                // 5. GUARDAR EN BD
                 int nuevoId = BD.InsertarLiquidacionCabecera(nuevaLiq);
 
-                // B) Guardamos cada detalle vinculado a ese ID
+                // B) Guardamos cada detalle
                 foreach (var item in listaDetalles)
                 {
                     BD.InsertarLiquidacionDetalle(
@@ -327,16 +332,50 @@ public class HomeController : Controller
 
                 return Json(new { success = true, message = $"¡Liquidación N° {nuevoId} guardada correctamente!" });
             }
-            // Eliminar y otros casos... (Implementar similar llamando a BD)
+            
+            // -----------------------------------------------------------------
+            // CASO 2: ELIMINAR (LA PARTE NUEVA QUE NECESITABAS)
+            // -----------------------------------------------------------------
+            else if (QueToco == "Eliminar")
+            {
+                if (IdLiquidacion.HasValue && IdLiquidacion.Value > 0)
+                {
+                    // Llamamos a la BD para borrar hijos y padre
+                    BD.EliminarLiquidacion(IdLiquidacion.Value);
+                    return Json(new { success = true, message = "Liquidación eliminada correctamente." });
+                }
+                else
+                {
+                    return Json(new { success = false, message = "ID inválido para eliminar." });
+                }
+            }
+
             return Json(new { success = false, message = "Acción no reconocida." });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error guardando liquidación");
+            _logger.LogError(ex, "Error en Gestión Liquidaciones");
             return Json(new { success = false, message = "Error grave: " + ex.Message });
         }
     }
 
+    // =========================================================================
+    // NUEVO ENDPOINT PARA "VER" (El JS lo llama para llenar el modal)
+    // =========================================================================
+    [HttpGet]
+    public IActionResult ObtenerDetallesDeLiquidacion(int idLiquidacion)
+    {
+        try
+        {
+            // Busca todos los items de esa liquidación
+            List<LiquidacionDetalle> detalles = BD.TraerDetallesPorIdLiquidacion(idLiquidacion);
+            return Json(new { success = true, data = detalles });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { success = false, message = ex.Message });
+        }
+    }
     // =========================================================================
     // NUEVO: ENDPOINT PARA BUSCAR (AJAX)
     // =========================================================================

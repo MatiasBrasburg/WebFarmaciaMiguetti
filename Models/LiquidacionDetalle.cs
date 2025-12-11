@@ -5,7 +5,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace WebFarmaciaMiguetti.Models
 {
-    public class LiquidacionesDetalle
+    public class LiquidacionDetalle
     {
         [Key]
             [JsonProperty]
@@ -14,7 +14,7 @@ namespace WebFarmaciaMiguetti.Models
             [JsonProperty]
         public int IdLiquidaciones { get; set; } 
 
-        // Columnas de Relación
+        
             [JsonProperty]
         public int IdObrasSociales { get; set; }
             [JsonProperty]
@@ -35,6 +35,6 @@ namespace WebFarmaciaMiguetti.Models
         [DataType(DataType.Currency)] // ✅ RESTAURADO
         public decimal MontoBonificacion { get; set; } // (Neto)
 
-        public LiquidacionesDetalle() { }
+        public LiquidacionDetalle() { }
     }
 }

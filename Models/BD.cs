@@ -250,6 +250,7 @@ public static void InsertarPlan(PlanBonificacion plan)
 
 
 //-- Codigo Liquidaciones --///
+
       public static List<Liquidaciones> TraerListaLiquidacionesCompleta()
     {
         List<Liquidaciones> ListLiquidaciones = new List<Liquidaciones>();
@@ -277,12 +278,14 @@ public static int InsertarLiquidacionCabecera(Liquidaciones liq)
 }
 
 // 2. INSERTAR DETALLE
+// 2. INSERTAR DETALLE (CORREGIDO: Tabla en Singular)
 public static void InsertarLiquidacionDetalle(int idLiquidacion, int idOS, int idPlan, int recetas, decimal bruto, decimal cargoOS, decimal bonificacion)
 {
     using (SqlConnection connection = new SqlConnection(_connectionString))
     {
+        // CORRECCIÓN: Quitamos la 's' final -> LiquidacionDetalle
         string query = @"
-            INSERT INTO LiquidacionesDetalles (IdLiquidacion, IdObraSocial, IdPlan, CantidadRecetas, TotalBruto, MontoCargoOS, MontoBonificacion)
+            INSERT INTO LiquidacionDetalle (IdLiquidacion, IdObrasSociales, IdPlanBonificacion, CantidadRecetas, TotalBruto, MontoCargoOS, MontoBonificacion)
             VALUES (@pIdLiq, @pIdOS, @pIdPlan, @pRecetas, @pBruto, @pCargoOS, @pBoni)";
 
         connection.Execute(query, new { 
@@ -327,6 +330,55 @@ public static List<Liquidaciones> BuscarLiquidaciones(int? idLiq, DateTime? desd
         }).ToList();
     }
 }
+
+
+      // EN Models/BD.cs
+
+// 1. PARA VER: Trae TODA la lista de items de una liquidación
+// EN Models/BD.cs
+
+// A. PARA EL BOTÓN VER (Trae la lista entera)
+public static List<LiquidacionDetalle> TraerDetallesPorIdLiquidacion(int idLiquidacion)
+{
+    using (SqlConnection connection = new SqlConnection(_connectionString))
+    {
+        // Traemos todos los detalles que pertenezcan a esa Liquidacion (FK)
+        string query = "SELECT * FROM LiquidacionDetalle WHERE IdLiquidaciones = @pIdLiq";
+        return connection.Query<LiquidacionDetalle>(query, new { pIdLiq = idLiquidacion }).ToList();
+    }
+}
+
+// B. PARA EL BOTÓN ELIMINAR (Borra todo en orden)
+public static void EliminarLiquidacion(int idLiquidacion)
+{
+    using (SqlConnection connection = new SqlConnection(_connectionString))
+    {
+        connection.Open();
+        // Usamos transacción para asegurar que no quede basura si algo falla
+        using (var transaction = connection.BeginTransaction())
+        {
+            try
+            {
+                // 1. Borrar Hijos (Detalles)
+                string queryDetalles = "DELETE FROM LiquidacionDetalle WHERE IdLiquidaciones = @pId";
+                connection.Execute(queryDetalles, new { pId = idLiquidacion }, transaction);
+
+                // 2. Borrar Padre (Cabecera)
+                string queryCabecera = "DELETE FROM Liquidaciones WHERE IdLiquidaciones = @pId";
+                connection.Execute(queryCabecera, new { pId = idLiquidacion }, transaction);
+
+                transaction.Commit();
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
+        }
+    }
+}
+
+
 
 
 

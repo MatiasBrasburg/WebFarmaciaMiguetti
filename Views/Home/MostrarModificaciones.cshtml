@@ -3,7 +3,6 @@
 
 @{
     ViewData["Title"] = "Gestión de Liquidaciones";
-
     // 1. RECUPERACIÓN DE DATOS (Para los Selects)
     var listaMandatarias = (ViewBag.Mandatarias as IEnumerable<dynamic>)?.ToList() ?? new List<dynamic>();
     var listaObrasSociales = (ViewBag.ObrasSociales as IEnumerable<dynamic>)?.ToList() ?? new List<dynamic>();
@@ -11,7 +10,6 @@
     // Ordenamos para facilitar la búsqueda visual
     if (listaObrasSociales.Any())
     {
-        // Intentamos ordenar si tienen la propiedad Nombre
         try { listaObrasSociales = listaObrasSociales.OrderBy(x => x.Nombre).ToList(); } catch { }
     }
 }
@@ -24,49 +22,50 @@
     
     h1 { font-size: 2.5rem; font-weight: 900; color: #000; margin-bottom: 20px; text-transform: uppercase; }
     
-    /* Inputs y Selects: Bordes Gruesos y Claros */
+    /* Inputs y Selects */
     .form-control, .form-select {
         border: 3px solid #6c757d;
-        font-size: 1.2rem; /* Letra grande dentro del input */
+        font-size: 1.2rem;
         padding: 10px;
-        height: auto;
         color: #000;
         font-weight: 500;
     }
     
     .form-control:focus, .form-select:focus {
-        border-color: #ffc107; /* Foco Amarillo Brillante */
+        border-color: #ffc107;
         box-shadow: 0 0 0 0.25rem rgba(255, 193, 7, 0.5);
-        background-color: #fff3cd; /* Fondo amarillo suave al escribir */
+        background-color: #fff3cd;
     }
 
-    /* Labels: Negrita y Mayúscula */
+    /* Labels */
     .form-label { font-weight: 900; font-size: 1.1rem; text-transform: uppercase; }
 
-    /* Botones: Grandes y con Iconos */
+    /* Botones */
     .btn-super {
-        font-size: 1.1rem;
-        font-weight: 800;
-        padding: 10px 20px;
-        border: 3px solid rgba(0,0,0,0.2);
-        text-transform: uppercase;
+        font-size: 1.1rem; font-weight: 800; padding: 10px 20px;
+        border: 3px solid rgba(0,0,0,0.2); text-transform: uppercase;
     }
     
-    /* Tablas: Bordes visibles */
+    /* Tablas */
     .table-bordered { border: 2px solid #000; }
     .table thead th { background-color: #343a40; color: white; font-size: 1.1rem; vertical-align: middle; }
     .table tbody td { font-size: 1.1rem; vertical-align: middle; font-weight: 500; }
 
     /* Panel de Totales */
     .total-display {
-        font-size: 1.8rem;
-        font-weight: 900;
-        color: #198754;
-        text-align: right;
+        font-size: 1.8rem; font-weight: 900; color: #198754;
+        text-align: right; padding: 15px; background: #d1e7dd;
+        border: 4px solid #198754; border-radius: 8px;
+    }
+
+    /* ESTILO ESPECIAL PARA EL VISOR DE DETALLES */
+    .visor-header {
+        background-color: #0dcaf0; /* Cyan */
+        color: #000;
         padding: 15px;
-        background: #d1e7dd;
-        border: 4px solid #198754;
-        border-radius: 8px;
+        border-bottom: 4px solid #000;
+        font-size: 1.3rem;
+        font-weight: bold;
     }
 </style>
 
@@ -137,7 +136,8 @@
 </div>
 
 <div class="modal fade" id="modalABM" tabindex="-1" data-bs-backdrop="static" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable"> <div class="modal-content border-4 border-primary">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable"> 
+        <div class="modal-content border-4 border-primary">
             
             <div class="modal-header bg-primary text-white">
                 <h3 class="modal-title fw-bold" id="tituloModal">NUEVA LIQUIDACIÓN</h3>
@@ -145,9 +145,9 @@
             </div>
 
             <div class="modal-body bg-light">
-                
                 <div class="row g-3 mb-4 p-3 border border-2 border-secondary rounded bg-white">
-                    <input type="hidden" id="liqId" value="0"> <div class="col-md-3">
+                    <input type="hidden" id="liqId" value="0"> 
+                    <div class="col-md-3">
                         <label class="form-label">📅 FECHA</label>
                         <input type="date" id="liqFecha" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")">
                     </div>
@@ -173,7 +173,6 @@
                     </div>
                     <div class="card-body bg-white">
                         <div class="row g-3 align-items-end">
-                            
                             <div class="col-md-4">
                                 <label class="form-label">Obra Social</label>
                                 <select id="inputOS" class="form-select" onchange="cargarPlanesDeOS(this.value)">
@@ -184,7 +183,6 @@
                                     }
                                 </select>
                             </div>
-
                             <div class="col-md-4">
                                 <label class="form-label">Plan Bonificación</label>
                                 <select id="inputPlan" class="form-select" disabled onchange="recalcularNeto()">
@@ -192,7 +190,6 @@
                                 </select>
                                 <input type="hidden" id="inputPlanPorcentaje" value="0"> 
                             </div>
-
                             <div class="col-md-2">
                                 <label class="form-label">Cant. Recetas</label>
                                 <input type="number" id="inputRecetas" class="form-control" value="0">
@@ -208,13 +205,11 @@
                                 <label class="form-label">A Cargo O.S.</label>
                                 <input type="number" id="inputCargoOS" class="form-control" step="0.01" value="0.00">
                             </div>
-                            
                             <div class="col-md-3">
                                 <label class="form-label text-success">NETO A PAGAR ($)</label>
                                 <input type="number" id="inputNeto" class="form-control fw-bold text-success border-success bg-light" readonly value="0.00" style="border-width: 3px;">
                                 <small class="text-muted" id="lblPorcentajeAplicado">Plan: 0%</small>
                             </div>
-
                             <div class="col-md-3">
                                 <button type="button" class="btn btn-success btn-super w-100" id="btnAgregarFila">
                                     ⬇️ AGREGAR
@@ -237,8 +232,7 @@
                                 <th>ACCIÓN</th>
                             </tr>
                         </thead>
-                        <tbody id="tbodyDetalle">
-                            </tbody>
+                        <tbody id="tbodyDetalle"></tbody>
                     </table>
                 </div>
                 
@@ -249,7 +243,6 @@
                         </div>
                     </div>
                 </div>
-
             </div>
 
             <div class="modal-footer bg-light">
@@ -260,20 +253,70 @@
     </div>
 </div>
 
+<div class="modal fade" id="modalVerDetalle" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content border-4 border-info">
+            
+            <div class="modal-header bg-info text-white">
+                <h3 class="modal-title fw-bold text-dark">👁️ CONSULTAR LIQUIDACIÓN</h3>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body bg-white p-0">
+                <div class="visor-header">
+                    <div class="row">
+                        <div class="col-md-2">N°: <span id="verId" class="fw-black text-danger">---</span></div>
+                        <div class="col-md-3">FECHA: <span id="verFecha" class="fw-normal">---</span></div>
+                        <div class="col-md-7">MANDATARIA: <span id="verMandataria" class="fw-black text-primary">---</span></div>
+                    </div>
+                </div>
+
+                <div class="table-responsive p-3">
+                    <table class="table table-bordered table-striped mb-0">
+                        <thead class="bg-dark text-white">
+                            <tr>
+                                <th>OBRA SOCIAL</th>
+                                <th>PLAN (ID)</th>
+                                <th>RECETAS</th>
+                                <th class="text-end">TOTAL BRUTO</th>
+                                <th class="text-end">CARGO O.S.</th>
+                                <th class="text-end">BONIFICACIÓN</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyVerDetalle">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-lg btn-dark fw-bold px-5" data-bs-dismiss="modal">CERRAR</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 @section Scripts {
 <script>
     // =========================================================================
-    // 1. VARIABLES GLOBALES
+    // 1. VARIABLES GLOBALES Y MAPEOS
     // =========================================================================
-    let detallesTemporales = []; // Array en memoria para guardar las filas
-    let indiceTemporal = 0;      // Contador para IDs únicos en la tabla visual
+    let detallesTemporales = []; 
+    let indiceTemporal = 0;      
     const modalABM = new bootstrap.Modal(document.getElementById('modalABM'));
+    const modalVer = new bootstrap.Modal(document.getElementById('modalVerDetalle')); // NUEVA INSTANCIA
+
+    // Mapa de Mandatarias para mostrar nombres en vez de IDs
+    const mapaMandatarias = {};
+    @foreach (var m in listaMandatarias)
+    {
+        @:mapaMandatarias["@m.IdMandatarias"] = "@Html.Raw(m.RazonSocial)";
+    }
 
     // =========================================================================
     // 2. LÓGICA DE DETALLES (AJAX PLANES + CÁLCULOS)
     // =========================================================================
-    
-    // A. Cuando selecciona una Obra Social, buscamos sus planes
     async function cargarPlanesDeOS(idOS) {
         const selectPlan = document.getElementById('inputPlan');
         selectPlan.innerHTML = '<option value="0">Cargando...</option>';
@@ -287,7 +330,6 @@
         }
 
         try {
-            // Llamamos al endpoint existente que hicimos antes
             const url = `@Url.Action("ObtenerPlanesPorObrasSociales", "Home")?idObraSocial=${idOS}`;
             const response = await fetch(url);
             const data = await response.json();
@@ -298,8 +340,7 @@
                 data.data.forEach(plan => {
                     const option = document.createElement('option');
                     option.value = plan.idPlanBonificacion;
-                    option.text = plan.nombrePlan; // Ej: "Plan Jubilados"
-                    // Guardamos el % en el atributo data (ej: 40)
+                    option.text = plan.nombrePlan; 
                     option.setAttribute('data-bonif', plan.bonificacion); 
                     selectPlan.appendChild(option);
                 });
@@ -312,7 +353,6 @@
         }
     }
 
-    // B. Calcular el Neto Automáticamente cuando cambia el Plan o el Total
     function recalcularNeto() {
         const selectPlan = document.getElementById('inputPlan');
         const inputTotal = document.getElementById('inputTotal');
@@ -322,27 +362,18 @@
 
         if (selectPlan.selectedIndex > 0) {
             const opcion = selectPlan.options[selectPlan.selectedIndex];
-            // Leemos el atributo data-bonif (ej: 40)
             porcentaje = parseFloat(opcion.getAttribute('data-bonif')) || 0;
         }
 
-        // Mostrar visualmente qué porcentaje se aplica
         document.getElementById('lblPorcentajeAplicado').textContent = `Plan: ${porcentaje}%`;
-
-        // CÁLCULO: Neto = Total - (Total * Porcentaje / 100)
-        // OJO: Pregunta de negocio: ¿La bonificación se RESTA al total o es lo que se PAGA?
-        // Asumo "Bonificación" es descuento. Si es "Cobertura", sería directo.
-        // Lógica estándar farmacia: Neto a Pagar = Total * (1 - %Bonif/100) si es descuento al cliente.
-        // O Neto a Cobrar a la OOSS = Total * %Cobertura/100.
-        // *Implementaré Cobro a OOSS (Total * Porcentaje / 100)* según tu descripción "Neto a pagar por bonificación".
-        
         const neto = total * (porcentaje / 100.0);
         document.getElementById('inputNeto').value = neto.toFixed(2);
     }
 
-    // C. Botón "AGREGAR A LA LISTA"
+    // =========================================================================
+    // 3. GESTIÓN DE LA TABLA TEMPORAL (ALTA)
+    // =========================================================================
     document.getElementById('btnAgregarFila').addEventListener('click', function() {
-        // Obtenemos valores
         const idOS = document.getElementById('inputOS').value;
         const nombreOS = document.getElementById('inputOS').options[document.getElementById('inputOS').selectedIndex].text;
         const idPlan = document.getElementById('inputPlan').value;
@@ -353,20 +384,17 @@
         const cargoOS = parseFloat(document.getElementById('inputCargoOS').value) || 0;
         const neto = parseFloat(document.getElementById('inputNeto').value) || 0;
 
-        // Validaciones
         if (idOS == "0" || idPlan == "0") { alert("⚠️ Debe seleccionar Obra Social y Plan."); return; }
         if (total <= 0) { alert("⚠️ El monto Total debe ser mayor a 0."); return; }
 
-        // Creamos objeto fila
         const nuevoDetalle = {
-            idTemp: ++indiceTemporal, // ID solo para el DOM
-            IdObraSocial: parseInt(idOS), // Nombres coinciden con DTO C#
-            IdPlan: parseInt(idPlan),
+            idTemp: ++indiceTemporal,
+            IdObrasSociales: parseInt(idOS),     
+            IdPlanBonificacion: parseInt(idPlan), 
             CantidadRecetas: recetas,
             TotalBruto: total,
             MontoCargoOS: cargoOS,
             MontoBonificacion: neto,
-            // Datos extra para mostrar en tabla
             nombreOSVisual: nombreOS,
             nombrePlanVisual: nombrePlan
         };
@@ -374,7 +402,7 @@
         detallesTemporales.push(nuevoDetalle);
         dibujarTablaDetalles();
         
-        // Limpiamos inputs para cargar otro
+        // Limpieza de inputs
         document.getElementById('inputOS').value = "0";
         document.getElementById('inputPlan').innerHTML = '<option value="0">- Primero elija OS -</option>';
         document.getElementById('inputPlan').disabled = true;
@@ -392,8 +420,7 @@
         let sumaTotal = 0;
 
         detallesTemporales.forEach(d => {
-            sumaTotal += d.TotalBruto; // O d.MontoBonificacion según qué total quieras mostrar abajo
-            
+            sumaTotal += d.TotalBruto; 
             const tr = `
                 <tr>
                     <td>${d.nombreOSVisual}</td>
@@ -409,7 +436,6 @@
             `;
             tbody.innerHTML += tr;
         });
-
         document.getElementById('spanTotalFinal').textContent = sumaTotal.toFixed(2);
     }
 
@@ -419,47 +445,39 @@
     }
 
     // =========================================================================
-    // 3. GUARDADO FINAL -> CONTROLLER (FormData para QueToco)
+    // 4. GUARDADO FINAL (ALTA)
     // =========================================================================
     document.getElementById('btnGuardarTodo').addEventListener('click', async function() {
         const btn = this;
-        
-        // 1. Validar Cabecera
         const idLiq = document.getElementById('liqId').value;
         const fecha = document.getElementById('liqFecha').value;
         const idMand = document.getElementById('liqMandataria').value;
         const obs = document.getElementById('liqObs').value;
 
-        if (idMand == "0") { alert("⚠️ Debe seleccionar la Mandataria de la liquidación."); return; }
-        if (detallesTemporales.length === 0) { alert("⚠️ La lista está vacía. Agregue al menos una Obra Social."); return; }
-
+        if (idMand == "0") { alert("⚠️ Debe seleccionar la Mandataria."); return; }
+        if (detallesTemporales.length === 0) { alert("⚠️ La lista está vacía."); return; }
         if(!confirm("¿Confirmar el guardado de esta Presentación?")) return;
 
         btn.disabled = true;
         btn.innerHTML = "⌛ GUARDANDO...";
 
-        // 2. Preparar FormData para enviar parámetros sueltos + JSON string
         const formData = new FormData();
         formData.append("QueToco", "Guardar");
         formData.append("IdLiquidacion", idLiq);
-        formData.append("IdMandataria", idMand);
+        formData.append("IdMandatarias", idMand);
         formData.append("Fecha", fecha);
         formData.append("Observaciones", obs);
-        
-        // Serializamos el array de objetos a un string JSON
         formData.append("DetallesJson", JSON.stringify(detallesTemporales));
 
         try {
             const response = await fetch('@Url.Action("MostrarModificaciones", "Home")', {
-                method: 'POST',
-                body: formData // Fetch detecta FormData y configura el header multipart automáticamente
+                method: 'POST', body: formData 
             });
             const result = await response.json();
-
             if (result.success) {
                 alert("✅ " + result.message);
                 modalABM.hide();
-                // Aquí podrías recargar la tabla de búsqueda
+                buscarLiquidaciones(); 
             } else {
                 alert("❌ Error: " + result.message);
             }
@@ -472,20 +490,95 @@
     });
 
     // =========================================================================
-    // 4. FUNCIONES DE UI
+    // 5. FUNCIONES DE UI PRINCIPAL
     // =========================================================================
     function abrirModalNueva() {
-        // Resetear formulario
         document.getElementById('tituloModal').textContent = "NUEVA LIQUIDACIÓN";
         document.getElementById('liqId').value = "0";
         document.getElementById('liqFecha').value = new Date().toISOString().split('T')[0];
         document.getElementById('liqMandataria').value = "0";
         document.getElementById('liqObs').value = "";
-        
         detallesTemporales = [];
         dibujarTablaDetalles();
-        
         modalABM.show();
+    }
+
+    // --- ACCIÓN: ELIMINAR ---
+    async function eliminarLiquidacion(idLiq) {
+        if (!confirm(`¿Está seguro de ELIMINAR la liquidación N° ${idLiq}?\nEsta acción no se puede deshacer.`)) return;
+
+        const formData = new FormData();
+        formData.append("QueToco", "Eliminar");
+        formData.append("IdLiquidacion", idLiq);
+
+        try {
+            const response = await fetch('@Url.Action("MostrarModificaciones", "Home")', {
+                method: 'POST', body: formData 
+            });
+            const result = await response.json();
+            
+            if (result.success) {
+                alert("🗑️ Liquidación eliminada.");
+                buscarLiquidaciones(); 
+            } else {
+                alert("⚠️ " + result.message);
+            }
+        } catch (error) {
+            alert("Error al intentar eliminar.");
+        }
+    }
+
+    // --- ACCIÓN: VER DETALLE (NUEVA PANTALLA EXCLUSIVA) ---
+    // Recibe más parámetros para pintar el encabezado bonito sin consultar la BD
+    async function verLiquidacion(idLiq, fechaStr, nombreMandataria) {
+        
+        // 1. Llenamos el encabezado del visor
+        document.getElementById('verId').textContent = idLiq;
+        document.getElementById('verFecha').textContent = fechaStr;
+        document.getElementById('verMandataria').textContent = nombreMandataria;
+        
+        const tbody = document.getElementById('tbodyVerDetalle');
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-primary p-3"><div class="spinner-border"></div> Cargando detalles...</td></tr>';
+        
+        modalVer.show();
+
+        // 2. Pedimos los items al servidor
+        try {
+            const response = await fetch(`@Url.Action("ObtenerDetallesDeLiquidacion", "Home")?idLiquidacion=${idLiq}`);
+            const result = await response.json();
+
+            if (result.success) {
+                tbody.innerHTML = '';
+                
+                if(result.data.length === 0) {
+                     tbody.innerHTML = '<tr><td colspan="6" class="text-center p-3">Esta liquidación no tiene items guardados.</td></tr>';
+                     return;
+                }
+
+                result.data.forEach(d => {
+                    // TRUCO: Buscamos el nombre de la OS en el combo oculto del otro modal
+                    const nombreOS = document.querySelector(`#inputOS option[value="${d.idObrasSociales}"]`)?.text || "OS Histórica";
+
+                    const fila = `
+                        <tr>
+                            <td>${nombreOS}</td>
+                            <td class="text-center">${d.idPlanBonificacion || '-'}</td>
+                            <td class="text-center">${d.cantidadRecetas}</td>
+                            <td class="text-end">$${d.totalBruto.toFixed(2)}</td>
+                            <td class="text-end">$${d.montoCargoOS.toFixed(2)}</td>
+                            <td class="text-end fw-bold">$${d.montoBonificacion.toFixed(2)}</td>
+                        </tr>
+                    `;
+                    tbody.innerHTML += fila;
+                });
+
+            } else {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-danger text-center">${result.message}</td></tr>`;
+            }
+        } catch (error) {
+            console.error(error);
+            tbody.innerHTML = `<tr><td colspan="6" class="text-danger text-center">Error de conexión.</td></tr>`;
+        }
     }
 
     async function buscarLiquidaciones() {
@@ -493,53 +586,53 @@
         const desde = document.getElementById('filtroFechaDesde').value;
         const hasta = document.getElementById('filtroFechaHasta').value;
         const mand = document.getElementById('filtroMandataria').value;
-
         const tbody = document.getElementById('tbodyResultados');
+        
         tbody.innerHTML = '<tr><td colspan="5" class="text-center p-3"><div class="spinner-border text-primary"></div> Buscando datos...</td></tr>';
 
-        // Construimos la URL con parámetros query string
         const url = `@Url.Action("BuscarLiquidacionesAjax", "Home")?id=${id}&desde=${desde}&hasta=${hasta}&mandataria=${mand}`;
 
         try {
             const response = await fetch(url);
             if (!response.ok) throw new Error("Error de red");
-            
             const resultado = await response.json();
 
             if (resultado.success && resultado.data.length > 0) {
-                tbody.innerHTML = ''; // Limpiar
-                
-                // Dibujar cada fila
+                tbody.innerHTML = ''; 
                 resultado.data.forEach(liq => {
-                    // Formatear fecha bonita
                     const fechaObj = new Date(liq.fechaPresentacion);
                     const fechaStr = fechaObj.toLocaleDateString('es-AR');
-                    
+                    const nombreMandataria = mapaMandatarias[liq.idMandatarias] || "Desconocida";
+
+                    // NOTA: Pasamos los datos entre comillas simples para que el JS los lea como strings
                     const fila = `
                         <tr>
                             <td class="fw-bold fs-5">${liq.idLiquidaciones}</td>
                             <td>${fechaStr}</td>
-                            <td>${liq.idMandataria} (Ver Nombre Pendiente)</td> 
+                            <td class="fw-bold text-dark">${nombreMandataria}</td> 
                             <td>${liq.observaciones || '-'}</td>
                             <td>
-                                <button class="btn btn-info btn-sm">👁️ VER</button>
-                                <button class="btn btn-danger btn-sm">🗑️</button>
+                                <button class="btn btn-info btn-sm text-white fw-bold" 
+                                    onclick="verLiquidacion(${liq.idLiquidaciones}, '${fechaStr}', '${nombreMandataria}')">
+                                    👁️ VER
+                                </button>
+                                <button class="btn btn-danger btn-sm fw-bold" 
+                                    onclick="eliminarLiquidacion(${liq.idLiquidaciones})">
+                                    🗑️ ELIMINAR
+                                </button>
                             </td>
                         </tr>
                     `;
                     tbody.innerHTML += fila;
                 });
             } else {
-                 tbody.innerHTML = '<tr><td colspan="5" class="text-center p-4 text-muted fw-bold">No se encontraron liquidaciones con esos filtros.</td></tr>';
+                 tbody.innerHTML = '<tr><td colspan="5" class="text-center p-4 text-muted fw-bold">No se encontraron liquidaciones.</td></tr>';
             }
-
         } catch (error) {
-            console.error(error);
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger fw-bold">❌ Error al buscar datos. Intente de nuevo.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger fw-bold">❌ Error al buscar datos.</td></tr>';
         }
     }
     
-    // TRUCO DE UX: Ejecutar búsqueda automática al cargar la página para que no se vea vacía
     document.addEventListener("DOMContentLoaded", () => {
         buscarLiquidaciones(); 
     });
