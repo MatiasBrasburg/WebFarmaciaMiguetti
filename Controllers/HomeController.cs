@@ -3,8 +3,9 @@ using Microsoft.AspNetCore.Mvc;
 using WebFarmaciaMiguetti.Models;
 using Microsoft.AspNetCore.Http;
 using System;
-using System.Text.Json;        
-
+using System.Text.Json;
+using System.Collections.Generic;
+using System.Linq; 
 
 namespace WebFarmaciaMiguetti.Controllers;
 
@@ -16,44 +17,43 @@ public class HomeController : Controller
     {
         _logger = logger;
     }
+    
     public IActionResult Index()
-   {
-
-    var usuarioLogueado = HttpContext.Session.GetString("UsuarioAutorizado");
-
-    if (string.IsNullOrEmpty(usuarioLogueado))
     {
-        // NO ESTÁ LOGUEADO: Lo mandamos a la puerta (Login)
-        return RedirectToAction("Index", "Account"); 
+        var usuarioLogueado = HttpContext.Session.GetString("UsuarioAutorizado");
+        if (string.IsNullOrEmpty(usuarioLogueado))
+        {
+            return RedirectToAction("Index", "Account"); 
+        }
+        return View(); 
     }
-
-   
-    return View(); 
-   }
+    
     public IActionResult Home()
     {
         return View("Index");
     }
-     public IActionResult IrAAltasModificacionesMandatarias()
+    
+    public IActionResult IrAAltasModificacionesMandatarias()
     {
-          List<Mandatarias> ListMandatarias = BD.TraerListaMandatarias();
-ViewBag.ListaMandatarias = ListMandatarias;
+        List<Mandatarias> ListMandatarias = BD.TraerListaMandatarias();
+        ViewBag.ListaMandatarias = ListMandatarias;
         return View("AltasModificacionesMandatarias");
     }
-    public IActionResult ModificarMandataria (int IdMandataria, string QueToco, string? NombreMandataria, long Cuit, string? Descripcion, string? Direccion)
+    
+    public IActionResult ModificarMandataria(int IdMandataria, string QueToco, string? NombreMandataria, long Cuit, string? Descripcion, string? Direccion)
     {
-string nuevoNombreMandataria = "";
+        string nuevoNombreMandataria = "";
+        
         if(QueToco == "Modificar")
         {
             Mandatarias ObjtMandataria = BD.TraerMandatariaPorId(IdMandataria);
 
-           if(!string.IsNullOrEmpty(NombreMandataria))
+            if(!string.IsNullOrEmpty(NombreMandataria))
             {
                 nuevoNombreMandataria = NombreMandataria;
             }
             else
             {
-                // Nombre inválido
                 return View("Error", new ErrorViewModel { RequestId = "Llene el nombre de la mandataria, por favor." });
             }
 
@@ -63,199 +63,194 @@ string nuevoNombreMandataria = "";
             }
             else
             {
-                // No se encontró la mandataria
                 return View("Error", new ErrorViewModel { RequestId = "No se encontró la mandataria." });
             }
         }
         else if(QueToco == "Agregar" )
         {
-            
-
             if(!string.IsNullOrEmpty(NombreMandataria))
             {
-               BD.AgregarMandataria(NombreMandataria, Cuit, Descripcion, Direccion);
+                BD.AgregarMandataria(NombreMandataria, Cuit, Descripcion, Direccion);
             }
             else
             {
-                // No se encontró la mandataria
-                return View("Error", new ErrorViewModel { RequestId = "No se encontró la mandataria con ese nombre." });
+                return View("Error", new ErrorViewModel { RequestId = "Llene el nombre de la mandataria, por favor." });
             }
+        }
+        else if(QueToco == "Eliminar")
+        {
+            BD.EliminarMandataria(IdMandataria);
         }
         else
         {
-            BD.EliminarMandataria(IdMandataria);
+            return View("Error", new ErrorViewModel { RequestId = "Operación no definida." });
         }
     
         return RedirectToAction("IrAAltasModificacionesMandatarias", "Home");
     }
 
 
- public IActionResult IrAAltasModificacionesOS()
+    public IActionResult IrAAltasModificacionesOS()
     {
-          List<ObrasSociales> ListOS = BD.TraerListaOS();
-ViewBag.ListaObrasSociales = ListOS;
+        List<ObrasSociales> ListOS = BD.TraerListaOS();
+        ViewBag.ListaObrasSociales = ListOS;
 
-List<Mandatarias> ListMandatarias = BD.TraerListaMandatarias();
-ViewBag.ListaMandatarias = ListMandatarias;
+        List<Mandatarias> ListMandatarias = BD.TraerListaMandatarias();
+        ViewBag.ListaMandatarias = ListMandatarias;
+        
         return View("AltasModificacionesObrasSociales");
     }
 
-public IActionResult ABM_OS(int IdOS, string QueToco, int? IdMandatarias, string? NombreOS, int? CodigoBonificacion, string? NombreCodigoBonificacion, bool? EsPrepaga, bool? Activa)
-{
+    // ==================================================================
+    // ACCIÓN ABM DE OBRAS SOCIALES (LIMPIA - SOLO OOSS)
+    // ==================================================================
+    public IActionResult ABM_OS(int IdOS, string QueToco, int? IdMandatarias, string? NombreOS, bool? EsPrepaga, bool? Activa)
+    {
+        bool valorEsPrepaga = EsPrepaga ?? false;
+        bool valorActiva = Activa ?? false; 
+        int nuevoIdMandataria = 0;
+        string nuevoNombreOS = "";
+
+        ObrasSociales ObjtOSS = null;
+        if (IdOS > 0)
+        {
+            ObjtOSS = BD.TraerOSPorId(IdOS);
+        }
+
+        if (QueToco == "Modificar")
+        {
+            if (!string.IsNullOrEmpty(NombreOS))
+            {
+                nuevoNombreOS = NombreOS;
+            }
+            else
+            {
+                return View("Error", new ErrorViewModel { RequestId = "El nombre de la Obra Social no puede estar vacío." });
+            }
+
+            if (ObjtOSS != null)
+            {
+                if (IdMandatarias.HasValue && IdMandatarias.Value > 0)
+                {
+                    nuevoIdMandataria = IdMandatarias.Value;
+                    Mandatarias mandataria = BD.TraerMandatariaPorId(nuevoIdMandataria);
+                    
+                    BD.ModificarOS(IdOS, nuevoNombreOS, nuevoIdMandataria, mandataria.RazonSocial, valorEsPrepaga, valorActiva);
+                }
+                else
+                {
+                    Mandatarias mandataria = BD.TraerMandatariaPorId(ObjtOSS.IdMandataria);
+                    BD.ModificarOS(IdOS, nuevoNombreOS, ObjtOSS.IdMandataria, mandataria.RazonSocial, valorEsPrepaga, valorActiva);
+                }
+            }
+            else
+            {
+                return View("Error", new ErrorViewModel { RequestId = "No se encontró la Obra Social para modificar." });
+            }
+        }
+        else if (QueToco == "Agregar")
+        {
+            int idMand = IdMandatarias ?? 0;
+            string nombre = NombreOS ?? "";
+
+            if (string.IsNullOrEmpty(nombre))
+            {
+                return View("Error", new ErrorViewModel { RequestId = "Debe escribir un nombre para la Obra Social." });
+            }
+
+            if (idMand > 0)
+            {
+                Mandatarias mandataria = BD.TraerMandatariaPorId(idMand);
+                if (mandataria != null)
+                {
+                    BD.AgregarOS( mandataria.IdMandatarias, nombre, mandataria.RazonSocial, valorEsPrepaga, valorActiva);
+                }
+                else
+                {
+                    return View("Error", new ErrorViewModel { RequestId = "La Mandataria seleccionada no existe en la Base de Datos." });
+                }
+            }
+            else
+            {
+                return View("Error", new ErrorViewModel { RequestId = "Debe seleccionar una Mandataria válida." });
+            }
+        }
+        else if (QueToco == "Eliminar")
+        {
+            BD.EliminarOS(IdOS);
+        }
+       
+        else
+        {
+            return View("Error", new ErrorViewModel { RequestId = "Operación no definida." });
+        }
+
+        return RedirectToAction("IrAAltasModificacionesOS", "Home");
+    }
+
+
+    // -----------------------------------------------------------------------------------
+    // NUEVOS ENDPOINTS AJAX PARA PLANES DE BONIFICACIÓN (FETCH API)
+    // -----------------------------------------------------------------------------------
+
+    [HttpGet]
+    public IActionResult ObtenerPlanesPorObrasSociales(int idObraSocial)
+    {
+        try
+        {
+            List<PlanBonificacion> planes = BD.TraerPlanBonificacionPorId(idObraSocial);
+            return Json(new { success = true, data = planes });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener planes para ObrasSociales ID: {Id}", idObraSocial);
+            return StatusCode(500, new { success = false, message = "Error interno: " + ex.Message });
+        }
+    }
     
-    bool valorEsPrepaga = EsPrepaga ?? false;
-    bool valorActiva = Activa ?? false; 
-    int nuevoIdMandataria = 0;
-    string nuevoNombreOS = "";
-
-   
-    ObrasSociales ObjtOSS = BD.TraerOSPorId(IdOS);
-
-    if (QueToco == "Modificar")
+    [HttpPost]
+    public IActionResult GuardarPlanBonificacion([FromBody] PlanBonificacion plan)
     {
-        if (!string.IsNullOrEmpty(NombreOS))
+        if (!ModelState.IsValid)
         {
-            nuevoNombreOS = NombreOS;
-        }
-        else
-        {
-            return View("Error", new ErrorViewModel { RequestId = "El nombre de la Obra Social no puede estar vacío." });
+            var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList();
+            return BadRequest(new { success = false, message = "Datos del plan inválidos.", errors = errors });
         }
 
-        if (ObjtOSS != null)
+        try
         {
-            if (IdMandatarias.HasValue && IdMandatarias.Value > 0)
+            if (plan.IdPlanBonificacion == 0) 
             {
-                nuevoIdMandataria = IdMandatarias.Value;
-                BD.ModificarOS(IdOS, nuevoNombreOS, nuevoIdMandataria, valorEsPrepaga, valorActiva);
+                 BD.InsertarPlan(plan);
+                 return Json(new { success = true, message = "¡Plan CREADO con éxito!" });
             }
-            else
+            else 
             {
-                // Si no cambió la mandataria, mantenemos la que tenía
-                BD.ModificarOS(IdOS, nuevoNombreOS, ObjtOSS.IdMandataria, valorEsPrepaga, valorActiva);
+                BD.ActualizarPlan(plan);
+                return Json(new { success = true, message = "¡Plan MODIFICADO con éxito!" });
             }
         }
-        else
+        catch (Exception ex)
         {
-            return View("Error", new ErrorViewModel { RequestId = "No se encontró la Obra Social para modificar." });
+            _logger.LogError(ex, "Error al guardar PlanBonificacion.");
+            return StatusCode(500, new { success = false, message = "Error crítico al guardar el plan: " + ex.Message });
         }
     }
-    else if (QueToco == "Agregar")
+
+    [HttpPost]
+    public IActionResult EliminarPlanBonificacion([FromBody] int idPlan)
     {
-        // === CORRECCIÓN DEL ERROR NULLREFERENCE ===
-        int idMand = IdMandatarias ?? 0;
-        string nombre = NombreOS ?? "";
-
-        if (string.IsNullOrEmpty(nombre))
+        try
         {
-            return View("Error", new ErrorViewModel { RequestId = "Debe escribir un nombre para la Obra Social." });
+            BD.EliminarPlan(idPlan);
+            return Json(new { success = true, message = "¡Plan eliminado con éxito!" });
         }
-
-        if (idMand > 0)
+        catch (Exception ex)
         {
-            Mandatarias mandataria = BD.TraerMandatariaPorId(idMand);
-            if (mandataria != null)
-            {
-                // Aquí usamos mandataria.IdMandatarias SOLO si estamos seguros que no es null
-                BD.AgregarOS( mandataria.IdMandatarias, nombre, mandataria.RazonSocial, valorEsPrepaga, valorActiva);
-            }
-            else
-            {
-                return View("Error", new ErrorViewModel { RequestId = "La Mandataria seleccionada no existe en la Base de Datos." });
-            }
-        }
-        else
-        {
-            return View("Error", new ErrorViewModel { RequestId = "Debe seleccionar una Mandataria válida." });
+            _logger.LogError(ex, "Error al eliminar PlanBonificacion ID: {Id}", idPlan);
+            return StatusCode(500, new { success = false, message = "Error interno al eliminar: " + ex.Message });
         }
     }
-    else if (QueToco == "Planes")
-    {
-        if (ObjtOSS == null)
-        {
-            return View("Error", new ErrorViewModel { RequestId = "No se encontró la Obra Social para cargar planes." });
-        }
-        else
-        {
-            // Verificamos si ya tiene plan o es nuevo
-            if (ObjtOSS.CodigoBonificacion > 0 || !string.IsNullOrEmpty(ObjtOSS.NombreCodigoBonificacion))
-            {
-                BD.ModificarBonificaciones(IdOS, CodigoBonificacion, NombreCodigoBonificacion);
-            }
-            else
-            {
-                BD.AgregarBonificaciones(IdOS, NombreCodigoBonificacion, CodigoBonificacion);
-            }
-        }
-    }
-    else
-    {
-        // Eliminar
-        BD.EliminarOS(IdOS);
-    }
-
-    return RedirectToAction("IrAAltasModificacionesOS", "Home");
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

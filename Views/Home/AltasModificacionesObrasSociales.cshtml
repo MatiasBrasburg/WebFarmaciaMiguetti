@@ -5,34 +5,24 @@
 @{
     ViewData["Title"] = "Gestión de Obras Sociales";
 
-    // 1. RECUPERACIÓN DE DATOS
-    // Convertimos a listas dinámicas para evitar errores de null
+    // 1. RECUPERACIÓN DE DATOS (Protección contra nulos)
     var listaOS = (ViewBag.ListaObrasSociales as IEnumerable<dynamic>)?.ToList() ?? new List<dynamic>();
     var listaMandatarias = (ViewBag.ListaMandatarias as IEnumerable<dynamic>)?.ToList() ?? new List<dynamic>();
 
-    // 2. ORDENAMIENTO INICIAL (Por el nuevo campo 'Nombre')
-    if (listaOS.Any())
-    {
-        try { listaOS = listaOS.OrderBy(x => x.Nombre).ToList(); } catch { }
-    }
+    // 2. ORDENAMIENTO ALFABÉTICO
+    if (listaOS.Any()) { try { listaOS = listaOS.OrderBy(x => x.Nombre).ToList(); } catch { } }
 
-    // 3. PREPARACIÓN DE DATOS PARA JAVASCRIPT (Serialización)
-    
-    // A. DATOS PARA EL BUSCADOR PRINCIPAL
-    // Usamos las propiedades EXACTAS de tu nuevo Modelo: IdObrasSociales, Nombre, NombreMandataria
+    // 3. SERIALIZACIÓN PARA BUSCADORES (JSON)
     var datosBuscadorPrincipal = listaOS.Select(os => {
-        // Validación de nulidad para el nombre de la mandataria
         string nombreMand = string.IsNullOrEmpty(os.NombreMandataria) ? "Sin Asignar" : os.NombreMandataria;
-
         return new {
-            id = os.IdObrasSociales,  // <--- CAMBIO CLAVE: Usamos IdObrasSociales
-            texto = os.Nombre + " (Mandataria: " + nombreMand + ")", // <--- CAMBIO CLAVE: Usamos Nombre
-            nombre = os.Nombre // <--- CAMBIO CLAVE: Usamos Nombre
+            id = os.IdObrasSociales,
+            texto = os.Nombre + " (Mandataria: " + nombreMand + ")",
+            nombre = os.Nombre
         };
     });
     var jsonOS = JsonSerializer.Serialize(datosBuscadorPrincipal);
 
-    // B. DATOS PARA EL BUSCADOR DEL MODAL
     var datosBuscadorModal = listaMandatarias.Select(m => new {
         id = m.IdMandatarias,
         texto = m.RazonSocial + " (CUIT: " + (m.Cuit > 0 ? m.Cuit.ToString() : "-") + ")",
@@ -45,23 +35,13 @@
     /* ========== ESTILOS UX 85 AÑOS ========== */
     body { font-family: 'Roboto', 'Open Sans', Arial, sans-serif; background-color: #f8f9fa; }
 
-    h1 {
-        font-size: clamp(2rem, 5vw, 2.8rem);
-        font-weight: bold;
-        color: #000;
-        margin-bottom: 2rem;
-    }
-
+    h1 { font-size: clamp(2rem, 5vw, 2.8rem); font-weight: bold; color: #000; margin-bottom: 2rem; }
     .container { width: 95%; max-width: 1600px; margin: 0 auto; padding: 1rem; }
 
     /* BOTONES GIGANTES */
     .btn-giant {
-        font-size: clamp(1rem, 2vw, 1.4rem);
-        padding: clamp(0.8rem, 1.5vw, 1rem) clamp(1rem, 2vw, 2rem);
-        font-weight: bold;
-        border: 3px solid;
-        margin: 0.3rem;
-        white-space: nowrap;
+        font-size: clamp(1rem, 2vw, 1.4rem); padding: clamp(0.8rem, 1.5vw, 1rem) clamp(1rem, 2vw, 2rem);
+        font-weight: bold; border: 3px solid; margin: 0.3rem; white-space: nowrap;
     }
     .btn-success { background-color: #198754; border-color: #198754; color: #fff; }
     .btn-warning { background-color: #ffc107; border-color: #ffc107; color: #000; }
@@ -70,83 +50,24 @@
     .btn-secondary { background-color: #6c757d; border-color: #6c757d; color: #fff; }
 
     /* BUSCADOR TIPO SPOTIFY */
-    .buscador-wrapper {
-        position: relative;
-        display: flex;
-        flex-direction: column;
-        align-items: flex-end;
-        margin-bottom: 1.5rem;
-    }
-
-    .buscador-input-group {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        width: 100%;
-        max-width: 500px;
-    }
-
-    .input-buscador {
-        font-size: 1.3rem;
-        padding: 10px 15px;
-        border: 3px solid #0d6efd;
-        font-weight: bold;
-        width: 100%;
-    }
-
-    /* LISTAS DE SUGERENCIAS FLOTANTES */
-    .lista-sugerencias {
-        position: absolute;
-        top: 100%;
-        right: 0; 
-        width: 100%;
-        max-width: 500px;
-        background: white;
-        border: 3px solid #000;
-        border-top: none;
-        z-index: 1055;
-        display: none;
-        max-height: 300px;
-        overflow-y: auto;
-        box-shadow: 0px 10px 15px rgba(0,0,0,0.2);
-    }
-    
+    .buscador-wrapper { position: relative; display: flex; flex-direction: column; align-items: flex-end; margin-bottom: 1.5rem; }
+    .buscador-input-group { display: flex; align-items: center; gap: 10px; width: 100%; max-width: 500px; }
+    .input-buscador { font-size: 1.3rem; padding: 10px 15px; border: 3px solid #0d6efd; font-weight: bold; width: 100%; }
+    .lista-sugerencias { position: absolute; top: 100%; right: 0; width: 100%; max-width: 500px; background: white; border: 3px solid #000; border-top: none; z-index: 1055; display: none; max-height: 300px; overflow-y: auto; box-shadow: 0px 10px 15px rgba(0,0,0,0.2); }
     .lista-sugerencias-modal { right: auto; left: 0; }
-
-    .item-sugerencia {
-        padding: 15px;
-        font-size: 1.2rem;
-        border-bottom: 1px solid #ddd;
-        cursor: pointer;
-        color: #000;
-        font-weight: 500;
-    }
-
+    .item-sugerencia { padding: 15px; font-size: 1.2rem; border-bottom: 1px solid #ddd; cursor: pointer; color: #000; font-weight: 500; }
     .item-sugerencia:hover { background-color: #0d6efd; color: white; }
 
     /* TABLA */
     .table-responsive { border: 3px solid #000; background-color: white; }
-    .table th {
-        background-color: #343a40;
-        color: white;
-        font-size: 1.2rem;
-        padding: 15px;
-        vertical-align: middle;
-    }
-    .table td {
-        font-size: 1.1rem;
-        vertical-align: middle;
-        padding: 15px;
-        font-weight: 500;
-        border-bottom: 2px solid #dee2e6;
-    }
+    .table th { background-color: #343a40; color: white; font-size: 1.2rem; padding: 15px; vertical-align: middle; }
+    .table td { font-size: 1.1rem; vertical-align: middle; padding: 15px; font-weight: 500; border-bottom: 2px solid #dee2e6; }
     .fila-os { display: table-row !important; transition: background-color 0.5s ease; }
 
     /* FORMULARIOS */
     .form-control { border: 2px solid #6c757d; font-size: 1.1rem; padding: 10px; }
     .form-control:focus { border-color: #ffc107; box-shadow: 0 0 0 0.25rem rgba(255,193,7,0.5); }
     .form-label { font-weight: bold; font-size: 1.1rem; }
-    
     .form-check-input { width: 2em; height: 2em; margin-top: 0; border: 2px solid #555; }
     .form-check-label { font-size: 1.2rem; margin-left: 10px; padding-top: 5px; cursor: pointer;}
     .form-check { display: flex; align-items: center; padding: 10px; background-color: #e9ecef; border-radius: 5px; margin-bottom: 10px;}
@@ -187,11 +108,8 @@
         <table class="table table-bordered table-hover table-striped">
             <thead>
                 <tr>
-                    
                     <th>NOMBRE O.S.</th>
                     <th>MANDATARIA</th>
-                    <th>CÓD. BONIF.</th>
-                    <th>NOMBRE PLAN</th>
                     <th>PREPAGA</th>
                     <th>ACTIVA</th>
                     <th>ACCIONES</th>
@@ -202,39 +120,30 @@
                 {
                     @foreach (var os in listaOS)
                     {
-                        // 1. OBTENCIÓN DE DATOS SEGÚN EL NUEVO MODELO
-                        // Usamos 'Nombre' en vez de 'NombreOS'
                         string nombreOsJs = System.Web.HttpUtility.JavaScriptStringEncode(os.Nombre);
-                        
-                        // Usamos la nueva propiedad 'NombreMandataria' directa
                         string nombreMandataria = string.IsNullOrEmpty(os.NombreMandataria) ? "-" : os.NombreMandataria;
                         string nombreMandJs = System.Web.HttpUtility.JavaScriptStringEncode(nombreMandataria);
                         
-                        string nombrePlanJs = System.Web.HttpUtility.JavaScriptStringEncode(os.NombreCodigoBonificacion ?? "");
-                        
-                        // 2. RENDERIZADO DE FILA
-                        // Nota: data-id usa el nuevo IdObrasSociales
                         <tr class="fila-os" data-id="@os.IdObrasSociales">
-                        
-                            <td>@os.Nombre</td> <td class="fw-bold text-primary">@nombreMandataria</td> <td>@(os.CodigoBonificacion > 0 ? os.CodigoBonificacion.ToString() : "-")</td>
-                            <td>@(string.IsNullOrEmpty(os.NombreCodigoBonificacion) ? "-" : os.NombreCodigoBonificacion)</td>
+                            <td>@os.Nombre</td> 
+                            <td class="fw-bold text-primary">@nombreMandataria</td> 
                             <td>@((os.EsPrepaga == true) ? "SÍ" : "NO")</td>
                             <td>@((os.Activa == true) ? "SÍ" : "NO")</td>
                             <td>
                                 <div class="d-flex gap-2">
                                     <button type="button" class="btn btn-warning btn-giant"
                                             onclick="abrirModalModificar(@os.IdObrasSociales, '@nombreOsJs', @os.IdMandataria, '@nombreMandJs', @((os.EsPrepaga == true).ToString().ToLower()), @((os.Activa == true).ToString().ToLower()))">
-                                        ✏️
+                                            ✏️
                                     </button>
                                     
                                     <button type="button" class="btn btn-info btn-giant"
-                                            onclick="abrirModalPlanes(@os.IdObrasSociales, '@nombreOsJs', '@(os.CodigoBonificacion ?? 0)', '@nombrePlanJs')">
-                                        📋
+                                            onclick="abrirModalPlanes(@os.IdObrasSociales, '@nombreOsJs')">
+                                            📋 PLANES
                                     </button>
 
                                     <button type="button" class="btn btn-danger btn-giant"
                                             onclick="abrirModalEliminar(@os.IdObrasSociales, '@nombreOsJs')">
-                                        🗑️
+                                            🗑️
                                     </button>
                                 </div>
                             </td>
@@ -243,7 +152,7 @@
                 }
                 else
                 {
-                    <tr><td colspan="8" class="text-center fs-4">No hay Obras Sociales cargadas.</td></tr>
+                    <tr><td colspan="5" class="text-center fs-4">No hay Obras Sociales cargadas.</td></tr>
                 }
             </tbody>
         </table>
@@ -261,7 +170,6 @@
                 <div class="modal-body p-4">
                     <input type="hidden" name="IdOS" id="inputIdOS" value="0">
                     <input type="hidden" name="QueToco" id="inputQueToco" value="">
-                    
                     <input type="hidden" name="IdMandatarias" id="inputIdMandatariaHidden" value="0">
 
                     <div id="divFormulario">
@@ -269,14 +177,12 @@
                             <label class="form-label">🏥 NOMBRE OBRA SOCIAL</label>
                             <input type="text" class="form-control" name="NombreOS" id="inputNombreOS" required>
                         </div>
-
                         <div class="mb-3 position-relative">
                             <label class="form-label">🏢 MANDATARIA ASOCIADA</label>
                             <input type="text" class="form-control" id="inputMandatariaModal" 
                                    placeholder="Escriba para buscar mandataria..." autocomplete="off" required>
                             <div id="listaSugerenciasModal" class="lista-sugerencias lista-sugerencias-modal"></div>
                         </div>
-
                         <div class="row mt-4">
                             <div class="col-md-6">
                                 <div class="form-check">
@@ -308,31 +214,64 @@
 </div>
 
 <div class="modal fade" id="modalPlanes" tabindex="-1" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
         <div class="modal-content border-3 border-info">
-            <form method="post" asp-controller="Home" asp-action="ABM_OS">
-                <div class="modal-header bg-info text-dark">
-                    <h5 class="modal-title fw-bold">📋 PLANES DE: <span id="spanNombreOSPlan"></span></h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body p-4">
-                    <input type="hidden" name="IdOS" id="inputIdOSPlan" value="0">
-                    <input type="hidden" name="QueToco" value="Planes">
+            <div class="modal-header bg-info text-dark">
+                <h5 class="modal-title fw-bold">📋 PLANES DE: <span id="spanNombreOSPlan"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4 bg-light">
+                
+                <div id="alertaPlanes" class="alert fw-bold fs-5 text-center" style="display:none;"></div>
 
-                    <div class="mb-3">
-                        <label class="form-label">📝 NOMBRE DEL PLAN</label>
-                        <input type="text" class="form-control" name="NombreCodigoBonificacion" id="inputNombrePlan" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">🔢 CÓDIGO BONIFICACIÓN</label>
-                        <input type="number" class="form-control" name="CodigoBonificacion" id="inputCodigoPlan" required>
-                    </div>
+                <div class="card p-3 mb-4 shadow-sm" style="border: 2px solid #0dcaf0;">
+                    <h5 class="fw-bold mb-3">➕ Nuevo / Editar Plan</h5>
+                    <form id="formPlanesAjax">
+                        <input type="hidden" id="planIdHidden" value="0">
+                        <input type="hidden" id="planIdOSHidden" value="0">
+                        <div class="row g-2">
+                            <div class="col-md-4">
+                                <label class="form-label">Nombre del Plan</label>
+                                <input type="text" class="form-control" id="planNombre" placeholder="Ej: Plan Jubilados" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">N° Bonificación (Cód)</label>
+                                <input type="text" class="form-control" id="planCodigo" placeholder="Ej: 4001">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">% Bonif.</label>
+                                <input type="number" class="form-control" id="planPorcentaje" placeholder="40" step="0.01" min="0" max="100" required>
+                            </div>
+                            <div class="col-md-3 d-grid">
+                                <label class="form-label">&nbsp;</label>
+                                <button type="button" class="btn btn-success fw-bold" id="btnGuardarPlanAjax">💾 GUARDAR</button>
+                            </div>
+                        </div>
+                    </form>
                 </div>
-                <div class="modal-footer bg-light">
-                    <button type="button" class="btn btn-secondary btn-giant" data-bs-dismiss="modal">❌ CANCELAR</button>
-                    <button type="submit" class="btn btn-info btn-giant">💾 GUARDAR PLAN</button>
+
+                <div class="table-responsive bg-white">
+                    <table class="table table-bordered mb-0">
+                        <thead class="bg-dark text-white">
+                            <tr>
+                                <th>Nombre Plan</th>
+                                <th>Código</th>
+                                <th>Bonificación</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyPlanesAjax"></tbody>
+                    </table>
                 </div>
-            </form>
+                <div id="loadingPlanes" class="text-center mt-3" style="display:none;">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <span class="fs-4 ms-2">Cargando planes...</span>
+                </div>
+
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary btn-giant" data-bs-dismiss="modal">❌ CERRAR</button>
+            </div>
         </div>
     </div>
 </div>
@@ -340,14 +279,10 @@
 @section Scripts {
 <script>
     // ============================================================
-    // 1. CARGA DE DATOS DESDE RAZOR (SERIALIZADOS A JSON)
+    // 1. LÓGICA BUSCADORES (OS y Mandatarias)
     // ============================================================
     var datosBuscadorMain = @Html.Raw(jsonOS);
     var datosBuscadorModal = @Html.Raw(jsonMandatarias);
-
-    // ============================================================
-    // 2. LÓGICA BUSCADOR PRINCIPAL (TABLA)
-    // ============================================================
     var inputMain = document.getElementById('inputBuscadorMain');
     var listaMain = document.getElementById('listaSugerenciasMain');
     var tbody = document.getElementById('tbodyOS');
@@ -355,15 +290,11 @@
     inputMain.addEventListener('input', function() {
         var texto = this.value.toLowerCase().trim();
         listaMain.innerHTML = ''; 
-
         if (texto.length === 0) { listaMain.style.display = 'none'; return; }
-
         var coincidencias = datosBuscadorMain.filter(function(item) {
             return (item.texto && item.texto.toLowerCase().includes(texto));
         });
-
         if (coincidencias.length === 0) { listaMain.style.display = 'none'; return; }
-
         coincidencias.forEach(function(item) {
             var div = document.createElement('div');
             div.className = 'item-sugerencia';
@@ -379,19 +310,16 @@
     });
 
     function moverFilaAlPrincipio(id) {
-        // data-id ahora coincide con IdObrasSociales
         var fila = document.querySelector('.fila-os[data-id="' + id + '"]');
         if (fila) {
             tbody.prepend(fila); 
-            fila.style.backgroundColor = '#fff3cd'; // Amarillo
+            fila.style.backgroundColor = '#fff3cd'; 
             fila.scrollIntoView({ behavior: 'smooth', block: 'center' });
             setTimeout(function() { fila.style.backgroundColor = ''; }, 3000);
         }
     }
 
-    // ============================================================
-    // 3. LÓGICA BUSCADOR MODAL (MANDATARIAS)
-    // ============================================================
+    // --- BUSCADOR MANDATARIAS (DENTRO DEL MODAL) ---
     var inputMandModal = document.getElementById('inputMandatariaModal');
     var inputIdMandHidden = document.getElementById('inputIdMandatariaHidden');
     var listaModal = document.getElementById('listaSugerenciasModal');
@@ -399,23 +327,23 @@
     inputMandModal.addEventListener('input', function() {
         var texto = this.value.toLowerCase().trim();
         listaModal.innerHTML = '';
+        
+        // AQUÍ ESTABA EL "PROBLEMA": Al escribir, limpiamos el ID.
+        // Si el usuario no hace click después, el ID queda en 0.
         inputIdMandHidden.value = "0"; 
 
         if (texto.length === 0) { listaModal.style.display = 'none'; return; }
-
         var coincidencias = datosBuscadorModal.filter(function(item) {
             return (item.texto && item.texto.toLowerCase().includes(texto));
         });
-
         if (coincidencias.length === 0) { listaModal.style.display = 'none'; return; }
-
         coincidencias.forEach(function(item) {
             var div = document.createElement('div');
             div.className = 'item-sugerencia';
             div.innerHTML = item.texto; 
             div.addEventListener('click', function() {
                 inputMandModal.value = item.nombre; 
-                inputIdMandHidden.value = item.id;  
+                inputIdMandHidden.value = item.id; // AQUÍ SE ASIGNA EL ID NUEVO
                 listaModal.style.display = 'none';
             });
             listaModal.appendChild(div);
@@ -429,12 +357,9 @@
     });
 
     // ============================================================
-    // 4. LÓGICA DE APERTURA DE MODALES
+    // 2. LÓGICA APERTURA MODALES (OS)
     // ============================================================
     var modalOS = new bootstrap.Modal(document.getElementById('modalOS'));
-    var modalPlanes = new bootstrap.Modal(document.getElementById('modalPlanes'));
-    
-    // Variables Elementos
     var modalTitulo = document.getElementById('modalTitulo');
     var inputIdOS = document.getElementById('inputIdOS');
     var inputQueToco = document.getElementById('inputQueToco');
@@ -450,19 +375,15 @@
         modalTitulo.textContent = '➕ AGREGAR OBRA SOCIAL';
         btnConfirmarModal.className = 'btn btn-success btn-giant';
         btnConfirmarModal.textContent = '💾 GUARDAR';
-
         inputQueToco.value = 'Agregar';
         inputIdOS.value = '0';
         inputNombreOS.value = '';
         inputMandModal.value = '';
-        inputIdMandHidden.value = '0'; // Se resetea el ID hidden de la mandataria
-
+        inputIdMandHidden.value = '0'; 
         chkEsPrepaga.checked = false;
         chkActiva.checked = true;
-
         inputNombreOS.required = true;
         inputMandModal.required = true;
-
         divFormulario.style.display = 'block';
         divMensajeEliminar.style.display = 'none';
         modalOS.show();
@@ -473,21 +394,18 @@
         modalTitulo.textContent = '✏️ MODIFICAR OBRA SOCIAL';
         btnConfirmarModal.className = 'btn btn-warning btn-giant';
         btnConfirmarModal.textContent = '💾 GUARDAR CAMBIOS';
-
         inputQueToco.value = 'Modificar';
-        inputIdOS.value = id;      // Viene de IdObrasSociales
-        inputNombreOS.value = nombre; // Viene de Nombre
-
-        // Cargar datos de Mandataria
-        inputIdMandHidden.value = idMand; // Viene de IdMandataria (singular en ObrasSociales)
-        inputMandModal.value = nombreMand; // Viene de NombreMandataria
-
+        inputIdOS.value = id;      
+        inputNombreOS.value = nombre; 
+        
+        // Asignamos el ID y el Nombre actuales
+        inputIdMandHidden.value = idMand; 
+        inputMandModal.value = nombreMand; 
+        
         chkEsPrepaga.checked = esPrepaga;
         chkActiva.checked = activa;
-
         inputNombreOS.required = true;
         inputMandModal.required = true;
-
         divFormulario.style.display = 'block';
         divMensajeEliminar.style.display = 'none';
         modalOS.show();
@@ -497,31 +415,195 @@
         modalTitulo.textContent = '🗑️ ELIMINAR OBRA SOCIAL';
         btnConfirmarModal.className = 'btn btn-danger btn-giant';
         btnConfirmarModal.textContent = '🗑️ CONFIRMAR ELIMINACIÓN';
-
         inputQueToco.value = 'Eliminar';
         inputIdOS.value = id;
         spanNombreEliminar.textContent = nombre;
-
         inputNombreOS.required = false;
         inputMandModal.required = false;
-
         divFormulario.style.display = 'none';
         divMensajeEliminar.style.display = 'block';
         modalOS.show();
     }
 
-    var inputIdOSPlan = document.getElementById('inputIdOSPlan');
-    var spanNombreOSPlan = document.getElementById('spanNombreOSPlan');
-    var inputNombrePlan = document.getElementById('inputNombrePlan');
-    var inputCodigoPlan = document.getElementById('inputCodigoPlan');
+    // ============================================================
+    // !!! CANDADO DE SEGURIDAD (FIX MANDATARIA NO GUARDADA) !!!
+    // ============================================================
+    // Si el usuario escribe una mandataria pero no hace click en la lista, el ID queda en 0.
+    // Esto impide enviar el formulario en ese estado.
+    
+    var formOS = document.querySelector('#modalOS form');
+    formOS.addEventListener('submit', function(e) {
+        var textoMandataria = inputMandModal.value.trim();
+        var idMandataria = inputIdMandHidden.value;
+        var operacion = inputQueToco.value;
 
-    function abrirModalPlanes(id, nombreOS, codigo, nombrePlan) {
-        inputIdOSPlan.value = id;
+        // Si estamos agregando o modificando...
+        if (operacion === 'Agregar' || operacion === 'Modificar') {
+            // Si hay texto escrito, PERO el ID es 0 o vacío...
+            if (textoMandataria.length > 0 && (idMandataria === "0" || idMandataria === "")) {
+                e.preventDefault(); // ¡ALTO! No envíes nada.
+                alert("⚠️ ATENCIÓN: \n\nEscribiste una Mandataria pero no la seleccionaste de la lista.\n\nPor favor, selecciona la opción que aparece en la lista desplegable.");
+                inputMandModal.focus();
+            }
+        }
+    });
+
+    // ============================================================
+    // 3. LÓGICA PLANES AJAX (Igual que antes)
+    // ============================================================
+    var modalPlanes = new bootstrap.Modal(document.getElementById('modalPlanes'));
+    var spanNombreOSPlan = document.getElementById('spanNombreOSPlan');
+    var tbodyPlanesAjax = document.getElementById('tbodyPlanesAjax');
+    var loadingPlanes = document.getElementById('loadingPlanes');
+    var alertaPlanes = document.getElementById('alertaPlanes');
+
+    var planIdHidden = document.getElementById('planIdHidden');
+    var planIdOSHidden = document.getElementById('planIdOSHidden');
+    var planNombre = document.getElementById('planNombre');
+    var planCodigo = document.getElementById('planCodigo');
+    var planPorcentaje = document.getElementById('planPorcentaje');
+    var btnGuardarPlanAjax = document.getElementById('btnGuardarPlanAjax');
+
+    function abrirModalPlanes(idOS, nombreOS) {
         spanNombreOSPlan.textContent = nombreOS;
-        inputCodigoPlan.value = (codigo == '0') ? '' : codigo;
-        inputNombrePlan.value = nombrePlan;
+        planIdOSHidden.value = idOS;
+        limpiarFormPlanes();
         modalPlanes.show();
-        setTimeout(() => inputNombrePlan.focus(), 500);
+        cargarPlanesAjax(idOS); 
+    }
+
+    function limpiarFormPlanes() {
+        planIdHidden.value = "0";
+        planNombre.value = "";
+        planCodigo.value = "";
+        planPorcentaje.value = "";
+        btnGuardarPlanAjax.textContent = "💾 GUARDAR";
+        btnGuardarPlanAjax.className = "btn btn-success fw-bold";
+        btnGuardarPlanAjax.disabled = false; 
+        alertaPlanes.style.display = 'none';
+    }
+
+    async function cargarPlanesAjax(idOS) {
+        tbodyPlanesAjax.innerHTML = '';
+        loadingPlanes.style.display = 'block';
+        try {
+            const response = await fetch(`@Url.Action("ObtenerPlanesPorObrasSociales", "Home")?idObraSocial=${idOS}`);
+            const data = await response.json();
+            
+            if (data.success) {
+                if (data.data.length === 0) {
+                    tbodyPlanesAjax.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Sin planes cargados.</td></tr>';
+                } else {
+                    data.data.forEach(p => {
+                        const bonifVisual = parseFloat(p.bonificacion).toFixed(2); 
+                        const row = `
+                            <tr>
+                                <td>${p.nombrePlan}</td>
+                                <td>${p.numeroBonificacion || '-'}</td>
+                                <td class="fw-bold text-success">${bonifVisual}%</td>
+                                <td>
+                                    <button class="btn btn-sm btn-warning me-2" onclick='editarPlanAjax(${JSON.stringify(p)})'>✏️</button>
+                                    <button class="btn btn-sm btn-danger" onclick="eliminarPlanAjax(${p.idPlanBonificacion})">🗑️</button>
+                                </td>
+                            </tr>
+                        `;
+                        tbodyPlanesAjax.innerHTML += row;
+                    });
+                }
+            } else {
+                mostrarAlertaPlan('error', 'Error al cargar planes.');
+            }
+        } catch (err) {
+            console.error(err);
+            mostrarAlertaPlan('error', 'Error de conexión.');
+        } finally {
+            loadingPlanes.style.display = 'none';
+        }
+    }
+
+    function editarPlanAjax(plan) {
+        planIdHidden.value = plan.idPlanBonificacion;
+        planNombre.value = plan.nombrePlan;
+        planCodigo.value = plan.numeroBonificacion;
+        planPorcentaje.value = plan.bonificacion;
+        btnGuardarPlanAjax.textContent = "✏️ MODIFICAR";
+        btnGuardarPlanAjax.className = "btn btn-warning fw-bold";
+        planNombre.focus();
+    }
+
+    document.getElementById('btnGuardarPlanAjax').addEventListener('click', async function(e) {
+        e.preventDefault(); 
+        if (!planNombre.value || !planPorcentaje.value) {
+            mostrarAlertaPlan('error', 'Complete el Nombre y la Bonificación.');
+            return;
+        }
+        btnGuardarPlanAjax.disabled = true;
+        const textoOriginal = btnGuardarPlanAjax.textContent;
+        btnGuardarPlanAjax.innerHTML = '<span class="spinner-border spinner-border-sm"></span> GUARDANDO...';
+
+        const planData = {
+            IdPlanBonificacion: parseInt(planIdHidden.value),
+            IdObraSocial: parseInt(planIdOSHidden.value),
+            NombrePlan: planNombre.value,
+            NumeroBonificacion: planCodigo.value,
+            Bonificacion: parseFloat(planPorcentaje.value) 
+        };
+
+        try {
+            const response = await fetch('@Url.Action("GuardarPlanBonificacion", "Home")', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(planData)
+            });
+            const result = await response.json();
+            if (result.success) {
+                mostrarAlertaPlan('success', result.message);
+                limpiarFormPlanes(); 
+                cargarPlanesAjax(planData.IdObraSocial); 
+            } else {
+                mostrarAlertaPlan('error', result.message);
+            }
+        } catch (err) {
+            console.error(err);
+            mostrarAlertaPlan('error', 'Error de conexión al guardar.');
+        } finally {
+            btnGuardarPlanAjax.disabled = false;
+            btnGuardarPlanAjax.textContent = textoOriginal;
+            if (planIdHidden.value !== "0") {
+                 btnGuardarPlanAjax.className = "btn btn-warning fw-bold";
+                 btnGuardarPlanAjax.textContent = "✏️ MODIFICAR";
+            } else {
+                 btnGuardarPlanAjax.className = "btn btn-success fw-bold";
+                 btnGuardarPlanAjax.textContent = "💾 GUARDAR";
+            }
+        }
+    });
+
+    async function eliminarPlanAjax(idPlan) {
+        if(!confirm('¿Seguro eliminar este plan?')) return;
+        try {
+            const response = await fetch('@Url.Action("EliminarPlanBonificacion", "Home")', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(idPlan)
+            });
+            const result = await response.json();
+            if(result.success) {
+                mostrarAlertaPlan('success', 'Plan eliminado.');
+                cargarPlanesAjax(planIdOSHidden.value);
+            } else {
+                mostrarAlertaPlan('error', result.message);
+            }
+        } catch(err) {
+            mostrarAlertaPlan('error', 'Error al eliminar.');
+        }
+    }
+
+    function mostrarAlertaPlan(tipo, msj) {
+        alertaPlanes.className = `alert fw-bold fs-5 text-center alert-${tipo === 'success' ? 'success' : 'danger'}`;
+        alertaPlanes.textContent = msj;
+        alertaPlanes.style.display = 'block';
+        setTimeout(() => alertaPlanes.style.display = 'none', 4000);
     }
 </script>
 }

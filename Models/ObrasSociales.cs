@@ -15,17 +15,14 @@ public class ObrasSociales
     public string Nombre { get; set; }
  [JsonProperty]
     public string NombreMandataria { get; set; }
-  [JsonProperty]
-    public int CodigoBonificacion { get; set; }
+  
 
     [JsonProperty]
     public bool? EsPrepaga { get; set; }
      [JsonProperty]
     public bool Activa { get; set; }
 
-    [JsonProperty]
-    public string NombreCodigoBonificacion { get; set; }
-    public ObrasSociales()
+        public ObrasSociales()
     {
         
     }

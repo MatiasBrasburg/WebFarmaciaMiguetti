@@ -92,13 +92,13 @@ private static string _connectionString = @"Server=.\SQLEXPRESS01;DataBase=Farma
         }
         return ListOS;
     }
- public static void ModificarOS  (int IdOS, string nuevoNombre, int IdMandatarias,  bool? EsPrepaga, bool? Activa)
+ public static void ModificarOS  (int IdOS, string nuevoNombre, int IdMandatarias, string nombreMandataria, bool? EsPrepaga, bool? Activa)
     {
      ObrasSociales ObjOS = null;
         using (SqlConnection connection = new SqlConnection(_connectionString))
         {
-            string query = "UPDATE ObrasSociales SET IdMandatarias = @pIdMandatarias, Nombre = @pNuevoNombre, EsPrepaga = @pEsPrepaga, Activa = @pActiva where IdObrasSociales = @pIdOS"; 
-            connection.Execute(query, new {pIdMandatarias = IdMandatarias, pNuevoNombre = nuevoNombre, pEsPrepaga = EsPrepaga, pActiva = Activa, pIdOS = IdOS });
+            string query = "UPDATE ObrasSociales SET IdMandatarias = @pIdMandatarias, Nombre = @pNuevoNombre, NombreMandataria = @pNombreMandataria, EsPrepaga = @pEsPrepaga, Activa = @pActiva where IdObrasSociales = @pIdOS"; 
+            connection.Execute(query, new {pIdMandatarias = IdMandatarias, pNuevoNombre = nuevoNombre, pNombreMandataria = nombreMandataria, pEsPrepaga = EsPrepaga, pActiva = Activa, pIdOS = IdOS });
          }
     
     }
@@ -141,11 +141,10 @@ private static string _connectionString = @"Server=.\SQLEXPRESS01;DataBase=Farma
 
 public static void AgregarBonificaciones(int IdOS, string? NombreCodigoBonificacion, int? CodigoBonificacion)
 {
-    // No necesitamos crear una instancia de ObrasSociales aquí
+  
     using (SqlConnection connection = new SqlConnection(_connectionString))
     {
-        // 🚨 CORRECCIÓN: Usamos UPDATE porque la Obra Social YA EXISTE.
-        // El INSERT intentaría crear una fila nueva, pero nosotros queremos modificar la fila del IdOS existente.
+       
         string query = "UPDATE ObrasSociales SET NombreCodigoBonificacion = @pNombreCodigoBonificacion, CodigoBonificacion = @pCodigoBonificacion WHERE IdObrasSociales = @pIdOS"; 
         
         connection.Execute(query, new { 
@@ -166,8 +165,85 @@ public static void AgregarBonificaciones(int IdOS, string? NombreCodigoBonificac
     
     }
 
+public static List<PlanBonificacion> TraerPlanBonificacionPorId  (int IdOS)
+    {
+     List<PlanBonificacion> ObjPlanBoni = null;
+        using (SqlConnection connection = new SqlConnection(_connectionString))
+        {
+            string query = "SELECT * FROM PlanBonificacion where IdObrasSociales = @pIdOS"; 
+            ObjPlanBoni = connection.Query<PlanBonificacion>(query, new {pIdOS = IdOS}).ToList();
+         }
 
+         return ObjPlanBoni;
+    }
 
+public static void InsertarPlan(PlanBonificacion plan)
+        {
+            // Nivel Técnico: Usamos parámetros (@NombrePlan) para evitar SQL Injection.
+            string query = "INSERT INTO PlanBonificacion (IdObrasSociales, NombrePlan, Bonificacion, NumeroBonificacion) " +
+                           "VALUES (@IdObraSocial, @NombrePlan, @Bonificacion, @NumeroBonificacion)";
+            
+            using (SqlConnection connection = new SqlConnection(_connectionString))
+            {
+                try
+                {
+                    connection.Open();
+                    // Dapper mapea automáticamente las propiedades del objeto 'plan' a los parámetros @
+                    connection.Execute(query, plan); 
+                }
+                catch (SqlException ex)
+                {
+                    // Manejo de error de base de datos. Deberías loggear esto.
+                    throw new Exception("Error al insertar el plan de bonificación en la base de datos.", ex);
+                }
+            }
+        }
+
+                public static void ActualizarPlan(PlanBonificacion plan)
+        {
+            // Nivel Técnico: La cláusula WHERE usa el PK para garantizar que solo se actualice una fila.
+            string query = "UPDATE PlanBonificacion SET " +
+                           "IdObrasSociales = @IdObraSocial, " +
+                           "NombrePlan = @NombrePlan, " +
+                           "Bonificacion = @Bonificacion, " +
+                           "NumeroBonificacion = @NumeroBonificacion " +
+                           "WHERE IdPlanBonificacion = @IdPlanBonificacion";
+
+            using (SqlConnection connection = new SqlConnection(_connectionString))
+            {
+                try
+                {
+                    connection.Open();
+                    // Dapper encuentra las propiedades del objeto 'plan' (incluyendo el PK para el WHERE)
+                    connection.Execute(query, plan); 
+                }
+                catch (SqlException ex)
+                {
+                    throw new Exception("Error al actualizar el plan de bonificación en la base de datos.", ex);
+                }
+            }
+        }
+
+        
+        public static void EliminarPlan(int idPlan)
+        {
+            // Nivel Técnico: Delete simple con parámetro para el Id.
+            string query = "DELETE FROM PlanBonificacion WHERE IdPlanBonificacion = @IdPlan";
+
+            using (SqlConnection connection = new SqlConnection(_connectionString))
+            {
+                try
+                {
+                    connection.Open();
+                    // Pasamos un objeto anónimo para el parámetro @IdPlan
+                    connection.Execute(query, new { IdPlan = idPlan }); 
+                }
+                catch (SqlException ex)
+                {
+                    throw new Exception("Error al eliminar el plan de bonificación en la base de datos.", ex);
+                }
+            }
+        }
 
 
 
