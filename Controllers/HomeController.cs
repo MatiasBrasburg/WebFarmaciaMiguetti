@@ -397,7 +397,74 @@ public class HomeController : Controller
     }
 
 
+[HttpGet]
+    public IActionResult ObtenerItemPorId(int idDetalle)
+    {
+        try
+        {
+            var item = BD.TraerDetallePorId(idDetalle);
+            if (item == null) return Json(new { success = false, message = "Ítem no encontrado" });
+            return Json(new { success = true, data = item });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = ex.Message });
+        }
+    }
 
+    [HttpPost]
+    public IActionResult GuardarItemIndividual(int IdLiquidacionPadre, int IdItem, int IdOS, int IdPlan, int Recetas, decimal Total, decimal CargoOS, decimal Bonificacion)
+    {
+        try
+        {
+            // Validaciones básicas
+            if (IdOS == 0) return Json(new { success = false, message = "Debe elegir Obra Social" });
+            if (Total <= 0) return Json(new { success = false, message = "El total debe ser mayor a 0" });
+
+            LiquidacionDetalle item = new LiquidacionDetalle
+            {
+                IdLiquidacionDetalle = IdItem,
+                IdLiquidaciones = IdLiquidacionPadre,
+                IdObrasSociales = IdOS,
+                IdPlanBonificacion = IdPlan,
+                CantidadRecetas = Recetas,
+                TotalBruto = Total,
+                MontoCargoOS = CargoOS,
+                MontoBonificacion = Bonificacion
+            };
+
+            if (IdItem == 0)
+            {
+                // INSERTAR
+                BD.AgregarItemIndividual(item);
+                return Json(new { success = true, message = "Ítem AGREGADO correctamente." });
+            }
+            else
+            {
+                // MODIFICAR
+                BD.ModificarItemIndividual(item);
+                return Json(new { success = true, message = "Ítem MODIFICADO correctamente." });
+            }
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = "Error: " + ex.Message });
+        }
+    }
+
+    [HttpPost]
+    public IActionResult EliminarItemIndividual(int idItem, int idLiquidacionPadre)
+    {
+        try
+        {
+            BD.EliminarItemIndividual(idItem, idLiquidacionPadre);
+            return Json(new { success = true, message = "Ítem eliminado." });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = ex.Message });
+        }
+    }
 
 
 

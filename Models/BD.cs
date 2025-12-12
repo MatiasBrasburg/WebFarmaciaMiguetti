@@ -379,7 +379,82 @@ public static void EliminarLiquidacion(int idLiquidacion)
 }
 
 
+// 1. Traer un solo ítem para editarlo
+public static LiquidacionDetalle TraerDetallePorId(int idDetalle)
+{
+    using (SqlConnection connection = new SqlConnection(_connectionString))
+    {
+        string query = "SELECT * FROM LiquidacionDetalle WHERE IdLiquidacionDetalle = @pId";
+        return connection.QueryFirstOrDefault<LiquidacionDetalle>(query, new { pId = idDetalle });
+    }
+}
 
+// 2. Agregar ítem suelto (y actualizar total del padre)
+public static void AgregarItemIndividual(LiquidacionDetalle item)
+{
+    using (SqlConnection connection = new SqlConnection(_connectionString))
+    {
+        connection.Open();
+        
+        // A. Insertar el ítem
+        string query = @"
+            INSERT INTO LiquidacionDetalle (IdLiquidaciones, IdObrasSociales, IdPlanBonificacion, CantidadRecetas, TotalBruto, MontoCargoOS, MontoBonificacion)
+            VALUES (@IdLiquidaciones, @IdObrasSociales, @IdPlanBonificacion, @CantidadRecetas, @TotalBruto, @MontoCargoOS, @MontoBonificacion)";
+        connection.Execute(query, item);
+
+        // B. Actualizar el Total de la Liquidación Padre (Magia automática)
+        ActualizarTotalCabecera(item.IdLiquidaciones, connection);
+    }
+}
+
+// 3. Modificar ítem suelto
+public static void ModificarItemIndividual(LiquidacionDetalle item)
+{
+    using (SqlConnection connection = new SqlConnection(_connectionString))
+    {
+        connection.Open();
+
+        string query = @"
+            UPDATE LiquidacionDetalle 
+            SET IdObrasSociales = @IdObrasSociales, 
+                IdPlanBonificacion = @IdPlanBonificacion, 
+                CantidadRecetas = @CantidadRecetas, 
+                TotalBruto = @TotalBruto, 
+                MontoCargoOS = @MontoCargoOS, 
+                MontoBonificacion = @MontoBonificacion
+            WHERE IdLiquidacionDetalle = @IdLiquidacionDetalle";
+        
+        connection.Execute(query, item);
+        
+        // Actualizar Total Padre
+        ActualizarTotalCabecera(item.IdLiquidaciones, connection);
+    }
+}
+
+// 4. Eliminar ítem suelto
+public static void EliminarItemIndividual(int idDetalle, int idLiquidacionPadre)
+{
+    using (SqlConnection connection = new SqlConnection(_connectionString))
+    {
+        connection.Open();
+        
+        string query = "DELETE FROM LiquidacionDetalle WHERE IdLiquidacionDetalle = @pId";
+        connection.Execute(query, new { pId = idDetalle });
+
+        // Actualizar Total Padre
+        ActualizarTotalCabecera(idLiquidacionPadre, connection);
+    }
+}
+
+// MÉTODO PRIVADO PARA RECALCULAR TOTALES (Evita inconsistencias)
+private static void ActualizarTotalCabecera(int idLiq, SqlConnection conn)
+{
+    string sqlUpdate = @"
+        UPDATE Liquidaciones 
+        SET TotalPresentado = (SELECT COALESCE(SUM(TotalBruto), 0) FROM LiquidacionDetalle WHERE IdLiquidaciones = @pId)
+        WHERE IdLiquidaciones = @pId";
+    conn.Execute(sqlUpdate, new { pId = idLiq });
+}
 
 
 
