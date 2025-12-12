@@ -456,6 +456,36 @@ private static void ActualizarTotalCabecera(int idLiq, SqlConnection conn)
     conn.Execute(sqlUpdate, new { pId = idLiq });
 }
 
+public static Liquidaciones TraerLiquidacionPorId(int id)
+{
+    using (SqlConnection connection = new SqlConnection(_connectionString))
+    {
+        string query = "SELECT * FROM Liquidaciones WHERE IdLiquidaciones = @pId";
+        return connection.QueryFirstOrDefault<Liquidaciones>(query, new { pId = id });
+    }
+}
+
+// 2. Guardar cambios de la cabecera (Fecha, Mandataria, Obs)
+public static void ModificarLiquidacionCabecera(int id, int idMandataria, DateTime fecha, string obs)
+{
+    using (SqlConnection connection = new SqlConnection(_connectionString))
+    {
+        string query = @"
+            UPDATE Liquidaciones 
+            SET IdMandatarias = @pMand, FechaPresentacion = @pFecha, Observaciones = @pObs, Periodo = @pPeriodo
+            WHERE IdLiquidaciones = @pId";
+            
+        connection.Execute(query, new { 
+            pId = id, 
+            pMand = idMandataria, 
+            pFecha = fecha, 
+            pObs = obs,
+            pPeriodo = fecha.ToString("MM-yyyy")
+        });
+    }
+}
+
+
 
 
 

@@ -34,8 +34,9 @@
     /* ESTILO VISOR */
     .visor-header { background-color: #0dcaf0; color: #000; padding: 15px; border-bottom: 4px solid #000; font-size: 1.3rem; font-weight: bold; }
     
-    /* ESTILO MINI-MODAL (ITEM) */
-    .modal-item-header { background-color: #ffc107; color: #000; border-bottom: 3px solid #000; }
+    /* ESTILO MINI-MODALES */
+    .modal-warning-header { background-color: #ffc107; color: #000; border-bottom: 3px solid #000; }
+    .modal-edit-header { background-color: #6610f2; color: #fff; border-bottom: 3px solid #000; }
 </style>
 
 <div class="container-fluid mt-4">
@@ -43,7 +44,7 @@
 
     <div class="card mb-4" style="border: 3px solid #6c757d; background-color: #e2e3e5;">
         <div class="card-body">
-            <h4 class="mb-3 fw-bold">🔍 BUSCAR LIQUIDACIONES ANTERIORES</h4>
+            <h4 class="mb-3 fw-bold">🔍 BUSCAR LIQUIDACIONES</h4>
             <div class="row g-3">
                 <div class="col-md-2">
                     <label class="form-label">N° Liquidación</label>
@@ -57,7 +58,7 @@
                     <label class="form-label">Fecha Hasta</label>
                     <input type="date" id="filtroFechaHasta" class="form-control">
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <label class="form-label">Mandataria</label>
                     <select id="filtroMandataria" class="form-select">
                         <option value="0">-- TODAS --</option>
@@ -67,8 +68,9 @@
                         }
                     </select>
                 </div>
-                <div class="col-md-2 d-grid align-items-end">
-                    <button class="btn btn-primary btn-super" onclick="buscarLiquidaciones()">🔍 BUSCAR</button>
+                <div class="col-md-3 d-flex align-items-end gap-2">
+                    <button class="btn btn-primary btn-super w-100" onclick="buscarLiquidaciones()">🔍 BUSCAR</button>
+                    <button class="btn btn-secondary btn-super" onclick="limpiarFiltros()" title="Borrar filtros y ver todo">🔄</button>
                 </div>
             </div>
         </div>
@@ -137,7 +139,7 @@
                             <div class="col-md-3"><label class="form-label">Total ($)</label><input type="number" id="inputTotal" class="form-control" step="0.01" value="0.00" oninput="recalcularNeto('inputTotal', 'inputPlan', 'inputNeto', 'lblPorcentajeAplicado')"></div>
                             <div class="col-md-3"><label class="form-label">Cargo O.S.</label><input type="number" id="inputCargoOS" class="form-control" step="0.01" value="0.00"></div>
                             <div class="col-md-3">
-                                <label class="form-label text-success">NETO ($)</label>
+                                <label class="form-label text-success">Bonif ($)</label>
                                 <input type="number" id="inputNeto" class="form-control fw-bold text-success border-success bg-light" readonly value="0.00">
                                 <small class="text-muted" id="lblPorcentajeAplicado">Plan: 0%</small>
                             </div>
@@ -147,7 +149,7 @@
                 </div>
                 <div class="table-responsive border border-2 border-dark rounded bg-white" style="min-height: 200px;">
                     <table class="table table-bordered mb-0">
-                        <thead><tr><th>OS</th><th>PLAN</th><th>RECETAS</th><th>TOTAL</th><th>CARGO OS</th><th>NETO</th><th>ACCION</th></tr></thead>
+                        <thead><tr><th>OS</th><th>PLAN</th><th>RECETAS</th><th>TOTAL</th><th>CARGO OS</th><th>BONIF</th><th>ACCION</th></tr></thead>
                         <tbody id="tbodyDetalle"></tbody>
                     </table>
                 </div>
@@ -167,7 +169,7 @@
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content border-4 border-info">
             <div class="modal-header bg-info text-white">
-                <h3 class="modal-title fw-bold text-dark">👁️ CONSULTA Y EDICIÓN</h3>
+                <h3 class="modal-title fw-bold text-dark">👁️ CONSULTA Y EDICIÓN DE ÍTEMS</h3>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body bg-white p-0">
@@ -182,23 +184,27 @@
                 <div class="p-3 bg-light border-bottom border-2 border-dark d-flex justify-content-between align-items-center">
                     <div class="d-flex align-items-center gap-2" style="flex: 1;">
                         <span class="fs-4">🔍</span>
-                        <input type="text" id="buscadorDetalles" class="form-control" placeholder="Escriba nombre de Obra Social para filtrar..." onkeyup="filtrarDetalles()">
+                        <input type="text" id="buscadorDetalles" class="form-control" placeholder="Escriba nombre de Obra Social..." onkeyup="filtrarDetalles()">
                     </div>
-                    <button class="btn btn-success btn-super ms-3" onclick="abrirItemABM(0)">
-                        ➕ AGREGAR ÍTEM
-                    </button>
+                    <button class="btn btn-success btn-super ms-3" onclick="abrirItemABM(0)">➕ AGREGAR ÍTEM</button>
                 </div>
 
                 <div class="table-responsive p-3">
                     <table class="table table-bordered table-striped mb-0">
                         <thead class="bg-dark text-white">
-                            <tr><th>OBRA SOCIAL</th><th>PLAN</th><th>RECETAS</th><th>TOTAL BRUTO</th><th>CARGO O.S.</th><th>BONIFICACIÓN</th><th>ACCIONES</th></tr>
+                            <tr>
+                                <th>OBRA SOCIAL</th><th>PLAN</th><th>RECETAS</th><th>TOTAL BRUTO</th><th>CARGO O.S.</th><th>BONIFICACIÓN</th>
+                                <th class="text-end">A PAGAR (REAL)</th> <th>ACCIONES</th>
+                            </tr>
                         </thead>
                         <tbody id="tbodyVerDetalle"></tbody>
                     </table>
                 </div>
             </div>
-            <div class="modal-footer bg-light">
+            <div class="modal-footer bg-light d-flex justify-content-between">
+                <button type="button" class="btn btn-primary btn-lg fw-bold" onclick="imprimirReporte()">
+                    🖨️ IMPRIMIR REPORTE
+                </button>
                 <button type="button" class="btn btn-lg btn-dark fw-bold px-5" data-bs-dismiss="modal">CERRAR</button>
             </div>
         </div>
@@ -208,7 +214,7 @@
 <div class="modal fade" id="modalItemIndividual" tabindex="-1" data-bs-backdrop="static" aria-hidden="true" style="z-index: 1060;">
     <div class="modal-dialog modal-lg">
         <div class="modal-content border-3 border-warning">
-            <div class="modal-header modal-item-header">
+            <div class="modal-header modal-warning-header">
                 <h4 class="modal-title fw-bold" id="tituloModalItem">EDITAR ÍTEM</h4>
                 <button type="button" class="btn-close" onclick="cerrarModalItem()"></button>
             </div>
@@ -230,23 +236,10 @@
                             <option value="0">- Primero OS -</option>
                         </select>
                     </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Cant. Recetas</label>
-                        <input type="number" id="item_Recetas" class="form-control" value="0">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Total ($)</label>
-                        <input type="number" id="item_Total" class="form-control" step="0.01" value="0.00" oninput="recalcularNeto('item_Total', 'item_IdPlan', 'item_Neto', 'item_lblPorc')">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Cargo O.S.</label>
-                        <input type="number" id="item_CargoOS" class="form-control" step="0.01" value="0.00">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label text-success">Neto ($)</label>
-                        <input type="number" id="item_Neto" class="form-control fw-bold bg-white" readonly value="0.00">
-                        <small id="item_lblPorc">0%</small>
-                    </div>
+                    <div class="col-md-3"><label class="form-label">Recetas</label><input type="number" id="item_Recetas" class="form-control" value="0"></div>
+                    <div class="col-md-3"><label class="form-label">Total ($)</label><input type="number" id="item_Total" class="form-control" step="0.01" value="0.00" oninput="recalcularNeto('item_Total', 'item_IdPlan', 'item_Neto', 'item_lblPorc')"></div>
+                    <div class="col-md-3"><label class="form-label">Cargo O.S.</label><input type="number" id="item_CargoOS" class="form-control" step="0.01" value="0.00"></div>
+                    <div class="col-md-3"><label class="form-label text-success">Bonif ($)</label><input type="number" id="item_Neto" class="form-control fw-bold bg-white" readonly value="0.00"><small id="item_lblPorc">0%</small></div>
                 </div>
             </div>
             <div class="modal-footer bg-light">
@@ -257,159 +250,157 @@
     </div>
 </div>
 
+<div class="modal fade" id="modalEditarCabecera" tabindex="-1" data-bs-backdrop="static" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-3 border-dark">
+            <div class="modal-header modal-edit-header">
+                <h4 class="modal-title fw-bold text-white">✏️ EDITAR DATOS GENERALES</h4>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body bg-light">
+                <input type="hidden" id="edit_Id" value="0">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">📅 FECHA</label>
+                        <input type="date" id="edit_Fecha" class="form-control">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">🏢 MANDATARIA</label>
+                        <select id="edit_Mandataria" class="form-select fw-bold">
+                            @foreach (var m in listaMandatarias) { <option value="@m.IdMandatarias">@m.RazonSocial</option> }
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">📝 OBSERVACIONES</label>
+                        <input type="text" id="edit_Obs" class="form-control">
+                    </div>
+                </div>
+                <div class="alert alert-info mt-3 fw-bold">
+                    ℹ️ Para editar los ítems (recetas, montos), utilice el botón "VER" del listado principal.
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal">CANCELAR</button>
+                <button type="button" class="btn btn-primary fw-bold px-4" onclick="guardarEdicionCabecera()">💾 ACTUALIZAR DATOS</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
 <script>
-    // =========================================================================
-    // 1. VARIABLES & CONFIGURACIÓN
-    // =========================================================================
+    // VARIABLES GLOBALES
     let detallesTemporales = []; 
     let indiceTemporal = 0;      
     const modalABM = new bootstrap.Modal(document.getElementById('modalABM'));
     const modalVer = new bootstrap.Modal(document.getElementById('modalVerDetalle'));
     const modalItem = new bootstrap.Modal(document.getElementById('modalItemIndividual'));
+    const modalEditCab = new bootstrap.Modal(document.getElementById('modalEditarCabecera'));
 
     const mapaMandatarias = {};
     @foreach (var m in listaMandatarias) { @:mapaMandatarias["@m.IdMandatarias"] = "@Html.Raw(m.RazonSocial)";
     }
 
-    // =========================================================================
-    // 2. LÓGICA COMÚN (PLANES & CÁLCULOS)
-    // =========================================================================
-    // Modificado para aceptar el ID del select destino (así sirve para ambos modales)
+    // LÓGICA COMÚN
     async function cargarPlanesDeOS(idOS, idSelectDestino) {
         const selectPlan = document.getElementById(idSelectDestino);
         selectPlan.innerHTML = '<option value="0">Cargando...</option>';
         selectPlan.disabled = true;
-
         if (idOS == "0") { selectPlan.innerHTML = '<option value="0">- Primero OS -</option>'; return; }
-
         try {
-            const url = `@Url.Action("ObtenerPlanesPorObrasSociales", "Home")?idObraSocial=${idOS}`;
-            const response = await fetch(url);
-            const data = await response.json();
-
+            const r = await fetch(`@Url.Action("ObtenerPlanesPorObrasSociales", "Home")?idObraSocial=${idOS}`);
+            const d = await r.json();
             selectPlan.innerHTML = '<option value="0">-- Seleccione Plan --</option>';
-            if (data.success && data.data.length > 0) {
-                data.data.forEach(plan => {
-                    const option = document.createElement('option');
-                    option.value = plan.idPlanBonificacion;
-                    option.text = plan.nombrePlan; 
-                    option.setAttribute('data-bonif', plan.bonificacion); 
-                    selectPlan.appendChild(option);
+            if (d.success && d.data.length > 0) {
+                d.data.forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p.idPlanBonificacion; opt.text = p.nombrePlan; 
+                    opt.setAttribute('data-bonif', p.bonificacion); selectPlan.appendChild(opt);
                 });
                 selectPlan.disabled = false;
             } else { selectPlan.innerHTML = '<option value="0">Sin planes</option>'; }
-        } catch (error) { alert("Error cargando planes."); }
+        } catch (e) { alert("Error cargando planes."); }
     }
 
-    // Modificado para calcular en cualquier formulario (Alta o Edición)
-    function recalcularNeto(idInputTotal, idSelectPlan, idInputNeto, idLbl) {
-        const total = parseFloat(document.getElementById(idInputTotal).value) || 0;
-        const select = document.getElementById(idSelectPlan);
-        let porcentaje = 0;
-
-        if (select.selectedIndex > 0) {
-            porcentaje = parseFloat(select.options[select.selectedIndex].getAttribute('data-bonif')) || 0;
-        }
-
-        if(document.getElementById(idLbl)) document.getElementById(idLbl).textContent = `Plan: ${porcentaje}%`;
-        const neto = total * (porcentaje / 100.0);
-        document.getElementById(idInputNeto).value = neto.toFixed(2);
+    function recalcularNeto(idInTot, idSel, idInNet, idLbl) {
+        const total = parseFloat(document.getElementById(idInTot).value) || 0;
+        const sel = document.getElementById(idSel);
+        let porc = (sel.selectedIndex > 0) ? parseFloat(sel.options[sel.selectedIndex].getAttribute('data-bonif')) : 0;
+        if(document.getElementById(idLbl)) document.getElementById(idLbl).textContent = `Plan: ${porc}%`;
+        document.getElementById(idInNet).value = (total * (porc / 100.0)).toFixed(2);
     }
 
-    // =========================================================================
-    // 3. LÓGICA DE ALTA (TABLA TEMPORAL)
-    // =========================================================================
+    // ALTA NUEVA (TABLA TEMPORAL)
     document.getElementById('btnAgregarFila').addEventListener('click', function() {
-        const idOS = document.getElementById('inputOS').value;
-        const nombreOS = document.getElementById('inputOS').options[document.getElementById('inputOS').selectedIndex].text;
-        const idPlan = document.getElementById('inputPlan').value;
-        const nombrePlan = document.getElementById('inputPlan').options[document.getElementById('inputPlan').selectedIndex]?.text || "-";
-        const recetas = parseInt(document.getElementById('inputRecetas').value) || 0;
-        const total = parseFloat(document.getElementById('inputTotal').value) || 0;
-        const cargoOS = parseFloat(document.getElementById('inputCargoOS').value) || 0;
-        const neto = parseFloat(document.getElementById('inputNeto').value) || 0;
-
-        if (idOS == "0" || idPlan == "0") { alert("⚠️ Faltan datos."); return; }
-        if (total <= 0) { alert("⚠️ Total debe ser mayor a 0."); return; }
-
-        const nuevoDetalle = {
-            idTemp: ++indiceTemporal,
-            IdObrasSociales: parseInt(idOS),     
-            IdPlanBonificacion: parseInt(idPlan), 
-            CantidadRecetas: recetas,
-            TotalBruto: total,
-            MontoCargoOS: cargoOS,
-            MontoBonificacion: neto,
-            nombreOSVisual: nombreOS,
-            nombrePlanVisual: nombrePlan
-        };
-        detallesTemporales.push(nuevoDetalle);
-        dibujarTablaDetalles();
+        const os = document.getElementById('inputOS'); const plan = document.getElementById('inputPlan');
+        if (os.value == "0" || plan.value == "0") { alert("⚠️ Faltan datos."); return; }
         
-        // Reset Inputs
-        document.getElementById('inputOS').value = "0";
-        document.getElementById('inputPlan').innerHTML = '<option value="0">- Primero OS -</option>';
-        document.getElementById('inputPlan').disabled = true;
-        document.getElementById('inputRecetas').value = "0";
-        document.getElementById('inputTotal').value = "0.00";
-        document.getElementById('inputCargoOS').value = "0.00";
-        document.getElementById('inputNeto').value = "0.00";
+        const nuevo = {
+            idTemp: ++indiceTemporal,
+            IdObrasSociales: parseInt(os.value), IdPlanBonificacion: parseInt(plan.value), 
+            CantidadRecetas: parseInt(document.getElementById('inputRecetas').value)||0,
+            TotalBruto: parseFloat(document.getElementById('inputTotal').value)||0,
+            MontoCargoOS: parseFloat(document.getElementById('inputCargoOS').value)||0,
+            MontoBonificacion: parseFloat(document.getElementById('inputNeto').value)||0,
+            nombreOSVisual: os.options[os.selectedIndex].text,
+            nombrePlanVisual: plan.options[plan.selectedIndex].text
+        };
+        detallesTemporales.push(nuevo);
+        dibujarTablaDetalles();
+        os.value="0"; plan.value="0"; plan.disabled=true;
+        document.getElementById('inputRecetas').value="0"; document.getElementById('inputTotal').value="0.00";
+        document.getElementById('inputCargoOS').value="0.00"; document.getElementById('inputNeto').value="0.00";
     });
 
     function dibujarTablaDetalles() {
-        const tbody = document.getElementById('tbodyDetalle');
-        tbody.innerHTML = '';
-        let sumaTotal = 0;
+        const tbody = document.getElementById('tbodyDetalle'); tbody.innerHTML = '';
+        let suma = 0;
         detallesTemporales.forEach(d => {
-            sumaTotal += d.TotalBruto; 
-            tbody.innerHTML += `<tr>
-                <td>${d.nombreOSVisual}</td><td>${d.nombrePlanVisual}</td><td class="text-center">${d.CantidadRecetas}</td>
+            suma += d.TotalBruto; 
+            tbody.innerHTML += `<tr><td>${d.nombreOSVisual}</td><td>${d.nombrePlanVisual}</td><td class="text-center">${d.CantidadRecetas}</td>
                 <td class="text-end">$${d.TotalBruto.toFixed(2)}</td><td class="text-end">$${d.MontoCargoOS.toFixed(2)}</td>
                 <td class="text-end fw-bold text-success">$${d.MontoBonificacion.toFixed(2)}</td>
-                <td class="text-center"><button class="btn btn-sm btn-danger" onclick="quitarDetalle(${d.idTemp})">🗑️</button></td>
-            </tr>`;
+                <td class="text-center"><button class="btn btn-sm btn-danger" onclick="quitarDetalle(${d.idTemp})">🗑️</button></td></tr>`;
         });
-        document.getElementById('spanTotalFinal').textContent = sumaTotal.toFixed(2);
+        document.getElementById('spanTotalFinal').textContent = suma.toFixed(2);
     }
-    function quitarDetalle(idTemp) { detallesTemporales = detallesTemporales.filter(d => d.idTemp !== idTemp); dibujarTablaDetalles(); }
+    function quitarDetalle(id) { detallesTemporales = detallesTemporales.filter(d => d.idTemp !== id); dibujarTablaDetalles(); }
 
     document.getElementById('btnGuardarTodo').addEventListener('click', async function() {
         const btn = this;
-        const idLiq = document.getElementById('liqId').value;
-        const fecha = document.getElementById('liqFecha').value;
         const idMand = document.getElementById('liqMandataria').value;
-        const obs = document.getElementById('liqObs').value;
-
         if (idMand == "0") { alert("⚠️ Falta Mandataria."); return; }
         if (detallesTemporales.length === 0) { alert("⚠️ Lista vacía."); return; }
-        if(!confirm("¿Confirmar Guardado?")) return;
+        if(!confirm("¿Confirmar?")) return;
 
-        btn.disabled = true; btn.innerHTML = "⌛ GUARDANDO...";
-        const formData = new FormData();
-        formData.append("QueToco", "Guardar");
-        formData.append("IdLiquidacion", idLiq);
-        formData.append("IdMandatarias", idMand);
-        formData.append("Fecha", fecha);
-        formData.append("Observaciones", obs);
-        formData.append("DetallesJson", JSON.stringify(detallesTemporales));
+        btn.disabled = true; btn.innerHTML = "⌛...";
+        const fd = new FormData();
+        fd.append("QueToco", "Guardar"); fd.append("IdLiquidacion", "0");
+        fd.append("IdMandatarias", idMand); fd.append("Fecha", document.getElementById('liqFecha').value);
+        fd.append("Observaciones", document.getElementById('liqObs').value);
+        fd.append("DetallesJson", JSON.stringify(detallesTemporales));
 
         try {
-            const response = await fetch('@Url.Action("MostrarModificaciones", "Home")', { method: 'POST', body: formData });
-            const result = await response.json();
-            if (result.success) { alert("✅ Guardado."); modalABM.hide(); buscarLiquidaciones(); } 
-            else { alert("❌ " + result.message); }
-        } catch (e) { alert("Error conexión."); } finally { btn.disabled = false; btn.innerHTML = "💾 GUARDAR TODO"; }
+            const r = await fetch('@Url.Action("MostrarModificaciones", "Home")', { method: 'POST', body: fd });
+            const res = await r.json();
+            if (res.success) { alert("✅ Guardado."); modalABM.hide(); buscarLiquidaciones(); } else { alert("❌ " + res.message); }
+        } catch (e) { alert("Error."); } finally { btn.disabled = false; btn.innerHTML = "💾 GUARDAR TODO"; }
     });
 
-    // =========================================================================
-    // 4. FUNCIONES PRINCIPALES (VISOR, ELIMINAR, BUSCAR)
-    // =========================================================================
+    // BUSCADOR PRINCIPAL + RESET
     function abrirModalNueva() {
         document.getElementById('tituloModal').textContent = "NUEVA LIQUIDACIÓN";
-        document.getElementById('liqId').value = "0";
-        document.getElementById('liqMandataria').value = "0";
+        document.getElementById('liqId').value = "0"; document.getElementById('liqMandataria').value = "0";
         detallesTemporales = []; dibujarTablaDetalles(); modalABM.show();
+    }
+
+    // --- NUEVA FUNCIÓN: LIMPIAR FILTROS ---
+    function limpiarFiltros() {
+        document.getElementById('filtroId').value = "";
+        document.getElementById('filtroFechaDesde').value = "";
+        document.getElementById('filtroFechaHasta').value = "";
+        document.getElementById('filtroMandataria').value = "0";
+        buscarLiquidaciones(); // Recarga automática
     }
 
     async function buscarLiquidaciones() {
@@ -418,148 +409,144 @@
         const hasta = document.getElementById('filtroFechaHasta').value;
         const mand = document.getElementById('filtroMandataria').value;
         const tbody = document.getElementById('tbodyResultados');
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center p-3"><div class="spinner-border"></div> Buscando...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center p-3"><div class="spinner-border"></div></td></tr>';
 
         try {
-            const url = `@Url.Action("BuscarLiquidacionesAjax", "Home")?id=${id}&desde=${desde}&hasta=${hasta}&mandataria=${mand}`;
-            const response = await fetch(url);
-            const res = await response.json();
+            const r = await fetch(`@Url.Action("BuscarLiquidacionesAjax", "Home")?id=${id}&desde=${desde}&hasta=${hasta}&mandataria=${mand}`);
+            const res = await r.json();
             if (res.success && res.data.length > 0) {
                 tbody.innerHTML = ''; 
-                res.data.forEach(liq => {
-                    const fecha = new Date(liq.fechaPresentacion).toLocaleDateString('es-AR');
-                    const nomMand = mapaMandatarias[liq.idMandatarias] || "---";
+                res.data.forEach(l => {
+                    const f = new Date(l.fechaPresentacion).toLocaleDateString('es-AR');
+                    const nm = mapaMandatarias[l.idMandatarias] || "---";
                     tbody.innerHTML += `<tr>
-                        <td class="fw-bold fs-5">${liq.idLiquidaciones}</td><td>${fecha}</td><td class="fw-bold">${nomMand}</td><td>${liq.observaciones||'-'}</td>
+                        <td class="fw-bold fs-5">${l.idLiquidaciones}</td><td>${f}</td><td class="fw-bold">${nm}</td><td>${l.observaciones||'-'}</td>
                         <td>
-                            <button class="btn btn-info btn-sm text-white fw-bold" onclick="verLiquidacion(${liq.idLiquidaciones}, '${fecha}', '${nomMand}')">👁️ VER</button>
-                            <button class="btn btn-danger btn-sm fw-bold" onclick="eliminarLiquidacion(${liq.idLiquidaciones})">🗑️</button>
-                        </td>
-                    </tr>`;
+                            <button class="btn btn-warning btn-sm fw-bold me-1" onclick="editarCabecera(${l.idLiquidaciones})">✏️</button>
+                            <button class="btn btn-info btn-sm text-white fw-bold me-1" onclick="verLiquidacion(${l.idLiquidaciones}, '${f}', '${nm}')">👁️ VER</button>
+                            <button class="btn btn-danger btn-sm fw-bold" onclick="eliminarLiquidacion(${l.idLiquidaciones})">🗑️</button>
+                        </td></tr>`;
                 });
-            } else { tbody.innerHTML = '<tr><td colspan="5" class="text-center p-4">No hay resultados.</td></tr>'; }
+            } else { tbody.innerHTML = '<tr><td colspan="5" class="text-center p-4">Sin resultados.</td></tr>'; }
         } catch (e) { tbody.innerHTML = '<tr><td colspan="5" class="text-danger text-center">Error.</td></tr>'; }
     }
 
-    async function eliminarLiquidacion(id) {
-        if (!confirm(`¿Eliminar liquidación N° ${id}?`)) return;
-        const fd = new FormData(); fd.append("QueToco", "Eliminar"); fd.append("IdLiquidacion", id);
-        try {
-            const r = await fetch('@Url.Action("MostrarModificaciones", "Home")', { method: 'POST', body: fd });
-            const res = await r.json();
-            if(res.success) { alert("Eliminado."); buscarLiquidaciones(); } else { alert(res.message); }
-        } catch(e) { alert("Error."); }
-    }
-
-    // =========================================================================
-    // 5. VISOR DETALLADO Y SU LÓGICA
-    // =========================================================================
-    
-    // Variables para saber qué liquidación estamos viendo
+    // VISOR DE DETALLES Y CÁLCULO NETO REAL
     let idLiquidacionActualVisor = 0; 
-
-    async function verLiquidacion(idLiq, fechaStr, nomMand) {
-        idLiquidacionActualVisor = idLiq; // Guardamos el ID globalmente para usarlo al agregar
-        document.getElementById('verId').textContent = idLiq;
-        document.getElementById('verFecha').textContent = fechaStr;
-        document.getElementById('verMandataria').textContent = nomMand;
-        document.getElementById('buscadorDetalles').value = ""; // Limpiar buscador
-
-        const tbody = document.getElementById('tbodyVerDetalle');
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center p-3"><div class="spinner-border"></div></td></tr>';
-        modalVer.show();
-        recargarTablaVisor();
+    async function verLiquidacion(id, f, nm) {
+        idLiquidacionActualVisor = id;
+        document.getElementById('verId').textContent = id; document.getElementById('verFecha').textContent = f;
+        document.getElementById('verMandataria').textContent = nm;
+        document.getElementById('buscadorDetalles').value = "";
+        modalVer.show(); recargarTablaVisor();
     }
 
     async function recargarTablaVisor() {
         const tbody = document.getElementById('tbodyVerDetalle');
         try {
-            const res = await fetch(`@Url.Action("ObtenerDetallesDeLiquidacion", "Home")?idLiquidacion=${idLiquidacionActualVisor}`);
-            const data = await res.json();
-            
-            if (data.success) {
+            const r = await fetch(`@Url.Action("ObtenerDetallesDeLiquidacion", "Home")?idLiquidacion=${idLiquidacionActualVisor}`);
+            const d = await r.json();
+            if (d.success) {
                 tbody.innerHTML = '';
-                if(data.data.length === 0) { tbody.innerHTML = '<tr><td colspan="7" class="text-center p-3">Sin detalles.</td></tr>'; return; }
+                if(d.data.length === 0) { tbody.innerHTML = '<tr><td colspan="8" class="text-center p-3">Sin detalles.</td></tr>'; return; }
+                d.data.forEach(x => {
+                    const nomOS = document.querySelector(`#inputOS option[value="${x.idObrasSociales}"]`)?.text || `ID ${x.idObrasSociales}`;
+                    
+                    // --- CÁLCULO NETO A PAGAR REAL ---
+                    const aPagarReal = x.montoCargoOS - x.montoBonificacion;
 
-                data.data.forEach(d => {
-                    const nomOS = document.querySelector(`#inputOS option[value="${d.idObrasSociales}"]`)?.text || `ID ${d.idObrasSociales}`;
+                    // --- ESTILO CORREGIDO: SIN COLOR VERDE EN A PAGAR ---
                     tbody.innerHTML += `<tr>
-                        <td class="nombre-os">${nomOS}</td>
-                        <td class="text-center">${d.idPlanBonificacion}</td>
-                        <td class="text-center">${d.cantidadRecetas}</td>
-                        <td class="text-end">$${d.totalBruto.toFixed(2)}</td>
-                        <td class="text-end">$${d.montoCargoOS.toFixed(2)}</td>
-                        <td class="text-end fw-bold">$${d.montoBonificacion.toFixed(2)}</td>
+                        <td class="nombre-os">${nomOS}</td><td class="text-center">${x.idPlanBonificacion}</td><td class="text-center">${x.cantidadRecetas}</td>
+                        <td class="text-end">$${x.totalBruto.toFixed(2)}</td><td class="text-end">$${x.montoCargoOS.toFixed(2)}</td>
+                        <td class="text-end">$${x.montoBonificacion.toFixed(2)}</td>
+                        <td class="text-end fw-bold border border-secondary">$${aPagarReal.toFixed(2)}</td>
                         <td class="text-center">
-                            <button class="btn btn-warning btn-sm" onclick="abrirItemABM(${d.idLiquidacionDetalle})">✏️</button>
-                            <button class="btn btn-danger btn-sm" onclick="eliminarItemIndividual(${d.idLiquidacionDetalle})">🗑️</button>
-                        </td>
-                    </tr>`;
+                            <button class="btn btn-warning btn-sm" onclick="abrirItemABM(${x.idLiquidacionDetalle})">✏️</button>
+                            <button class="btn btn-danger btn-sm" onclick="eliminarItemIndividual(${x.idLiquidacionDetalle})">🗑️</button>
+                        </td></tr>`;
                 });
-            } else { tbody.innerHTML = `<tr><td colspan="7" class="text-danger">${data.message}</td></tr>`; }
-        } catch(e) { tbody.innerHTML = '<tr><td colspan="7" class="text-danger">Error carga.</td></tr>'; }
+            } else { tbody.innerHTML = `<tr><td colspan="8" class="text-danger">${d.message}</td></tr>`; }
+        } catch(e) { tbody.innerHTML = '<tr><td colspan="8" class="text-danger">Error.</td></tr>'; }
     }
 
-    // BUSCADOR EN CLIENTE
+    // EDICIÓN DE CABECERA
+    async function editarCabecera(id) {
+        try {
+            const r = await fetch(`@Url.Action("ObtenerCabeceraLiquidacion", "Home")?id=${id}`);
+            const res = await r.json();
+            if (res.success) {
+                const d = res.data;
+                document.getElementById('edit_Id').value = d.idLiquidaciones;
+                document.getElementById('edit_Fecha').value = d.fechaPresentacion.split('T')[0];
+                document.getElementById('edit_Mandataria').value = d.idMandatarias;
+                document.getElementById('edit_Obs').value = d.observaciones;
+                modalEditCab.show();
+            } else { alert(res.message); }
+        } catch (e) { alert("Error al cargar datos."); }
+    }
+
+    async function guardarEdicionCabecera() {
+        const fd = new FormData();
+        fd.append("IdLiquidacion", document.getElementById('edit_Id').value);
+        fd.append("Fecha", document.getElementById('edit_Fecha').value);
+        fd.append("IdMandataria", document.getElementById('edit_Mandataria').value);
+        fd.append("Observaciones", document.getElementById('edit_Obs').value);
+
+        try {
+            const r = await fetch('@Url.Action("GuardarEdicionCabecera", "Home")', { method: 'POST', body: fd });
+            const res = await r.json();
+            if (res.success) { alert("✅ Actualizado."); modalEditCab.hide(); buscarLiquidaciones(); }
+            else { alert("❌ " + res.message); }
+        } catch(e) { alert("Error al guardar."); }
+    }
+
+    // UTILS
     function filtrarDetalles() {
-        const texto = document.getElementById('buscadorDetalles').value.toLowerCase();
-        const filas = document.querySelectorAll('#tbodyVerDetalle tr');
-        filas.forEach(fila => {
-            const celdaNombre = fila.querySelector('.nombre-os');
-            if (celdaNombre) {
-                const nombre = celdaNombre.textContent.toLowerCase();
-                fila.style.display = nombre.includes(texto) ? '' : 'none';
-            }
+        const txt = document.getElementById('buscadorDetalles').value.toLowerCase();
+        document.querySelectorAll('#tbodyVerDetalle tr').forEach(r => {
+            const c = r.querySelector('.nombre-os');
+            if(c) r.style.display = c.textContent.toLowerCase().includes(txt) ? '' : 'none';
         });
     }
-
-    // =========================================================================
-    // 6. MINI-MODAL DE EDICIÓN DE ÍTEM
-    // =========================================================================
+    async function eliminarLiquidacion(id) {
+        if (!confirm(`¿Borrar liquidación N° ${id}?`)) return;
+        const fd = new FormData(); fd.append("QueToco", "Eliminar"); fd.append("IdLiquidacion", id);
+        try { const r = await fetch('@Url.Action("MostrarModificaciones", "Home")', { method: 'POST', body: fd }); 
+        if((await r.json()).success) { alert("Borrado."); buscarLiquidaciones(); } else alert("Error."); } catch(e){}
+    }
     
+    // FUNCIONES ABM ITEM INDIVIDUAL (MINI MODAL)
     async function abrirItemABM(idItem) {
-        // Resetear form
         document.getElementById('item_Id').value = idItem;
         document.getElementById('item_IdLiquidacionPadre').value = idLiquidacionActualVisor;
         document.getElementById('tituloModalItem').textContent = (idItem === 0) ? "NUEVO ÍTEM" : "EDITAR ÍTEM";
-        
-        // Valores por defecto
-        document.getElementById('item_IdOS').value = "0";
-        document.getElementById('item_IdPlan').innerHTML = '<option value="0">- Primero OS -</option>';
-        document.getElementById('item_IdPlan').disabled = true;
-        document.getElementById('item_Recetas').value = "0";
-        document.getElementById('item_Total').value = "0.00";
-        document.getElementById('item_CargoOS').value = "0.00";
-        document.getElementById('item_Neto').value = "0.00";
+        // Reset Inputs
+        document.getElementById('item_IdOS').value="0"; document.getElementById('item_IdPlan').innerHTML='<option value="0">- Primero OS -</option>';
+        document.getElementById('item_IdPlan').disabled=true;
+        document.getElementById('item_Recetas').value="0"; document.getElementById('item_Total').value="0.00";
+        document.getElementById('item_CargoOS').value="0.00"; document.getElementById('item_Neto').value="0.00";
 
         if (idItem > 0) {
-            // Modo Edición: Cargar datos
             try {
-                const res = await fetch(`@Url.Action("ObtenerItemPorId", "Home")?idDetalle=${idItem}`);
-                const r = await res.json();
-                if(r.success) {
-                    const d = r.data;
+                const r = await fetch(`@Url.Action("ObtenerItemPorId", "Home")?idDetalle=${idItem}`);
+                const res = await r.json();
+                if(res.success) {
+                    const d = res.data;
                     document.getElementById('item_IdOS').value = d.idObrasSociales;
-                    // Cargar planes y esperar a que termine para seleccionar
-                    await cargarPlanesDeOS(d.idObrasSociales, 'item_IdPlan'); 
+                    await cargarPlanesDeOS(d.idObrasSociales, 'item_IdPlan');
                     document.getElementById('item_IdPlan').value = d.idPlanBonificacion;
                     document.getElementById('item_Recetas').value = d.cantidadRecetas;
                     document.getElementById('item_Total').value = d.totalBruto;
                     document.getElementById('item_CargoOS').value = d.montoCargoOS;
                     document.getElementById('item_Neto').value = d.montoBonificacion;
-                } else { alert(r.message); return; }
+                }
             } catch(e) { alert("Error cargando ítem."); return; }
         }
-
         modalItem.show();
     }
-
-    function cerrarModalItem() {
-        modalItem.hide();
-        // Al cerrar, nos aseguramos que el modal de abajo (Ver) siga scrolleable
-        document.body.classList.add('modal-open'); 
-    }
-
+    function cerrarModalItem() { modalItem.hide(); document.body.classList.add('modal-open'); }
+    
     async function guardarItemIndividual() {
         const fd = new FormData();
         fd.append("IdLiquidacionPadre", document.getElementById('item_IdLiquidacionPadre').value);
@@ -567,32 +554,70 @@
         fd.append("IdOS", document.getElementById('item_IdOS').value);
         fd.append("IdPlan", document.getElementById('item_IdPlan').value);
         fd.append("Recetas", document.getElementById('item_Recetas').value);
-        fd.append("Total", document.getElementById('item_Total').value.replace('.', ',')); // Fix cultura
+        fd.append("Total", document.getElementById('item_Total').value.replace('.', ','));
         fd.append("CargoOS", document.getElementById('item_CargoOS').value.replace('.', ','));
         fd.append("Bonificacion", document.getElementById('item_Neto').value.replace('.', ','));
 
         try {
             const r = await fetch('@Url.Action("GuardarItemIndividual", "Home")', { method: 'POST', body: fd });
-            const res = await r.json();
-            if(res.success) {
-                alert("✅ Guardado.");
-                cerrarModalItem();
-                recargarTablaVisor(); // Refrescar la tabla de atrás
-            } else { alert("❌ " + res.message); }
-        } catch(e) { alert("Error guardando."); }
+            if((await r.json()).success) { alert("✅ Guardado."); cerrarModalItem(); recargarTablaVisor(); }
+            else alert("Error.");
+        } catch(e) { alert("Error."); }
+    }
+    async function eliminarItemIndividual(id) {
+        if(!confirm("¿Borrar ítem?")) return;
+        const fd = new FormData(); fd.append("idItem", id); fd.append("idLiquidacionPadre", idLiquidacionActualVisor);
+        try { if((await (await fetch('@Url.Action("EliminarItemIndividual", "Home")', { method: 'POST', body: fd })).json()).success) recargarTablaVisor(); } catch(e){}
     }
 
-    async function eliminarItemIndividual(idItem) {
-        if(!confirm("¿Borrar este renglón?")) return;
-        const fd = new FormData();
-        fd.append("idItem", idItem);
-        fd.append("idLiquidacionPadre", idLiquidacionActualVisor);
+    // IMPRIMIR REPORTE
+    function imprimirReporte() {
+        const idLiq = document.getElementById('verId').textContent;
+        const fecha = document.getElementById('verFecha').textContent;
+        const mandataria = document.getElementById('verMandataria').textContent;
+        
+        let filasHTML = "";
+        document.querySelectorAll('#tbodyVerDetalle tr').forEach(tr => {
+            const celdas = tr.querySelectorAll('td');
+            if(celdas.length > 1) { 
+                filasHTML += `<tr>
+                    <td style="text-align:left; padding:5px;">${celdas[0].textContent}</td>
+                    <td style="text-align:center;">${celdas[1].textContent}</td>
+                    <td style="text-align:center;">${celdas[2].textContent}</td>
+                    <td style="text-align:right;">${celdas[3].textContent}</td>
+                    <td style="text-align:right;">${celdas[4].textContent}</td>
+                    <td style="text-align:right;">${celdas[5].textContent}</td>
+                    <td style="text-align:right; font-weight:bold;">${celdas[6].textContent}</td>
+                </tr>`;
+            }
+        });
 
-        try {
-            const r = await fetch('@Url.Action("EliminarItemIndividual", "Home")', { method: 'POST', body: fd });
-            const res = await r.json();
-            if(res.success) { recargarTablaVisor(); } else { alert(res.message); }
-        } catch(e) { alert("Error eliminando."); }
+        const v = window.open('', '', 'height=800,width=1000');
+        v.document.write(`<html><head><title>Impresión Liquidación</title><style>
+            body { font-family: 'Courier New', monospace; font-size: 14px; padding: 20px; }
+            h1 { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; }
+            .info-box { border: 1px solid #000; padding: 10px; margin-bottom: 20px; background: #f0f0f0; }
+            .info-item { font-weight: bold; margin-right: 20px; font-size: 16px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+            th { border-bottom: 2px solid #000; padding: 5px; background: #ddd; }
+            td { border-bottom: 1px solid #ccc; padding: 5px; }
+            .firma { margin-top: 80px; text-align: right; font-weight: bold; }
+        </style></head><body>
+            <h1>DETALLE DE LIQUIDACIÓN DE OBRAS SOCIALES</h1>
+            <div class="info-box">
+                <span class="info-item">N°: ${idLiq}</span> <br><br>
+                <span class="info-item">MANDATARIA: ${mandataria}</span> <br><br>
+                <span class="info-item">FECHA: ${fecha}</span>
+            </div>
+            <table><thead><tr>
+                <th style="text-align:left;">OBRA SOCIAL</th><th>PLAN</th><th>RECETAS</th>
+                <th style="text-align:right;">TOTAL</th><th style="text-align:right;">CARGO O.S.</th>
+                <th style="text-align:right;">BONIF.</th><th style="text-align:right;">A PAGAR</th>
+            </tr></thead><tbody>${filasHTML}</tbody></table>
+            <div class="firma">_______________________________<br>Firma Responsable</div>
+            <div style="text-align:center; margin-top:50px; font-size:10px;">Generado el: ${new Date().toLocaleString()}</div>
+        </body></html>`);
+        v.document.close(); v.focus(); setTimeout(() => { v.print(); v.close(); }, 500);
     }
 
     document.addEventListener("DOMContentLoaded", () => { buscarLiquidaciones(); });

@@ -472,6 +472,42 @@ public class HomeController : Controller
 
 
 
+    // =========================================================================
+    // GESTIÓN DE EDICIÓN DE CABECERA (SOLO DATOS GENERALES)
+    // =========================================================================
+
+    [HttpGet]
+    public IActionResult ObtenerCabeceraLiquidacion(int id)
+    {
+        try
+        {
+            var liq = BD.TraerLiquidacionPorId(id);
+            if (liq == null) return Json(new { success = false, message = "No encontrada" });
+            return Json(new { success = true, data = liq });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = ex.Message });
+        }
+    }
+
+    [HttpPost]
+    public IActionResult GuardarEdicionCabecera(int IdLiquidacion, int IdMandataria, DateTime Fecha, string Observaciones)
+    {
+        try
+        {
+            BD.ModificarLiquidacionCabecera(IdLiquidacion, IdMandataria, Fecha, Observaciones ?? "");
+            return Json(new { success = true, message = "Datos de liquidación actualizados." });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = "Error: " + ex.Message });
+        }
+    }
+
+
+
+
 
 
 
