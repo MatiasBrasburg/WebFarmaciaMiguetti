@@ -283,9 +283,9 @@ public static void InsertarLiquidacionDetalle(int idLiquidacion, int idOS, int i
 {
     using (SqlConnection connection = new SqlConnection(_connectionString))
     {
-        // CORRECCIÓN: Quitamos la 's' final -> LiquidacionDetalle
+        // CORRECCIÓN FINAL: La columna en BD se llama IdLiquidaciones (Plural)
         string query = @"
-            INSERT INTO LiquidacionDetalle (IdLiquidacion, IdObrasSociales, IdPlanBonificacion, CantidadRecetas, TotalBruto, MontoCargoOS, MontoBonificacion)
+            INSERT INTO LiquidacionDetalle (IdLiquidaciones, IdObrasSociales, IdPlanBonificacion, CantidadRecetas, TotalBruto, MontoCargoOS, MontoBonificacion)
             VALUES (@pIdLiq, @pIdOS, @pIdPlan, @pRecetas, @pBruto, @pCargoOS, @pBoni)";
 
         connection.Execute(query, new { 
