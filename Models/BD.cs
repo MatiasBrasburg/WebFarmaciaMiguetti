@@ -653,7 +653,20 @@ public static Cobros TraerCobroPorIdOS(int IdOS)
          return ObjCobro;
     }
 
+// =============================================================================
+// UTILIDADES PARA COBROS
+// =============================================================================
 
+public static dynamic TraerMandatariaPorIdOS(int idObraSocial)
+{
+    using (SqlConnection connection = new SqlConnection(_connectionString))
+    {
+       
+        string query = "SELECT IdMandatarias as IdMandataria FROM ObrasSociales WHERE IdObrasSociales = @pId";
+        
+        return connection.QueryFirstOrDefault(query, new { pId = idObraSocial });
+    }
+}
 
 
 

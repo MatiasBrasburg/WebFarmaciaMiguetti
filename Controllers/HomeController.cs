@@ -656,7 +656,7 @@ BD.ModificarUsuario(userDeSesion.IdUsuario, Contraseña ?? usuarioCompleto.Contr
     }
 
     [HttpGet]
-    //preguntarle por esta funcion a chat 
+ 
     public IActionResult ObtenerCobroPorId(int idCobro)
     {
         try
@@ -664,16 +664,16 @@ BD.ModificarUsuario(userDeSesion.IdUsuario, Contraseña ?? usuarioCompleto.Contr
             var cobro = BD.TraerCobroPorId(idCobro);
             if (cobro == null) return Json(new { success = false, message = "No encontrado" });
             
-            var datosExtras = BD.TraerMandatariaPorIdOS(cobro.IdObrasSociales); //aca no entinedo que quiere traer
+            Mandatarias mandataria = BD.TraerMandatariaPorIdOS(cobro.IdObrasSociales.Value); 
             
-            return Json(new { success = true, data = cobro, idMandataria = datosExtras.IdMandataria });
+            return Json(new { success = true, data = cobro, idMandataria = mandataria.IdMandatarias });
         }
         catch (Exception ex)
         {
             return Json(new { success = false, message = ex.Message });
         }
     }
-}
+
 
 
 
