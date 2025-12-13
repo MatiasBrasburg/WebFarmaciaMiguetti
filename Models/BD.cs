@@ -3,6 +3,7 @@ using Dapper;
 using System.Collections.Generic;
 using System.Linq;
 using System.Data;
+using Microsoft.Identity.Client;
 namespace WebFarmaciaMiguetti.Models;
 public static class BD
 {
@@ -113,7 +114,17 @@ private static string _connectionString = @"Server=.\SQLEXPRESS01;DataBase=Farma
     
          return ObjOS;
     }
+ public static List<ObrasSociales> TraerOSPorIdMandataria  (int IdMandataria)
+    {
+     List<ObrasSociales> listaOS = null;
+        using (SqlConnection connection = new SqlConnection(_connectionString))
+        {
+            string query = "SELECT * FROM ObrasSociales where IdMandatarias = @pIdMandataria"; 
+            listaOS = connection.Query<ObrasSociales>(query, new {pIdMandataria = IdMandataria}).ToList();
+         }
 
+         return listaOS;
+    }
   public static void AgregarOS  ( int IdMandataria, string Nombre, string NombreMandataria, bool? EsPrepaga, bool? Activa)
     {
      ObrasSociales ObjOS = null;
@@ -488,38 +499,159 @@ public static void ModificarLiquidacionCabecera(int id, int idMandataria, DateTi
 
 
 
+public static Usuario TraerUsuarioPorId(int idUsuario)
+    {
+     Usuario ObjUsuario = null;
+        using (SqlConnection connection = new SqlConnection(_connectionString))
+        {
+            string query = "SELECT * FROM Usuario where IdUsuario = @pIdUsuario"; 
+            ObjUsuario = connection.QueryFirstOrDefault<Usuario>(query, new {pIdUsuario = idUsuario});
+         }
+    
+         return ObjUsuario;
+    }
+    
+
+
+   public static void ModificarUsuario(int IdUsuario, string? Contraseña, string? RazonSocial, string? Domicilio, long? Cuit, string? Iva)
+    {
+     Usuario ObjUsuario = null;
+        using (SqlConnection connection = new SqlConnection(_connectionString))
+        {
+            string query = "UPDATE Usuario SET Contraseña = @pContraseña, RazonSocial = @pRazonSocial, Domicilio = @pDomicilio, Cuit = @pCuit, Iva = @pIva where IdUsuario = @pIdUsuario"; 
+            connection.Execute(query, new {pIdUsuario = IdUsuario, pContraseña = Contraseña, pRazonSocial = RazonSocial, pDomicilio = Domicilio, pCuit = Cuit, pIva = Iva});
+         }
+    
+    }
+
+    public static List<Cobros> BuscarCobros(string? numeroComprobante, DateTime? desde, DateTime? hasta, int? IdObraSocial, int? Mandataria)
+    {
+        using (SqlConnection connection = new SqlConnection(_connectionString))
+        {
+            string query = @"
+                SELECT * FROM Cobros 
+                WHERE (@pNumeroComprobante IS NULL OR NumeroComprobante LIKE '%' + @pNumeroComprobante + '%')
+                AND (@pDesde IS NULL OR FechaCobro >= @pDesde)
+                AND (@pHasta IS NULL OR FechaCobro <= @pHasta)
+                AND (@pIdObraSocial IS NULL OR IdObrasSociales = @pIdObraSocial)
+                AND (@pMandataria IS NULL OR IdMandatarias = @pMandataria)";
+
+            return connection.Query<Cobros>(query, new
+            {
+                pNumeroComprobante = numeroComprobante,
+                pDesde = desde,
+                pHasta = hasta,
+                pIdObraSocial = IdObraSocial,
+                pMandataria = Mandataria
+            }).ToList();
+        }
+    }
+
+public static void AgregarCobro(int? IdLiquidaciones, int? IdObrasSociales, DateTime? FechaCobro, decimal ImporteCobrado, string NumeroComprobante, string? TipoPago, decimal MontoDebitos, string? MotivoDebito)
+    {
+        Cobros cobro = new Cobros
+        {
+            IdLiquidaciones = IdLiquidaciones,
+            IdObrasSociales = IdObrasSociales,
+            FechaCobro = FechaCobro,
+            ImporteCobrado = ImporteCobrado,
+            NumeroComprobante = NumeroComprobante,
+            TipoPago = TipoPago,
+            MontoDebitos = MontoDebitos,
+            MotivoDebito = MotivoDebito
+        };
+    {
+        using (SqlConnection connection = new SqlConnection(_connectionString))
+        {
+            string query = @"
+                INSERT INTO Cobros (IdLiquidaciones, IdObrasSociales, FechaCobro, ImporteCobrado, NumeroComprobante, TipoPago, MontoDebitos, MotivoDebito) 
+                VALUES (@IdLiquidaciones, @IdObrasSociales, @FechaCobro, @ImporteCobrado, @NumeroComprobante, @TipoPago, @MontoDebitos, @MotivoDebito)";
+
+            connection.Execute(query, cobro);
+        }
+    }
+    }
+
+    public static void ModificarCobro(int IdCobro, int? IdLiquidacion, int? IdObraSocial, DateTime? FechaCobro, decimal Precio, string NumeroComprobante, string? TipoPago, decimal MontoDebitos, string? MotivoDebito)
+    {
+        using (SqlConnection connection = new SqlConnection(_connectionString))
+        {
+            string query = @"
+                UPDATE Cobros 
+                SET IdLiquidaciones = @IdLiquidaciones,
+                    IdObrasSociales = @IdObrasSociales,
+                    FechaCobro = @FechaCobro,
+                    Precio = @Precio,
+                    NumeroComprobante = @NumeroComprobante,
+                    TipoPago = @TipoPago,
+                    MontoDebitos = @MontoDebitos,
+                    MotivoDebito = @MotivoDebito
+                WHERE IdCobros = @IdCobros";
+
+            connection.Execute(query, new
+            {
+                IdCobros = IdCobro,
+                IdLiquidaciones = IdLiquidacion,
+                IdObrasSociales = IdObraSocial,
+                FechaCobro = FechaCobro,
+                Precio = Precio,
+                NumeroComprobante = NumeroComprobante,
+                TipoPago = TipoPago,
+                MontoDebitos = MontoDebitos,
+                MotivoDebito = MotivoDebito
+            });
+        }
+    }
+
+
+public static void EliminarCobro(int IdCobro)
+    {
+        using (SqlConnection connection = new SqlConnection(_connectionString))
+        {
+            string query = "DELETE FROM Cobros WHERE IdCobros = @IdCobros";
+            connection.Execute(query, new { IdCobros = IdCobro });
+        }
+    }
+
+public static Cobros TraerCobroPorId(int IdCobro)
+    {
+     Cobros ObjCobro = null;
+        using (SqlConnection connection = new SqlConnection(_connectionString))
+        {
+            string query = "SELECT * FROM Cobros where IdCobros = @pIdCobro"; 
+            ObjCobro = connection.QueryFirstOrDefault<Cobros>(query, new {pIdCobro = IdCobro});
+         }
+    
+         return ObjCobro;
+    }
 
 
 
+public static List<Liquidaciones> TraerLiquidacionesPendientesPorOS(int idObraSocial)
+    {
+        using (SqlConnection connection = new SqlConnection(_connectionString))
+        {
+            string query = @"
+                SELECT * FROM Liquidaciones 
+                WHERE IdLiquidaciones NOT IN (SELECT DISTINCT IdLiquidaciones FROM Cobros WHERE IdLiquidaciones IS NOT NULL)
+                AND IdMandatarias = @pIdObraSocial";
+
+            return connection.Query<Liquidaciones>(query, new { pIdObraSocial = idObraSocial }).ToList();
+        }
+    }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+public static Cobros TraerCobroPorIdOS(int IdOS)
+    {
+     Cobros ObjCobro = null;
+        using (SqlConnection connection = new SqlConnection(_connectionString))
+        {
+            string query = "SELECT * FROM Cobros where IdObrasSociales = @pIdOS"; 
+            ObjCobro = connection.QueryFirstOrDefault<Cobros>(query, new {pIdOS = IdOS});
+         }
+    
+         return ObjCobro;
+    }
 
 
 

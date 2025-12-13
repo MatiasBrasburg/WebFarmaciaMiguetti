@@ -14,13 +14,13 @@ public class Cobros
     public int? IdObrasSociales { get;  set; }
     [JsonProperty]
     [DataType(DataType.Date)]
-    public DateTime? FechaCobros { get; set; }
+    public DateTime? FechaCobro { get; set; }
 
         [JsonProperty]
         [Required]
         [Column(TypeName = "decimal(18,2)")] // <--- OBLIGATORIO PARA SQL
         [DataType(DataType.Currency)] // Para que se vea con el signo $ en la vista
-       public decimal Precio { get; set; }
+       public decimal ImporteCobrado { get; set; }
 
     [JsonProperty]
     public string NumeroComprobante { get; set; }

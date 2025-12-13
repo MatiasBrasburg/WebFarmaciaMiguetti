@@ -1,0 +1,120 @@
+@* Archivo: Views/Home/Configuracion.cshtml *@
+@using WebFarmaciaMiguetti.Models
+@{
+    ViewData["Title"] = "Configuración";
+    // Recuperamos el usuario del ViewBag
+    Usuario usuario = ViewBag.usuario as Usuario;
+}
+
+@* ESTILOS: Todo grande y claro para el usuario de 85 años *@
+<style>
+    .config-container {
+        max-width: 800px;
+        margin: 20px auto;
+        padding: 30px;
+        border: 2px solid #000;
+        border-radius: 10px;
+        background-color: #fff;
+    }
+
+    .config-titulo {
+        text-align: center;
+        font-size: 30px;
+        font-weight: bold;
+        margin-bottom: 30px;
+        text-decoration: underline;
+    }
+
+    .form-group-grande {
+        margin-bottom: 25px;
+    }
+
+    .label-grande {
+        display: block;
+        font-size: 22px;
+        font-weight: bold;
+        margin-bottom: 10px;
+        color: #000;
+    }
+
+    .input-grande {
+        width: 100%;
+        padding: 15px;
+        font-size: 20px;
+        border: 3px solid #333; /* Borde grueso */
+        border-radius: 5px;
+        background-color: #f8f9fa;
+    }
+
+    /* Cuando hace click, se pone amarillo para que vea dónde escribe */
+    .input-grande:focus {
+        background-color: #fffde7;
+        border-color: #000;
+        outline: none;
+    }
+
+    .btn-guardar {
+        width: 100%;
+        padding: 20px;
+        font-size: 24px;
+        font-weight: bold;
+        color: white;
+        background-color: #198754; /* Verde */
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        margin-top: 20px;
+    }
+
+    .btn-guardar:hover {
+        background-color: #146c43;
+    }
+</style>
+
+<div class="config-container">
+    <h1 class="config-titulo">⚙️ DATOS DE LA FARMACIA</h1>
+
+    @if (usuario != null)
+    {
+        @* Formulario simple HTML (Post tradicional) *@
+        <form action="@Url.Action("Configuracion", "Home")" method="post">
+            
+            @* ID Oculto *@
+            <input type="hidden" name="IdUsuario" value="@usuario.IdUsuario" />
+
+            <div class="form-group-grande">
+                <label class="label-grande">Nombre / Razón Social:</label>
+                <input type="text" class="input-grande" name="RazonSocial" value="@usuario.RazonSocial" />
+            </div>
+
+            <div class="form-group-grande">
+                <label class="label-grande">CUIT (Solo números):</label>
+                <input type="number" class="input-grande" name="Cuit" value="@usuario.Cuit" />
+            </div>
+
+            <div class="form-group-grande">
+                <label class="label-grande">Dirección:</label>
+                <input type="text" class="input-grande" name="Domicilio" value="@usuario.Domicilio" />
+            </div>
+
+            <div class="form-group-grande">
+                <label class="label-grande">Código de IVA:</label>
+                @* type="number" para que solo acepte numeros y value con el dato actual *@
+                <input type="number" class="input-grande" name="Iva" value="@usuario.Iva" />
+            </div>
+
+            <div class="form-group-grande">
+                <label class="label-grande">Nueva Contraseña (Opcional):</label>
+                <input type="password" class="input-grande" name="Contraseña" placeholder="Escriba solo si desea cambiarla" />
+            </div>
+
+            <button type="submit" class="btn-guardar">💾 GUARDAR CAMBIOS</button>
+        </form>
+    }
+    else
+    {
+        <div class="alert alert-danger">
+            <h2>Error: No se cargó el usuario. Vuelva a iniciar sesión.</h2>
+        </div>
+    }
+</div>

@@ -1,0 +1,405 @@
+@using WebFarmaciaMiguetti.Models
+
+@{
+    ViewData["Title"] = "Gestión de Cobros";
+    // AHORA RECIBIMOS MANDATARIAS, NO OBRAS SOCIALES DIRECTAMENTE
+    var listaMandatarias = (ViewBag.ListaMandatarias as IEnumerable<dynamic>)?.ToList() ?? new List<dynamic>();
+    var listaTiposPago = (ViewBag.TiposPago as List<string>) ?? new List<string> { "Transferencia", "Cheque", "Efectivo", "Depósito" };
+}
+
+<style>
+    /* ESTÉTICA FINANCIERA (VERDE) */
+    body { font-family: 'Verdana', sans-serif; background-color: #f0f7f4; color: #000; }
+    h1 { font-size: 2.5rem; font-weight: 900; color: #146c43; margin-bottom: 20px; text-transform: uppercase; border-bottom: 4px solid #146c43; display: inline-block; }
+    
+    .form-control, .form-select { border: 3px solid #6c757d; font-size: 1.1rem; padding: 10px; color: #000; font-weight: 500; }
+    .form-control:focus, .form-select:focus { border-color: #198754; box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.25); background-color: #e8f5e9; }
+    .form-label { font-weight: 900; font-size: 1rem; text-transform: uppercase; color: #333; }
+    .btn-super { font-size: 1.1rem; font-weight: 800; padding: 10px 20px; border: 3px solid rgba(0,0,0,0.2); text-transform: uppercase; }
+    
+    .table-bordered { border: 2px solid #000; }
+    .table thead th { background-color: #146c43; color: white; font-size: 1.1rem; vertical-align: middle; }
+    .table tbody td { font-size: 1.1rem; vertical-align: middle; font-weight: 500; }
+    
+    .card-resumen { background-color: #d1e7dd; border: 3px solid #198754; border-radius: 10px; padding: 15px; }
+    .total-final { font-size: 2rem; font-weight: 900; color: #198754; text-align: center; }
+</style>
+
+<div class="container-fluid mt-4">
+    <h1>💰 GESTIÓN DE COBROS</h1>
+
+    <div class="card mb-4" style="border: 3px solid #6c757d; background-color: #e9ecef;">
+        <div class="card-body">
+            <h4 class="mb-3 fw-bold text-dark">🔍 BUSCAR POR MANDATARIA / OS</h4>
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">1. Mandataria</label>
+                    <select id="filtroMandataria" class="form-select" onchange="cargarOS(this.value, 'filtroOS')">
+                        <option value="0">-- TODAS --</option>
+                        @foreach (var m in listaMandatarias)
+                        {
+                            <option value="@m.IdMandatarias">@m.RazonSocial</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">2. Obra Social</label>
+                    <select id="filtroOS" class="form-select" disabled>
+                        <option value="0">-- Seleccione Mandataria --</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-2">
+                    <label class="form-label">N° Comprobante</label>
+                    <input type="text" id="filtroComprobante" class="form-control">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Fecha Desde</label>
+                    <input type="date" id="filtroFechaDesde" class="form-control">
+                </div>
+                <div class="col-md-2 d-flex align-items-end gap-2">
+                    <button class="btn btn-success btn-super w-100" onclick="buscarCobros()">🔍 BUSCAR</button>
+                    <button class="btn btn-secondary btn-super" onclick="limpiarFiltros()">🔄</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card" style="border: 3px solid #000;">
+        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center p-3">
+            <h3 class="m-0 fw-bold">📋 LISTADO DE INGRESOS</h3>
+            <button class="btn btn-success btn-super text-white border-white" onclick="abrirModalCobro(0)">
+                ➕ NUEVO COBRO
+            </button>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover mb-0" id="tablaCobros">
+                    <thead>
+                        <tr>
+                            <th>FECHA</th>
+                            <th>MANDATARIA / OS</th>
+                            <th>COMPROBANTE</th>
+                            <th>TIPO</th>
+                            <th class="text-end">IMPORTE ($)</th>
+                            <th class="text-end">DÉBITOS ($)</th>
+                            <th class="text-end">NETO ($)</th>
+                            <th class="text-center">ACCIONES</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbodyCobros">
+                        <tr><td colspan="8" class="text-center p-4 text-muted fs-4">Utilice los filtros para buscar...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalCobro" tabindex="-1" data-bs-backdrop="static" aria-hidden="true">
+    <div class="modal-dialog modal-lg"> 
+        <div class="modal-content border-4 border-success">
+            <div class="modal-header bg-success text-white">
+                <h3 class="modal-title fw-bold" id="tituloModal">REGISTRAR COBRO</h3>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body bg-white">
+                <input type="hidden" id="cobroId" value="0">
+                
+                <div class="row g-3 mb-3 p-3 bg-light border border-2 rounded">
+                    <div class="col-md-6">
+                        <label class="form-label">1. MANDATARIA</label>
+                        <select id="cobroMandataria" class="form-select fw-bold" onchange="cargarOS(this.value, 'cobroOS')">
+                            <option value="0">-- SELECCIONE --</option>
+                            @foreach (var m in listaMandatarias)
+                            {
+                                <option value="@m.IdMandatarias">@m.RazonSocial</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">2. OBRA SOCIAL PAGADORA</label>
+                        <select id="cobroOS" class="form-select fw-bold border-success" disabled onchange="cargarLiquidacionesPendientes(this.value)">
+                            <option value="0">-- Primero Mandataria --</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="alert alert-secondary border-2 border-dark p-2 mb-3">
+                    <label class="form-label mb-1 small">🔗 IMPUTAR A LIQUIDACIÓN (Opcional)</label>
+                    <select id="cobroLiquidacion" class="form-select border-primary text-primary fw-bold" disabled>
+                        <option value="0">-- Pago a Cuenta / General --</option>
+                    </select>
+                </div>
+
+                <div class="card mb-3 p-3 bg-white border-2">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">FECHA</label>
+                            <input type="date" id="cobroFecha" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">FORMA PAGO</label>
+                            <select id="cobroTipo" class="form-select">
+                                @foreach(var tipo in listaTiposPago) { <option value="@tipo">@tipo</option> }
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">N° COMPROBANTE</label>
+                            <input type="text" id="cobroComprobante" class="form-control" placeholder="Ej: 998877">
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label text-primary">💵 IMPORTE (BRUTO)</label>
+                            <input type="number" id="cobroImporte" class="form-control fw-bold fs-4 text-primary" step="0.01" value="0.00" oninput="calcularTotalNeto()">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-danger">📉 DÉBITOS</label>
+                            <input type="number" id="cobroDebitos" class="form-control fw-bold fs-4 text-danger" step="0.01" value="0.00" oninput="calcularTotalNeto()">
+                        </div>
+                        <div class="col-12">
+                            <input type="text" id="cobroMotivoDebito" class="form-control form-control-sm" placeholder="Motivo del débito (Opcional)...">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-resumen">
+                    <div class="row align-items-center">
+                        <div class="col-6 text-end fw-bold fs-5">NETO PERCIBIDO:</div>
+                        <div class="col-6"><div class="total-final" id="lblTotalNeto">$0.00</div></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary btn-lg fw-bold" data-bs-dismiss="modal">CANCELAR</button>
+                <button type="button" class="btn btn-success btn-lg fw-bold px-5" onclick="guardarCobro()">💾 GUARDAR</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    const modalCobro = new bootstrap.Modal(document.getElementById('modalCobro'));
+
+    // =========================================================================
+    // 1. LÓGICA DE COMBOS EN CASCADA (MANDATARIA -> OS -> LIQUIDACIONES)
+    // =========================================================================
+    
+    // Carga Obras Sociales cuando cambia la Mandataria
+    async function cargarOS(idMandataria, idSelectDestino) {
+        const select = document.getElementById(idSelectDestino);
+        select.innerHTML = '<option value="0">Cargando...</option>';
+        select.disabled = true;
+
+        // Si es en el modal, también reseteamos liquidaciones
+        if(idSelectDestino === 'cobroOS') {
+            document.getElementById('cobroLiquidacion').innerHTML = '<option value="0">-- Pago a Cuenta --</option>';
+            document.getElementById('cobroLiquidacion').disabled = true;
+        }
+
+        if(idMandataria == "0") {
+            select.innerHTML = '<option value="0">-- Seleccione Mandataria --</option>';
+            return;
+        }
+
+        try {
+            // LLAMA A TU NUEVA FUNCIÓN DEL CONTROLLER
+            const r = await fetch(`@Url.Action("TraerObrasSocialesPorMandataria", "Home")?idMandataria=${idMandataria}`);
+            const res = await r.json();
+            
+            select.innerHTML = '<option value="0">-- SELECCIONE OS --</option>';
+            if(res.success && res.data.length > 0) {
+                res.data.forEach(os => {
+                    // Adaptar 'os.idObrasSociales' y 'os.nombre' a como venga tu objeto JSON
+                    const opt = document.createElement('option');
+                    opt.value = os.idObrasSociales; 
+                    opt.text = os.nombre;
+                    select.appendChild(opt);
+                });
+                select.disabled = false;
+            } else {
+                select.innerHTML = '<option value="0">Sin Obras Sociales</option>';
+            }
+        } catch(e) {
+            console.error(e);
+            alert("Error al cargar Obras Sociales.");
+        }
+    }
+
+    // Carga Liquidaciones cuando cambia la OS (Solo en el Modal)
+    async function cargarLiquidacionesPendientes(idOS) {
+        const select = document.getElementById('cobroLiquidacion');
+        select.innerHTML = '<option value="0">Cargando...</option>';
+        select.disabled = true;
+
+        if(idOS == "0") return;
+
+        try {
+            const r = await fetch(`@Url.Action("TraerLiquidacionesPendientesPorOS", "Home")?idObraSocial=${idOS}`);
+            const res = await r.json();
+            
+            select.innerHTML = '<option value="0">-- Pago a Cuenta / General --</option>';
+            if(res.success && res.data.length > 0) {
+                res.data.forEach(liq => {
+                    const opt = document.createElement('option');
+                    opt.value = liq.idLiquidaciones;
+                    const fecha = new Date(liq.fechaPresentacion).toLocaleDateString();
+                    opt.text = `Liq #${liq.idLiquidaciones} - $${liq.totalPresentado} (${fecha})`;
+                    select.appendChild(opt);
+                });
+            }
+            select.disabled = false;
+        } catch(e) { console.error(e); }
+    }
+
+    function calcularTotalNeto() {
+        const imp = parseFloat(document.getElementById('cobroImporte').value) || 0;
+        const deb = parseFloat(document.getElementById('cobroDebitos').value) || 0;
+        document.getElementById('lblTotalNeto').textContent = `$${(imp - deb).toFixed(2)}`;
+    }
+
+    // =========================================================================
+    // 2. CRUD (CONECTADO A TU CONTROLLER)
+    // =========================================================================
+
+    async function buscarCobros() {
+        const mand = document.getElementById('filtroMandataria').value;
+        const os = document.getElementById('filtroOS').value;
+        const comp = document.getElementById('filtroComprobante').value;
+        const d = document.getElementById('filtroFechaDesde').value;
+        const h = document.getElementById('filtroFechaHasta').value;
+        
+        const tbody = document.getElementById('tbodyCobros');
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center p-4"><div class="spinner-border text-success"></div></td></tr>';
+
+        // AQUÍ PASO 'IdMandataria' TAMBIÉN PARA QUE PUEDAS FILTRAR EN TU SQL
+        const url = `@Url.Action("BuscarCobrosAjax", "Home")?IdMandataria=${mand}&IdObraSocial=${os}&numeroComprobante=${comp}&desde=${d}&hasta=${h}`;
+
+        try {
+            const r = await fetch(url);
+            const res = await r.json();
+            if(res.success && res.data.length > 0) {
+                tbody.innerHTML = '';
+                res.data.forEach(c => {
+                    const fecha = new Date(c.fechaCobro).toLocaleDateString('es-AR');
+                    // Mostrar Nombre OS o Mandataria si la traes en el objeto
+                    const detalle = c.nombreObraSocial || "---"; 
+                    const neto = c.precio - c.montoDebitos; // Usando 'Precio' como 'ImporteCobrado'
+
+                    tbody.innerHTML += `<tr>
+                        <td>${fecha}</td>
+                        <td class="fw-bold text-dark">${detalle}</td>
+                        <td>${c.numeroComprobante}</td>
+                        <td><span class="badge bg-secondary">${c.tipoPago}</span></td>
+                        <td class="text-end text-primary">$${c.precio.toFixed(2)}</td>
+                        <td class="text-end text-danger">$${c.montoDebitos.toFixed(2)}</td>
+                        <td class="text-end fw-black text-success border-start border-success">$${neto.toFixed(2)}</td>
+                        <td class="text-center">
+                            <button class="btn btn-warning btn-sm" onclick="editarCobro(${c.idCobros})">✏️</button>
+                            <button class="btn btn-danger btn-sm" onclick="eliminarCobro(${c.idCobros})">🗑️</button>
+                        </td>
+                    </tr>`;
+                });
+            } else { tbody.innerHTML = '<tr><td colspan="8" class="text-center p-4">No se encontraron cobros.</td></tr>'; }
+        } catch(e) { tbody.innerHTML = '<tr><td colspan="8" class="text-danger text-center">Error.</td></tr>'; }
+    }
+
+    async function guardarCobro() {
+        if(document.getElementById('cobroOS').value == "0") { alert("Falta Obra Social"); return; }
+        
+        // USAMOS TUS NOMBRES DE VARIABLES EXACTOS
+        const fd = new FormData();
+        fd.append("IdCobro", document.getElementById('cobroId').value);
+        fd.append("IdObraSocial", document.getElementById('cobroOS').value);
+        fd.append("IdLiquidacion", document.getElementById('cobroLiquidacion').value);
+        fd.append("FechaCobro", document.getElementById('cobroFecha').value);
+        fd.append("TipoPago", document.getElementById('cobroTipo').value);
+        fd.append("NumeroComprobante", document.getElementById('cobroComprobante').value);
+        // IMPORTANTE: TU CONTROLLER ESPERA "Precio", NO "ImporteCobrado"
+        fd.append("Precio", document.getElementById('cobroImporte').value.replace('.', ','));
+        fd.append("MontoDebitos", document.getElementById('cobroDebitos').value.replace('.', ','));
+        fd.append("MotivoDebito", document.getElementById('cobroMotivoDebito').value);
+
+        try {
+            const r = await fetch('@Url.Action("GuardarCobro", "Home")', { method: 'POST', body: fd });
+            const res = await r.json();
+            if(res.success) { alert("✅ Guardado."); modalCobro.hide(); buscarCobros(); }
+            else { alert("❌ " + res.message); }
+        } catch(e) { alert("Error guardando."); }
+    }
+
+    async function eliminarCobro(id) {
+        if(!confirm("¿Eliminar este cobro?")) return;
+        const fd = new FormData(); fd.append("idCobro", id);
+        try {
+            const r = await fetch('@Url.Action("EliminarCobro", "Home")', { method: 'POST', body: fd });
+            if((await r.json()).success) buscarCobros();
+        } catch(e) {}
+    }
+
+    async function editarCobro(id) {
+        try {
+            const r = await fetch(`@Url.Action("ObtenerCobroPorId", "Home")?idCobro=${id}`);
+            const res = await r.json();
+            if(res.success) {
+                const d = res.data;
+                // NOTA: Para editar bien, necesitamos saber el ID de la Mandataria dueña de la OS
+                // Si tu objeto 'd' no trae idMandataria, tendrás que buscarlo o el usuario tendrá que re-seleccionar.
+                // Asumiré que el usuario selecciona de nuevo para simplificar, o que 'd' trae idMandataria.
+                
+                // Si 'd' tiene idMandataria:
+                if(d.idMandataria) {
+                    document.getElementById('cobroMandataria').value = d.idMandataria;
+                    await cargarOS(d.idMandataria, 'cobroOS');
+                }
+                
+                // Abrimos Modal
+                document.getElementById('cobroId').value = id;
+                document.getElementById('tituloModal').textContent = "EDITAR COBRO";
+                modalCobro.show();
+
+                // Llenamos campos
+                document.getElementById('cobroOS').value = d.idObrasSociales;
+                document.getElementById('cobroFecha').value = d.fechaCobro.split('T')[0];
+                document.getElementById('cobroTipo').value = d.tipoPago;
+                document.getElementById('cobroComprobante').value = d.numeroComprobante;
+                document.getElementById('cobroImporte').value = d.precio; // TU VARIABLE ES PRECIO
+                document.getElementById('cobroDebitos').value = d.montoDebitos;
+                document.getElementById('cobroMotivoDebito').value = d.motivoDebito;
+                
+                // Intentar seleccionar la liquidación
+                await cargarLiquidacionesPendientes(d.idObrasSociales);
+                document.getElementById('cobroLiquidacion').value = d.idLiquidaciones || 0;
+                
+                calcularTotalNeto();
+            }
+        } catch(e) { alert("Error cargando."); }
+    }
+
+    function abrirModalCobro(id) {
+        document.getElementById('cobroId').value = id;
+        document.getElementById('tituloModal').textContent = "NUEVO COBRO";
+        if(id === 0) {
+            document.getElementById('cobroMandataria').value = "0";
+            document.getElementById('cobroOS').innerHTML = '<option value="0">-- Primero Mandataria --</option>';
+            document.getElementById('cobroOS').disabled = true;
+            document.getElementById('cobroLiquidacion').innerHTML = '<option value="0">-- Pago a Cuenta --</option>';
+            document.getElementById('cobroLiquidacion').disabled = true;
+            document.getElementById('cobroImporte').value = "0.00";
+            document.getElementById('cobroComprobante').value = "";
+            calcularTotalNeto();
+        }
+        modalCobro.show();
+    }
+
+    function limpiarFiltros() {
+        document.getElementById('filtroMandataria').value = "0";
+        document.getElementById('filtroOS').innerHTML = '<option value="0">-- Seleccione Mandataria --</option>';
+        document.getElementById('filtroOS').disabled = true;
+        document.getElementById('filtroComprobante').value = "";
+        document.getElementById('filtroFechaDesde').value = "";
+        buscarCobros();
+    }
+</script>
+}

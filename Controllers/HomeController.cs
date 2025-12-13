@@ -21,7 +21,7 @@ public class HomeController : Controller
     
     public IActionResult Index()
     {
-        var usuarioLogueado = HttpContext.Session.GetString("UsuarioAutorizado");
+        var usuarioLogueado = HttpContext.Session.GetString("Usuario");
         if (string.IsNullOrEmpty(usuarioLogueado))
         {
             return RedirectToAction("Index", "Account"); 
@@ -504,6 +504,244 @@ public class HomeController : Controller
             return Json(new { success = false, message = "Error: " + ex.Message });
         }
     }
+
+//Configuracion de usuario
+
+ public IActionResult IrAConfiguracion(){
+        string? usuarioJson = HttpContext.Session.GetString("Usuario"); // Crear el usuario session
+        if (string.IsNullOrEmpty(usuarioJson))
+        {
+            return RedirectToAction("Index", "Account");
+        }
+        Usuario userDeSesion = Objeto.StringToObject<Usuario>(usuarioJson);
+       
+     
+        Usuario usuarioCompleto = BD.TraerUsuarioPorId(userDeSesion.IdUsuario);
+
+
+        if (usuarioCompleto == null)
+        {
+            return RedirectToAction("CerrarSesion", "Index");
+        }
+        ViewBag.usuario = usuarioCompleto;
+
+        return View("Configuracion");
+    }
+
+ public IActionResult Configuracion(string? Contraseña, string? RazonSocial, string? Domicilio, long? Cuit, string? Iva){
+        string? usuarioJson = HttpContext.Session.GetString("Usuario"); // Crear el usuario session
+        if (string.IsNullOrEmpty(usuarioJson))
+        {
+            return RedirectToAction("Index", "Account");
+        }
+        Usuario userDeSesion = Objeto.StringToObject<Usuario>(usuarioJson);
+       
+     
+        Usuario usuarioCompleto = BD.TraerUsuarioPorId(userDeSesion.IdUsuario);
+
+
+        if (usuarioCompleto == null)
+        {
+            return RedirectToAction("CerrarSesion", "Index");
+        }
+   
+
+BD.ModificarUsuario(userDeSesion.IdUsuario, Contraseña ?? usuarioCompleto.Contraseña, RazonSocial ?? usuarioCompleto.RazonSocial, Domicilio ?? usuarioCompleto.Domicilio, Cuit ?? usuarioCompleto.Cuit, Iva ?? usuarioCompleto.Iva);
+
+
+        return RedirectToAction("IrAConfiguracion", "Home");
+    }
+
+ public IActionResult IrAGestionCobros(){
+        string? usuarioJson = HttpContext.Session.GetString("Usuario"); // Crear el usuario session
+        if (string.IsNullOrEmpty(usuarioJson))
+        {
+            return RedirectToAction("Index", "Account");
+        }
+        Usuario userDeSesion = Objeto.StringToObject<Usuario>(usuarioJson);
+       
+     
+        Usuario usuarioCompleto = BD.TraerUsuarioPorId(userDeSesion.IdUsuario);
+
+
+        if (usuarioCompleto == null)
+        {
+            return RedirectToAction("CerrarSesion", "Index");
+        }
+       
+       ViewBag.ObrasSociales = BD.TraerListaOS();
+       ViewBag.Mandatarias = BD.TraerListaMandatarias();
+       ViewBag.TiposPago = new List<string> { "Transferencia", "Efectivo", "Cheque", "Depósito" };
+
+        return View("GestionCobros");
+    }
+
+
+    [HttpGet]
+    public IActionResult TraerObrasSocialesPorMandataria(int idMandataria)
+    {
+        try
+        {
+            var lista = BD.TraerOSPorIdMandataria(idMandataria);
+            return Json(new { success = true, data = lista });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = ex.Message });
+        }
+    }
+
+    [HttpGet]
+    public IActionResult TraerLiquidacionesPendientesPorOS(int idObraSocial)
+    {
+        try
+        {
+            var lista = BD.TraerLiquidacionesPendientesPorOS(idObraSocial);
+            return Json(new { success = true, data = lista });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = ex.Message });
+        }
+    }
+
+    [HttpGet]
+    public IActionResult BuscarCobrosAjax(string? numeroComprobante, DateTime? desde, DateTime? hasta, int? IdObraSocial, int? IdMandataria)
+    {
+        try
+        {
+            var lista = BD.BuscarCobros(numeroComprobante, desde, hasta, IdObraSocial, IdMandataria);
+            return Json(new { success = true, data = lista });
+        }
+        catch (Exception ex)
+        {
+             return StatusCode(500, new { success = false, message = ex.Message });
+        }
+    }
+
+    [HttpPost]
+    public IActionResult GuardarCobro(int IdCobro, int? IdLiquidacion, int? IdObraSocial, DateTime? FechaCobro, decimal Precio, string NumeroComprobante, string? TipoPago, decimal MontoDebitos, string? MotivoDebito)
+    {
+        try
+        {
+            if (IdCobro == 0)
+            {
+                BD.AgregarCobro(IdLiquidacion, IdObraSocial, FechaCobro, Precio, NumeroComprobante, TipoPago, MontoDebitos, MotivoDebito);
+                return Json(new { success = true, message = "Cobro AGREGADO correctamente." });
+            }
+            else
+            {
+                BD.ModificarCobro(IdCobro, IdLiquidacion, IdObraSocial, FechaCobro, Precio, NumeroComprobante, TipoPago, MontoDebitos, MotivoDebito);
+                return Json(new { success = true, message = "Cobro MODIFICADO correctamente." });
+            }
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = "Error: " + ex.Message });
+        }
+    }
+
+    [HttpPost]
+    public IActionResult EliminarCobro(int idCobro)
+    {
+        try
+        {
+            BD.EliminarCobro(idCobro);
+            return Json(new { success = true, message = "Cobro eliminado correctamente." });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = "Error: " + ex.Message });
+        }
+    }
+
+    [HttpGet]
+    //preguntarle por esta funcion a chat 
+    public IActionResult ObtenerCobroPorId(int idCobro)
+    {
+        try
+        {
+            var cobro = BD.TraerCobroPorId(idCobro);
+            if (cobro == null) return Json(new { success = false, message = "No encontrado" });
+            
+            var datosExtras = BD.TraerMandatariaPorIdOS(cobro.IdObrasSociales); //aca no entinedo que quiere traer
+            
+            return Json(new { success = true, data = cobro, idMandataria = datosExtras.IdMandataria });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = ex.Message });
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
