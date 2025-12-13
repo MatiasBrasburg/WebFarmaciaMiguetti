@@ -619,19 +619,20 @@ BD.ModificarUsuario(userDeSesion.IdUsuario, Contraseña ?? usuarioCompleto.Contr
         }
     }
 
-    [HttpPost]
-    public IActionResult GuardarCobro(int IdCobro, int? IdLiquidacion, int? IdObraSocial, DateTime? FechaCobro, decimal Precio, string NumeroComprobante, string? TipoPago, decimal MontoDebitos, string? MotivoDebito)
+   [HttpPost]
+    public IActionResult GuardarCobro(int IdCobro, int? IdLiquidacion, int? IdObraSocial, DateTime? FechaCobro, decimal ImporteCobrado, string NumeroComprobante, string? TipoPago, decimal MontoDebitos, string? MotivoDebito)
     {
         try
         {
             if (IdCobro == 0)
             {
-                BD.AgregarCobro(IdLiquidacion, IdObraSocial, FechaCobro, Precio, NumeroComprobante, TipoPago, MontoDebitos, MotivoDebito);
+                // Pasamos ImporteCobrado al método de BD
+                BD.AgregarCobro(IdLiquidacion, IdObraSocial, FechaCobro, ImporteCobrado, NumeroComprobante, TipoPago, MontoDebitos, MotivoDebito);
                 return Json(new { success = true, message = "Cobro AGREGADO correctamente." });
             }
             else
             {
-                BD.ModificarCobro(IdCobro, IdLiquidacion, IdObraSocial, FechaCobro, Precio, NumeroComprobante, TipoPago, MontoDebitos, MotivoDebito);
+                BD.ModificarCobro(IdCobro, IdLiquidacion, IdObraSocial, FechaCobro, ImporteCobrado, NumeroComprobante, TipoPago, MontoDebitos, MotivoDebito);
                 return Json(new { success = true, message = "Cobro MODIFICADO correctamente." });
             }
         }

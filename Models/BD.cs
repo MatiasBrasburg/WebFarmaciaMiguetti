@@ -547,15 +547,22 @@ public static List<Liquidaciones> TraerLiquidacionesPendientesPorOS(int idObraSo
 }
 
 // 3. Buscar Cobros (El motor del buscador principal)
-public static List<Cobros> BuscarCobros(string numeroComprobante, DateTime? desde, DateTime? hasta, int? idObraSocial, int? idMandataria)
+// EN Models/BD.cs
+
+// CAMBIO: Devolvemos 'dynamic' para poder incluir columnas extra (NombreMandataria)
+public static List<dynamic> BuscarCobros(string numeroComprobante, DateTime? desde, DateTime? hasta, int? idObraSocial, int? idMandataria)
 {
     using (SqlConnection connection = new SqlConnection(_connectionString))
     {
-        // Hacemos JOIN con Obras Sociales para poder buscar por Mandataria también
+        // SQL MEJORADO: Trae el nombre de la Mandataria haciendo doble JOIN
         string query = @"
-            SELECT C.*, OS.Nombre as NombreObraSocial 
+            SELECT 
+                C.*, 
+                OS.Nombre as NombreObraSocial,
+                M.RazonSocial as NombreMandataria  -- <--- ESTO FALTABA
             FROM Cobros C
             INNER JOIN ObrasSociales OS ON C.IdObrasSociales = OS.IdObrasSociales
+            INNER JOIN Mandatarias M ON OS.IdMandatarias = M.IdMandatarias
             WHERE 1=1 ";
 
         if (!string.IsNullOrEmpty(numeroComprobante))
@@ -571,11 +578,11 @@ public static List<Cobros> BuscarCobros(string numeroComprobante, DateTime? desd
             query += " AND C.IdObrasSociales = @pIdOS";
 
         if (idMandataria.HasValue && idMandataria.Value > 0)
-            query += " AND OS.IdMandatarias = @pIdMand"; // Filtro por el padre
+            query += " AND M.IdMandatarias = @pIdMand";
 
         query += " ORDER BY C.FechaCobro DESC";
 
-        return connection.Query<Cobros>(query, new { 
+        return connection.Query<dynamic>(query, new { 
             pComp = $"%{numeroComprobante}%", 
             pDesde = desde, 
             pHasta = hasta, 
