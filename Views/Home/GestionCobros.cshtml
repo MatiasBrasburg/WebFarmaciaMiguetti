@@ -2,13 +2,11 @@
 
 @{
     ViewData["Title"] = "Gestión de Cobros";
-    // CORRECCIÓN: Usamos 'Mandatarias' tal cual lo enviaste en tu Controller
     var listaMandatarias = (ViewBag.Mandatarias as IEnumerable<dynamic>)?.ToList() ?? new List<dynamic>();
     var listaTiposPago = (ViewBag.TiposPago as List<string>) ?? new List<string> { "Transferencia", "Cheque", "Efectivo", "Depósito" };
 }
 
 <style>
-    /* ESTÉTICA FINANCIERA (VERDE) */
     body { font-family: 'Verdana', sans-serif; background-color: #f0f7f4; color: #000; }
     h1 { font-size: 2.5rem; font-weight: 900; color: #146c43; margin-bottom: 20px; text-transform: uppercase; border-bottom: 4px solid #146c43; display: inline-block; }
     
@@ -54,16 +52,17 @@
                 </div>
                 
                 <div class="col-md-2">
-                    <label class="form-label">N° Comprobante</label>
-                    <input type="text" id="filtroComprobante" class="form-control">
-                </div>
-                <div class="col-md-2">
                     <label class="form-label">Fecha Desde</label>
                     <input type="date" id="filtroFechaDesde" class="form-control">
                 </div>
+                <div class="col-md-2">
+                    <label class="form-label">Fecha Hasta</label>
+                    <input type="date" id="filtroFechaHasta" class="form-control">
+                </div>
+
                 <div class="col-md-2 d-flex align-items-end gap-2">
                     <button class="btn btn-success btn-super w-100" onclick="buscarCobros()">🔍 BUSCAR</button>
-                    <button class="btn btn-secondary btn-super" onclick="limpiarFiltros()" title="Borrar filtros y ver todo">🔄</button>
+                    <button class="btn btn-secondary btn-super" onclick="limpiarFiltros()" title="Borrar filtros">🔄</button>
                 </div>
             </div>
         </div>
@@ -131,13 +130,6 @@
                     </div>
                 </div>
 
-                <div class="alert alert-secondary border-2 border-dark p-2 mb-3">
-                    <label class="form-label mb-1 small">🔗 IMPUTAR A LIQUIDACIÓN (Opcional)</label>
-                    <select id="cobroLiquidacion" class="form-select border-primary text-primary fw-bold" disabled>
-                        <option value="0">-- Pago a Cuenta / General --</option>
-                    </select>
-                </div>
-
                 <div class="card mb-3 p-3 bg-white border-2">
                     <div class="row g-3">
                         <div class="col-md-4">
@@ -193,26 +185,21 @@
     });
 
     // =========================================================================
-    // 1. UTILIDADES DE AUTOCOMPLETADO (INPUT + DATALIST)
+    // 1. UTILIDADES DE AUTOCOMPLETADO
     // =========================================================================
-    
-    // Función genérica para obtener el ID basado en el valor del input y el datalist
     function obtenerIdDeDatalist(inputId, datalistId) {
         const val = document.getElementById(inputId).value;
         const options = document.getElementById(datalistId).options;
         for(let i=0; i<options.length; i++) {
-            if(options[i].value === val) {
-                return options[i].getAttribute('data-id');
-            }
+            if(options[i].value === val) return options[i].getAttribute('data-id');
         }
         return "0";
     }
 
-    // --- LÓGICA FILTRO PRINCIPAL ---
     function seleccionarMandatariaFiltro() {
         const id = obtenerIdDeDatalist('txtFiltroMandataria', 'dlFiltroMandataria');
         document.getElementById('filtroMandataria').value = id;
-        cargarOS(id, 'dlFiltroOS', 'txtFiltroOS'); // Carga las OS en el datalist correspondiente
+        cargarOS(id, 'dlFiltroOS', 'txtFiltroOS'); 
     }
 
     function seleccionarOSFiltro() {
@@ -220,12 +207,9 @@
         document.getElementById('filtroOS').value = id;
     }
 
-    // --- LÓGICA MODAL ---
     function seleccionarMandatariaModal() {
         const id = obtenerIdDeDatalist('txtCobroMandataria', 'dlCobroMandataria');
         document.getElementById('cobroMandataria').value = id;
-        
-        // Limpiamos OS y Liquidaciones
         document.getElementById('txtCobroOS').value = "";
         document.getElementById('cobroOS').value = "0";
         cargarOS(id, 'dlCobroOS', 'txtCobroOS');
@@ -234,29 +218,18 @@
     function seleccionarOSModal() {
         const id = obtenerIdDeDatalist('txtCobroOS', 'dlCobroOS');
         document.getElementById('cobroOS').value = id;
-        cargarLiquidacionesPendientes(id);
     }
-
 
     // =========================================================================
     // 2. CARGA DE DATOS (AJAX)
     // =========================================================================
-    
-    // Carga Obras Sociales en el Datalist destino
     async function cargarOS(idMandataria, idDatalist, idInputVisible) {
         const datalist = document.getElementById(idDatalist);
         const input = document.getElementById(idInputVisible);
         
-        datalist.innerHTML = ''; // Limpiar opciones
+        datalist.innerHTML = ''; 
         input.disabled = true;
         input.placeholder = "Cargando...";
-
-        if(idInputVisible === 'txtCobroOS') {
-            // Resetear liquidaciones si estamos en modal
-            const selLiq = document.getElementById('cobroLiquidacion');
-            selLiq.innerHTML = '<option value="0">-- Pago a Cuenta / General --</option>';
-            selLiq.disabled = true;
-        }
 
         if(idMandataria == "0") {
             input.placeholder = "Primero Mandataria...";
@@ -272,13 +245,12 @@
                     const id = os.idObrasSociales || os.IdObrasSociales;
                     const nombre = os.nombre || os.Nombre;
                     const opt = document.createElement('option');
-                    opt.value = nombre; // Lo que se ve y escribe
-                    opt.setAttribute('data-id', id); // El ID oculto
+                    opt.value = nombre; 
+                    opt.setAttribute('data-id', id); 
                     datalist.appendChild(opt);
                 });
                 input.disabled = false;
                 input.placeholder = "Escriba para buscar...";
-                // Si hay una sola, quizás sea cómodo, pero mejor dejamos que el usuario elija
             } else {
                 input.placeholder = "Sin Obras Sociales";
             }
@@ -288,39 +260,6 @@
         }
     }
 
-    // Carga Liquidaciones (Modal)
-    async function cargarLiquidacionesPendientes(idOS) {
-        const select = document.getElementById('cobroLiquidacion');
-        select.innerHTML = '<option value="0">Cargando...</option>';
-        select.disabled = true;
-
-        if(idOS == "0") {
-            select.innerHTML = '<option value="0">-- Pago a Cuenta / General --</option>';
-            return;
-        }
-
-        try {
-            const r = await fetch(`@Url.Action("TraerLiquidacionesPendientesPorOS", "Home")?idObraSocial=${idOS}`);
-            const res = await r.json();
-            
-            select.innerHTML = '<option value="0">-- Pago a Cuenta / General --</option>';
-            if(res.success && res.data.length > 0) {
-                res.data.forEach(liq => {
-                    const id = liq.idLiquidaciones || liq.IdLiquidaciones;
-                    const total = liq.totalPresentado || liq.TotalPresentado;
-                    const fechaRaw = liq.fechaPresentacion || liq.FechaPresentacion;
-                    const fecha = new Date(fechaRaw).toLocaleDateString();
-                    
-                    const opt = document.createElement('option');
-                    opt.value = id;
-                    opt.text = `Liq #${id} - $${total} (${fecha})`;
-                    select.appendChild(opt);
-                });
-            }
-            select.disabled = false;
-        } catch(e) { console.error(e); }
-    }
-
     function calcularTotalNeto() {
         const imp = parseFloat(document.getElementById('cobroImporte').value) || 0;
         const deb = parseFloat(document.getElementById('cobroDebitos').value) || 0;
@@ -328,13 +267,16 @@
     }
 
     // =========================================================================
-    // 3. CRUD
+    // 3. CRUD PRINCIPAL (BUSCAR, GUARDAR, ELIMINAR)
     // =========================================================================
 
     async function buscarCobros() {
         const mand = document.getElementById('filtroMandataria').value;
         const os = document.getElementById('filtroOS').value;
-        const comp = document.getElementById('filtroComprobante').value;
+        // Si no se usó el buscador predictivo, el value podría ser 0, intentamos buscar texto libre si quisieras (opcional)
+        // Por ahora mantenemos lógica estricta de ID.
+        
+        const comp = document.getElementById('filtroComprobante')?.value || ""; // Protección null
         const d = document.getElementById('filtroFechaDesde').value;
         const h = document.getElementById('filtroFechaHasta').value;
         
@@ -346,6 +288,7 @@
         try {
             const r = await fetch(url);
             const res = await r.json();
+            
             if(res.success && res.data.length > 0) {
                 tbody.innerHTML = '';
                 res.data.forEach(c => {
@@ -358,7 +301,6 @@
                     const tipo = c.tipoPago || c.TipoPago;
                     const neto = precio - debitos; 
 
-                    // CORRECCIÓN ESTÉTICA: NETO SIN COLOR VERDE
                     tbody.innerHTML += `<tr>
                         <td>${fecha}</td>
                         <td class="fw-bold text-dark">${nombreOS}</td>
@@ -373,7 +315,9 @@
                         </td>
                     </tr>`;
                 });
-            } else { tbody.innerHTML = '<tr><td colspan="8" class="text-center p-4 text-muted">No se encontraron cobros.</td></tr>'; }
+            } else { 
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center p-4 text-muted">No se encontraron cobros con esos filtros.</td></tr>'; 
+            }
         } catch(e) { 
             console.error(e);
             tbody.innerHTML = '<tr><td colspan="8" class="text-center text-danger">Error de conexión.</td></tr>'; 
@@ -386,13 +330,13 @@
         const fd = new FormData();
         fd.append("IdCobro", document.getElementById('cobroId').value);
         fd.append("IdObraSocial", document.getElementById('cobroOS').value);
-        fd.append("IdLiquidacion", document.getElementById('cobroLiquidacion').value);
         fd.append("FechaCobro", document.getElementById('cobroFecha').value);
         fd.append("TipoPago", document.getElementById('cobroTipo').value);
         fd.append("NumeroComprobante", document.getElementById('cobroComprobante').value);
         fd.append("Precio", document.getElementById('cobroImporte').value.replace('.', ','));
         fd.append("MontoDebitos", document.getElementById('cobroDebitos').value.replace('.', ','));
         fd.append("MotivoDebito", document.getElementById('cobroMotivoDebito').value);
+        // Eliminado IdLiquidacion
 
         try {
             const r = await fetch('@Url.Action("GuardarCobro", "Home")', { method: 'POST', body: fd });
@@ -419,11 +363,9 @@
                 const d = res.data;
                 const mandID = res.idMandataria || d.idMandataria || 0; 
 
-                // 1. Abrir Modal
                 abrirModalCobro(id);
 
-                // 2. Setear la Mandataria (Texto y Value)
-                // Buscar el nombre en el datalist para ponerlo en el input visible
+                // Setear Mandataria
                 const opciones = document.getElementById('dlCobroMandataria').options;
                 for(let i=0; i<opciones.length; i++){
                     if(opciones[i].getAttribute('data-id') == mandID){
@@ -433,15 +375,12 @@
                 }
                 document.getElementById('cobroMandataria').value = mandID;
 
-                // 3. Cargar OS y luego seleccionar
+                // Cargar OS y luego seleccionar
                 if(mandID > 0) {
                     await cargarOS(mandID, 'dlCobroOS', 'txtCobroOS');
-                    
                     const idOS = d.idObrasSociales || d.IdObrasSociales;
                     document.getElementById('cobroOS').value = idOS;
                     
-                    // Truco para poner el texto de la OS en el input visible
-                    // (Hay que esperar que el datalist se llene)
                     setTimeout(() => {
                         const opsOS = document.getElementById('dlCobroOS').options;
                         for(let k=0; k<opsOS.length; k++){
@@ -460,9 +399,6 @@
                 document.getElementById('cobroDebitos').value = d.montoDebitos || d.MontoDebitos;
                 document.getElementById('cobroMotivoDebito').value = d.motivoDebito || d.MotivoDebito || "";
                 
-                await cargarLiquidacionesPendientes(document.getElementById('cobroOS').value);
-                document.getElementById('cobroLiquidacion').value = d.idLiquidaciones || d.IdLiquidaciones || 0;
-                
                 calcularTotalNeto();
             }
         } catch(e) { 
@@ -476,7 +412,6 @@
         document.getElementById('tituloModal').textContent = (id === 0) ? "NUEVO COBRO" : "EDITAR COBRO";
         
         if(id === 0) {
-            // Reset Inputs Texto y Hidden
             document.getElementById('txtCobroMandataria').value = "";
             document.getElementById('cobroMandataria').value = "0";
             
@@ -485,9 +420,6 @@
             document.getElementById('txtCobroOS').disabled = true;
             document.getElementById('txtCobroOS').placeholder = "Primero Mandataria...";
 
-            document.getElementById('cobroLiquidacion').innerHTML = '<option value="0">-- Pago a Cuenta --</option>';
-            document.getElementById('cobroLiquidacion').disabled = true;
-            
             document.getElementById('cobroImporte').value = "0.00";
             document.getElementById('cobroComprobante').value = "";
             document.getElementById('cobroMotivoDebito').value = "";
@@ -497,17 +429,14 @@
     }
 
     function limpiarFiltros() {
-        // Limpiar inputs visibles y ocultos
         document.getElementById('txtFiltroMandataria').value = "";
         document.getElementById('filtroMandataria').value = "0";
-        
         document.getElementById('txtFiltroOS').value = "";
         document.getElementById('filtroOS').value = "0";
         document.getElementById('txtFiltroOS').disabled = true;
-        
         document.getElementById('filtroComprobante').value = "";
         document.getElementById('filtroFechaDesde').value = "";
-        document.getElementById('filtroFechaHasta').value = ""; // Faltaba limpiar este
+        document.getElementById('filtroFechaHasta').value = "";
         buscarCobros();
     }
 </script>

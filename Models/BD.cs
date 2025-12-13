@@ -524,150 +524,154 @@ public static Usuario TraerUsuarioPorId(int idUsuario)
     
     }
 
-    public static List<Cobros> BuscarCobros(string? numeroComprobante, DateTime? desde, DateTime? hasta, int? IdObraSocial, int? Mandataria)
-    {
-        using (SqlConnection connection = new SqlConnection(_connectionString))
-        {
-            string query = @"
-                SELECT * FROM Cobros 
-                WHERE (@pNumeroComprobante IS NULL OR NumeroComprobante LIKE '%' + @pNumeroComprobante + '%')
-                AND (@pDesde IS NULL OR FechaCobro >= @pDesde)
-                AND (@pHasta IS NULL OR FechaCobro <= @pHasta)
-                AND (@pIdObraSocial IS NULL OR IdObrasSociales = @pIdObraSocial)
-                AND (@pMandataria IS NULL OR IdMandatarias = @pMandataria)";
-
-            return connection.Query<Cobros>(query, new
-            {
-                pNumeroComprobante = numeroComprobante,
-                pDesde = desde,
-                pHasta = hasta,
-                pIdObraSocial = IdObraSocial,
-                pMandataria = Mandataria
-            }).ToList();
-        }
-    }
-
-public static void AgregarCobro(int? IdLiquidaciones, int? IdObrasSociales, DateTime? FechaCobro, decimal ImporteCobrado, string NumeroComprobante, string? TipoPago, decimal MontoDebitos, string? MotivoDebito)
-    {
-        Cobros cobro = new Cobros
-        {
-            IdLiquidaciones = IdLiquidaciones,
-            IdObrasSociales = IdObrasSociales,
-            FechaCobro = FechaCobro,
-            ImporteCobrado = ImporteCobrado,
-            NumeroComprobante = NumeroComprobante,
-            TipoPago = TipoPago,
-            MontoDebitos = MontoDebitos,
-            MotivoDebito = MotivoDebito
-        };
-    {
-        using (SqlConnection connection = new SqlConnection(_connectionString))
-        {
-            string query = @"
-                INSERT INTO Cobros (IdLiquidaciones, IdObrasSociales, FechaCobro, ImporteCobrado, NumeroComprobante, TipoPago, MontoDebitos, MotivoDebito) 
-                VALUES (@IdLiquidaciones, @IdObrasSociales, @FechaCobro, @ImporteCobrado, @NumeroComprobante, @TipoPago, @MontoDebitos, @MotivoDebito)";
-
-            connection.Execute(query, cobro);
-        }
-    }
-    }
-
-    public static void ModificarCobro(int IdCobro, int? IdLiquidacion, int? IdObraSocial, DateTime? FechaCobro, decimal Precio, string NumeroComprobante, string? TipoPago, decimal MontoDebitos, string? MotivoDebito)
-    {
-        using (SqlConnection connection = new SqlConnection(_connectionString))
-        {
-            string query = @"
-                UPDATE Cobros 
-                SET IdLiquidaciones = @IdLiquidaciones,
-                    IdObrasSociales = @IdObrasSociales,
-                    FechaCobro = @FechaCobro,
-                    Precio = @Precio,
-                    NumeroComprobante = @NumeroComprobante,
-                    TipoPago = @TipoPago,
-                    MontoDebitos = @MontoDebitos,
-                    MotivoDebito = @MotivoDebito
-                WHERE IdCobros = @IdCobros";
-
-            connection.Execute(query, new
-            {
-                IdCobros = IdCobro,
-                IdLiquidaciones = IdLiquidacion,
-                IdObrasSociales = IdObraSocial,
-                FechaCobro = FechaCobro,
-                Precio = Precio,
-                NumeroComprobante = NumeroComprobante,
-                TipoPago = TipoPago,
-                MontoDebitos = MontoDebitos,
-                MotivoDebito = MotivoDebito
-            });
-        }
-    }
+  // =============================================================================
+// SECCIÓN COBROS (FALTABA TODO ESTO)
+// =============================================================================
 
 
-public static void EliminarCobro(int IdCobro)
-    {
-        using (SqlConnection connection = new SqlConnection(_connectionString))
-        {
-            string query = "DELETE FROM Cobros WHERE IdCobros = @IdCobros";
-            connection.Execute(query, new { IdCobros = IdCobro });
-        }
-    }
-
-public static Cobros TraerCobroPorId(int IdCobro)
-    {
-     Cobros ObjCobro = null;
-        using (SqlConnection connection = new SqlConnection(_connectionString))
-        {
-            string query = "SELECT * FROM Cobros where IdCobros = @pIdCobro"; 
-            ObjCobro = connection.QueryFirstOrDefault<Cobros>(query, new {pIdCobro = IdCobro});
-         }
-    
-         return ObjCobro;
-    }
-
-
-
+// 2. Traer Liquidaciones donde participa esa Obra Social (Para imputar pagos)
 public static List<Liquidaciones> TraerLiquidacionesPendientesPorOS(int idObraSocial)
-    {
-        using (SqlConnection connection = new SqlConnection(_connectionString))
-        {
-            string query = @"
-                SELECT * FROM Liquidaciones 
-                WHERE IdLiquidaciones NOT IN (SELECT DISTINCT IdLiquidaciones FROM Cobros WHERE IdLiquidaciones IS NOT NULL)
-                AND IdMandatarias = @pIdObraSocial";
-
-            return connection.Query<Liquidaciones>(query, new { pIdObraSocial = idObraSocial }).ToList();
-        }
-    }
-
-
-public static Cobros TraerCobroPorIdOS(int IdOS)
-    {
-     Cobros ObjCobro = null;
-        using (SqlConnection connection = new SqlConnection(_connectionString))
-        {
-            string query = "SELECT * FROM Cobros where IdObrasSociales = @pIdOS"; 
-            ObjCobro = connection.QueryFirstOrDefault<Cobros>(query, new {pIdOS = IdOS});
-         }
-    
-         return ObjCobro;
-    }
-
-// =============================================================================
-// UTILIDADES PARA COBROS
-// =============================================================================
-
-public static dynamic TraerMandatariaPorIdOS(int idObraSocial)
 {
     using (SqlConnection connection = new SqlConnection(_connectionString))
     {
-       
-        string query = "SELECT IdMandatarias as IdMandataria FROM ObrasSociales WHERE IdObrasSociales = @pId";
-        
-        return connection.QueryFirstOrDefault(query, new { pId = idObraSocial });
+        // Buscamos liquidaciones que tengan detalles de esa OS
+        string query = @"
+            SELECT DISTINCT L.IdLiquidaciones, L.FechaPresentacion, L.TotalPresentado, L.Periodo
+            FROM Liquidaciones L
+            INNER JOIN LiquidacionDetalle LD ON L.IdLiquidaciones = LD.IdLiquidaciones
+            WHERE LD.IdObrasSociales = @pIdOS
+            ORDER BY L.FechaPresentacion DESC";
+            
+        return connection.Query<Liquidaciones>(query, new { pIdOS = idObraSocial }).ToList();
     }
 }
 
+// 3. Buscar Cobros (El motor del buscador principal)
+public static List<Cobros> BuscarCobros(string numeroComprobante, DateTime? desde, DateTime? hasta, int? idObraSocial, int? idMandataria)
+{
+    using (SqlConnection connection = new SqlConnection(_connectionString))
+    {
+        // Hacemos JOIN con Obras Sociales para poder buscar por Mandataria también
+        string query = @"
+            SELECT C.*, OS.Nombre as NombreObraSocial 
+            FROM Cobros C
+            INNER JOIN ObrasSociales OS ON C.IdObrasSociales = OS.IdObrasSociales
+            WHERE 1=1 ";
+
+        if (!string.IsNullOrEmpty(numeroComprobante))
+            query += " AND C.NumeroComprobante LIKE @pComp";
+
+        if (desde.HasValue)
+            query += " AND C.FechaCobro >= @pDesde";
+
+        if (hasta.HasValue)
+            query += " AND C.FechaCobro <= @pHasta";
+
+        if (idObraSocial.HasValue && idObraSocial.Value > 0)
+            query += " AND C.IdObrasSociales = @pIdOS";
+
+        if (idMandataria.HasValue && idMandataria.Value > 0)
+            query += " AND OS.IdMandatarias = @pIdMand"; // Filtro por el padre
+
+        query += " ORDER BY C.FechaCobro DESC";
+
+        return connection.Query<Cobros>(query, new { 
+            pComp = $"%{numeroComprobante}%", 
+            pDesde = desde, 
+            pHasta = hasta, 
+            pIdOS = idObraSocial,
+            pIdMand = idMandataria
+        }).ToList();
+    }
+}
+
+// 4. Agregar Cobro
+public static void AgregarCobro(int? idLiquidacion, int? idObraSocial, DateTime? fecha, decimal importe, string comprobante, string tipo, decimal debitos, string motivoDebito)
+{
+    using (SqlConnection connection = new SqlConnection(_connectionString))
+    {
+        string query = @"
+            INSERT INTO Cobros (IdLiquidaciones, IdObrasSociales, FechaCobro, ImporteCobrado, NumeroComprobante, TipoPago, MontoDebitos, MotivoDebito)
+            VALUES (@pLiq, @pOS, @pFecha, @pImporte, @pComp, @pTipo, @pDebitos, @pMotivo)";
+
+        connection.Execute(query, new {
+            pLiq = (idLiquidacion == 0 ? null : idLiquidacion), // Si es 0 guardamos NULL
+            pOS = idObraSocial,
+            pFecha = fecha,
+            pImporte = importe,
+            pComp = comprobante,
+            pTipo = tipo,
+            pDebitos = debitos,
+            pMotivo = motivoDebito
+        });
+    }
+}
+
+// 5. Modificar Cobro
+public static void ModificarCobro(int idCobro, int? idLiquidacion, int? idObraSocial, DateTime? fecha, decimal importe, string comprobante, string tipo, decimal debitos, string motivoDebito)
+{
+    using (SqlConnection connection = new SqlConnection(_connectionString))
+    {
+        string query = @"
+            UPDATE Cobros 
+            SET IdLiquidaciones = @pLiq, 
+                IdObrasSociales = @pOS, 
+                FechaCobro = @pFecha, 
+                ImporteCobrado = @pImporte, 
+                NumeroComprobante = @pComp, 
+                TipoPago = @pTipo, 
+                MontoDebitos = @pDebitos, 
+                MotivoDebito = @pMotivo
+            WHERE IdCobros = @pId";
+
+        connection.Execute(query, new {
+            pId = idCobro,
+            pLiq = (idLiquidacion == 0 ? null : idLiquidacion),
+            pOS = idObraSocial,
+            pFecha = fecha,
+            pImporte = importe,
+            pComp = comprobante,
+            pTipo = tipo,
+            pDebitos = debitos,
+            pMotivo = motivoDebito
+        });
+    }
+}
+
+// 6. Eliminar Cobro
+public static void EliminarCobro(int idCobro)
+{
+    using (SqlConnection connection = new SqlConnection(_connectionString))
+    {
+        string query = "DELETE FROM Cobros WHERE IdCobros = @pId";
+        connection.Execute(query, new { pId = idCobro });
+    }
+}
+
+// 7. Traer un Cobro por ID (Para editar)
+public static Cobros TraerCobroPorId(int idCobro)
+{
+    using (SqlConnection connection = new SqlConnection(_connectionString))
+    {
+        string query = "SELECT * FROM Cobros WHERE IdCobros = @pId";
+        return connection.QueryFirstOrDefault<Cobros>(query, new { pId = idCobro });
+    }
+}
+
+// 8. Traer Mandataria dueña de una OS (Para que el combo se seleccione solo al editar)
+public static Mandatarias TraerMandatariaPorIdOS(int idObraSocial)
+{
+    using (SqlConnection connection = new SqlConnection(_connectionString))
+    {
+        // Join para buscar al padre
+        string query = @"
+            SELECT M.* FROM Mandatarias M
+            INNER JOIN ObrasSociales OS ON M.IdMandatarias = OS.IdMandatarias
+            WHERE OS.IdObrasSociales = @pIdOS";
+            
+        return connection.QueryFirstOrDefault<Mandatarias>(query, new { pIdOS = idObraSocial });
+    }
+}
 
 
 
