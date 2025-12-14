@@ -606,18 +606,26 @@ BD.ModificarUsuario(userDeSesion.IdUsuario, Contraseña ?? usuarioCompleto.Contr
     }
 
     [HttpGet]
-    public IActionResult BuscarCobrosAjax(string? numeroComprobante, DateTime? desde, DateTime? hasta, int? IdObraSocial, int? IdMandataria)
+public IActionResult BuscarCobrosAjax(string? numeroComprobante, DateTime? desde, DateTime? hasta, int? IdObraSocial, int? IdMandataria)
+{
+    try
     {
-        try
+        // Usamos la nueva búsqueda agrupada
+        var lista = BD.BuscarCobros(desde, hasta, IdMandataria, IdObraSocial);
+        
+        // Si el usuario busca por comprobante específico, filtramos en memoria (o podrías agregarlo al SQL)
+        if (!string.IsNullOrEmpty(numeroComprobante))
         {
-            var lista = BD.BuscarCobros(numeroComprobante, desde, hasta, IdObraSocial, IdMandataria);
-            return Json(new { success = true, data = lista });
+            lista = lista.Where(x => x.NumeroComprobante.ToString().Contains(numeroComprobante)).ToList();
         }
-        catch (Exception ex)
-        {
-             return StatusCode(500, new { success = false, message = ex.Message });
-        }
+
+        return Json(new { success = true, data = lista });
     }
+    catch (Exception ex)
+    {
+         return StatusCode(500, new { success = false, message = ex.Message });
+    }
+}
 
    [HttpPost]
     public IActionResult GuardarCobro(int IdCobro, int? IdLiquidacion, int? IdObraSocial, DateTime? FechaCobro, decimal ImporteCobrado, string NumeroComprobante, string? TipoPago, decimal MontoDebitos, string? MotivoDebito)
@@ -675,10 +683,73 @@ BD.ModificarUsuario(userDeSesion.IdUsuario, Contraseña ?? usuarioCompleto.Contr
         }
     }
 
+[HttpPost]
+public IActionResult GuardarLoteCobros([FromBody] List<Cobros> lote)
+{
+    // 1. Validar que llegue algo
+    if (lote == null || !lote.Any())
+    {
+        return Json(new { success = false, message = "La lista de cobros llegó vacía." });
+    }
+
+    int guardados = 0;
+    int errores = 0;
+    string ultimoError = "";
+
+    // 2. Recorrer y Guardar
+    foreach (var item in lote)
+    {
+        // Saltamos si no tiene Obra Social (Integridad básica)
+        if ((item.IdObrasSociales ?? 0) == 0) continue;
+
+        try
+        {
+            // LLAMADA AL MODELO (ESTILO DAPPER)
+            BD.GuardarCobroDesdeObjeto(item);
+            guardados++;
+        }
+        catch (Exception ex)
+        {
+            errores++;
+            ultimoError = ex.Message;
+            // Seguimos con el siguiente (Soft Fail)
+        }
+    }
+
+    // 3. Respuesta
+    if (guardados > 0)
+    {
+        return Json(new { 
+            success = true, 
+            message = $"✅ Se guardaron {guardados} cobros correctamente." + (errores > 0 ? $" (Hubo {errores} errores)." : "") 
+        });
+    }
+    else
+    {
+        return Json(new { success = false, message = "❌ Error al guardar. Detalle: " + ultimoError });
+    }
+}
 
 
+// Agrega esto en tu HomeController
 
+[HttpGet]
+public IActionResult TraerCobrosPorComprobante(string comprobante)
+{
+    try
+    {
+        if (string.IsNullOrEmpty(comprobante)) 
+            return Json(new { success = false, message = "Comprobante vacío" });
 
+        // Llamamos al nuevo método de BD
+        var lista = BD.TraerCobrosDelMismoLote(comprobante);
+        return Json(new { success = true, data = lista });
+    }
+    catch (Exception ex)
+    {
+        return Json(new { success = false, message = ex.Message });
+    }
+}
 
 
 

@@ -550,44 +550,44 @@ public static List<Liquidaciones> TraerLiquidacionesPendientesPorOS(int idObraSo
 // EN Models/BD.cs
 
 // CAMBIO: Devolvemos 'dynamic' para poder incluir columnas extra (NombreMandataria)
-public static List<dynamic> BuscarCobros(string numeroComprobante, DateTime? desde, DateTime? hasta, int? idObraSocial, int? idMandataria)
+public static List<dynamic> BuscarCobros(DateTime? desde, DateTime? hasta, int? idMandataria, int? idObraSocial)
 {
     using (SqlConnection connection = new SqlConnection(_connectionString))
     {
-        // SQL MEJORADO: Trae el nombre de la Mandataria haciendo doble JOIN
+        // 🧠 LÓGICA SQL: Agrupamos por Mandataria y Comprobante.
+        // Sumamos los importes y debitos para mostrar el TOTAL del cheque.
         string query = @"
             SELECT 
-                C.*, 
-                OS.Nombre as NombreObraSocial,
-                M.RazonSocial as NombreMandataria  -- <--- ESTO FALTABA
+                M.RazonSocial as NombreMandataria,
+                C.NumeroComprobante,
+                CAST(C.FechaCobro AS DATE) as FechaCobro,
+                C.TipoPago,
+                SUM(C.ImporteCobrado) as TotalImporte,
+                SUM(C.MontoDebitos) as TotalDebitos,
+                COUNT(*) as CantidadItems,
+                -- Usamos MAX para obtener un ID de referencia y el ID de Mandataria para el filtro
+                MAX(C.IdCobros) as IdReferencia, 
+                MAX(M.IdMandatarias) as IdMandatarias
             FROM Cobros C
             INNER JOIN ObrasSociales OS ON C.IdObrasSociales = OS.IdObrasSociales
             INNER JOIN Mandatarias M ON OS.IdMandatarias = M.IdMandatarias
             WHERE 1=1 ";
 
-        if (!string.IsNullOrEmpty(numeroComprobante))
-            query += " AND C.NumeroComprobante LIKE @pComp";
+        if (desde.HasValue) query += " AND C.FechaCobro >= @pDesde";
+        if (hasta.HasValue) query += " AND C.FechaCobro <= @pHasta";
+        if (idMandataria.HasValue && idMandataria.Value > 0) query += " AND M.IdMandatarias = @pIdMand";
+        if (idObraSocial.HasValue && idObraSocial.Value > 0) query += " AND C.IdObrasSociales = @pIdOS";
 
-        if (desde.HasValue)
-            query += " AND C.FechaCobro >= @pDesde";
-
-        if (hasta.HasValue)
-            query += " AND C.FechaCobro <= @pHasta";
-
-        if (idObraSocial.HasValue && idObraSocial.Value > 0)
-            query += " AND C.IdObrasSociales = @pIdOS";
-
-        if (idMandataria.HasValue && idMandataria.Value > 0)
-            query += " AND M.IdMandatarias = @pIdMand";
-
-        query += " ORDER BY C.FechaCobro DESC";
+        // Agrupamos estrictamente por el 'Lote' físico (El papel del cheque/transferencia)
+        query += @"
+            GROUP BY M.RazonSocial, C.NumeroComprobante, CAST(C.FechaCobro AS DATE), C.TipoPago
+            ORDER BY FechaCobro DESC";
 
         return connection.Query<dynamic>(query, new { 
-            pComp = $"%{numeroComprobante}%", 
             pDesde = desde, 
             pHasta = hasta, 
-            pIdOS = idObraSocial,
-            pIdMand = idMandataria
+            pIdMand = idMandataria,
+            pIdOS = idObraSocial
         }).ToList();
     }
 }
@@ -680,6 +680,72 @@ public static Mandatarias TraerMandatariaPorIdOS(int idObraSocial)
     }
 }
 
+
+
+public static void GuardarCobroDesdeObjeto(Cobros item)
+{
+    using (SqlConnection connection = new SqlConnection(_connectionString))
+    {
+        string query = @"
+            INSERT INTO Cobros (
+                IdLiquidaciones, 
+                IdObrasSociales, 
+                FechaCobro, 
+                ImporteCobrado, 
+                NumeroComprobante, 
+                TipoPago, 
+                MontoDebitos, 
+                MotivoDebito
+            ) 
+            VALUES (
+                @pLiq, 
+                @pOS, 
+                @pFecha, 
+                @pImporte, 
+                @pComp, 
+                @pTipo, 
+                @pDebitos, 
+                @pMotivo
+            )";
+
+        // Dapper hace el trabajo sucio aquí
+        connection.Execute(query, new {
+            pLiq = (item.IdLiquidaciones == 0 ? null : item.IdLiquidaciones), // Convertimos 0 a NULL si es necesario
+            pOS = item.IdObrasSociales,
+            pFecha = item.FechaCobro ?? DateTime.Now,
+            pImporte = item.ImporteCobrado,
+            pComp = item.NumeroComprobante,
+            pTipo = item.TipoPago,
+            pDebitos = item.MontoDebitos,
+            pMotivo = item.MotivoDebito
+        });
+    }
+}
+
+
+
+// Agrega esto en Models/BD.cs
+
+public static List<dynamic> TraerCobrosDelMismoLote(string numeroComprobante)
+{
+    using (SqlConnection connection = new SqlConnection(_connectionString))
+    {
+        // Traemos todos los cobros que tengan ESE número de comprobante.
+        // Hacemos JOIN con Obra Social para mostrar el nombre en la tablita.
+        string query = @"
+            SELECT 
+                C.*, 
+                OS.Nombre as NombreObraSocial,
+                M.RazonSocial as NombreMandataria
+            FROM Cobros C
+            INNER JOIN ObrasSociales OS ON C.IdObrasSociales = OS.IdObrasSociales
+            INNER JOIN Mandatarias M ON OS.IdMandatarias = M.IdMandatarias
+            WHERE C.NumeroComprobante = @pComp
+            ORDER BY C.IdCobros DESC";
+
+        return connection.Query<dynamic>(query, new { pComp = numeroComprobante }).ToList();
+    }
+}
 
 
 
