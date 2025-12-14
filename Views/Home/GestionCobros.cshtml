@@ -1,70 +1,64 @@
 @using System.Text.Json
-@using System.Linq
 @using WebFarmaciaMiguetti.Models
 
 @{
     ViewData["Title"] = "Gestión de Cobros";
-    var listaRaw = ViewBag.ListaMandatarias as IEnumerable<dynamic>;
-    var listaMandatarias = listaRaw?.ToList() ?? new List<dynamic>();
+
+    // 1. PREPARAMOS LOS DATOS INICIALES DEL SERVER
+    var listaMandatariasRaw = ViewBag.Mandatarias as IEnumerable<dynamic>;
+    var listaMandatarias = listaMandatariasRaw?.ToList() ?? new List<dynamic>();
     var listaTiposPago = (ViewBag.TiposPago as List<string>) ?? new List<string> { "Transferencia", "Cheque", "Efectivo", "Depósito" };
 
-    // JSON PARA EL BUSCADOR DE MANDATARIAS (INICIAL)
+    // 2. SERIALIZAMOS PARA JS
     var jsonMandatarias = JsonSerializer.Serialize(listaMandatarias.Select(m => new { 
         id = m.IdMandatarias, 
-        texto = m.RazonSocial,
-        nombre = m.RazonSocial
+        nombre = m.RazonSocial 
     }));
 }
 
 <style>
-    /* ESTILOS GENERALES */
     body { font-family: 'Roboto', sans-serif; background-color: #f4f6f9; }
-    h1 { font-size: 2.2rem; font-weight: 900; color: #146c43; text-transform: uppercase; margin-bottom: 1.5rem; border-bottom: 4px solid #146c43; display: inline-block; }
+    h1 { font-size: 2.2rem; font-weight: 900; color: #146c43; text-transform: uppercase; border-bottom: 4px solid #146c43; display: inline-block; }
 
     /* CONTENEDOR BUSCADOR */
     .search-container { background-color: #e9ecef; border: 2px solid #ced4da; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-    .form-label-sm { font-weight: 700; font-size: 0.85rem; text-transform: uppercase; color: #495057; margin-bottom: 2px; display: block; }
+    .form-label-sm { font-weight: 700; font-size: 0.85rem; text-transform: uppercase; color: #495057; display: block; }
     
     /* INPUTS */
     .form-control-sm-custom { border: 2px solid #adb5bd; font-weight: 500; padding: 5px 10px; width: 100%; border-radius: 4px; font-size: 0.95rem; }
-    .form-control-sm-custom:focus { border-color: #198754; box-shadow: 0 0 0 0.2rem rgba(25,135,84,0.15); }
+    .form-control-sm-custom:focus { border-color: #198754; box-shadow: 0 0 0 0.2rem rgba(25,135,84,0.15); outline: none; }
     .form-control-sm-custom:disabled { background-color: #e9ecef; cursor: not-allowed; opacity: 0.7; }
 
-    /* BOTONES */
-    .btn-action { font-weight: 800; text-transform: uppercase; padding: 6px 15px; font-size: 0.9rem; border: 2px solid rgba(0,0,0,0.1); }
-    
-    /* TABLA */
-    .table-responsive { border: 2px solid #000; border-radius: 4px; overflow: hidden; background: white; }
-    .table thead th { background-color: #146c43; color: white; font-size: 0.95rem; padding: 10px; vertical-align: middle; text-align: center; }
-    .table tbody td { font-size: 0.9rem; padding: 8px 10px; vertical-align: middle; font-weight: 500; }
-
-    /* ============================================================= */
-    /* ESTILOS DEL BUSCADOR FLOTANTE PERSONALIZADO (TU ESTILO)       */
-    /* ============================================================= */
+    /* BUSCADOR FLOTANTE */
     .buscador-wrapper { position: relative; width: 100%; }
-    
     .lista-sugerencias {
         position: absolute; top: 100%; left: 0; width: 100%;
         background: white; border: 2px solid #000; border-top: none;
-        z-index: 1050; display: none; max-height: 250px; overflow-y: auto;
+        z-index: 9999; 
+        display: none; max-height: 250px; overflow-y: auto;
         box-shadow: 0 4px 8px rgba(0,0,0,0.15);
     }
-    
-    .item-sugerencia { 
-        padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #eee; font-size: 0.9rem; color: #000; 
-    }
+    .item-sugerencia { padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #eee; font-size: 0.9rem; color: #000; }
     .item-sugerencia:hover { background-color: #198754; color: white; }
-    /* Fin Estilos Buscador */
 
-    /* ESTILOS MODAL */
+    /* TABLA */
+    .table-responsive { border: 2px solid #000; border-radius: 4px; overflow: hidden; background: white; margin-top: 15px; }
+    
+    /* ALINEACIÓN DE TÍTULOS */
+    .table thead th { background-color: #146c43; color: white; padding: 12px; text-align: center; vertical-align: middle; }
+    
+    /* Celdas generales */
+    .table tbody td { padding: 8px 12px; vertical-align: middle; }
+
+    /* MODAL */
     .card-resumen { background-color: #d1e7dd; border: 3px solid #198754; border-radius: 8px; padding: 10px; margin-top: 15px; }
     .total-final { font-size: 1.8rem; font-weight: 900; color: #198754; text-align: center; }
 </style>
 
 <div class="container-fluid mt-4">
-    <div class="d-flex justify-content-between align-items-center">
+    <div class="d-flex justify-content-between align-items-center mb-3">
         <h1>💰 GESTIÓN DE COBROS</h1>
-        <button class="btn btn-success btn-action py-2 px-4 fs-6" onclick="abrirModalCobro(0)">
+        <button class="btn btn-success fw-bold py-2 px-4" onclick="abrirModalCobro(0)">
             ➕ NUEVO COBRO
         </button>
     </div>
@@ -105,8 +99,8 @@
             </div>
 
             <div class="col-lg-2 col-md-12 d-flex gap-1">
-                <button class="btn btn-primary btn-action w-100" onclick="buscarCobros()">🔍</button>
-                <button class="btn btn-secondary btn-action w-auto" onclick="limpiarFiltros()" title="Limpiar">🔄</button>
+                <button class="btn btn-primary fw-bold w-100" onclick="buscarCobros()">🔍 BUSCAR</button>
+                <button class="btn btn-secondary fw-bold" onclick="limpiarFiltros()" title="Limpiar">🔄</button>
             </div>
         </div>
     </div>
@@ -115,17 +109,19 @@
         <table class="table table-hover table-striped mb-0">
             <thead>
                 <tr>
-                    <th class="text-center">FECHA</th>
-                    <th>MANDATARIA</th>   <th>OBRA SOCIAL</th>  <th>COMPROBANTE</th>
+                    <th>FECHA</th>
+                    <th>MANDATARIA</th>
+                    <th>OBRA SOCIAL</th>
+                    <th>COMPROBANTE</th>
                     <th>TIPO</th>
-                    <th class="text-end">IMPORTE</th>
-                    <th class="text-end">DÉBITOS</th>
-                    <th class="text-end">NETO</th>
-                    <th class="text-center">ACCIONES</th>
+                    <th class="text-end pe-4">IMPORTE</th>
+                    <th class="text-end pe-4">DÉBITOS</th>
+                    <th class="text-end pe-4">NETO</th>
+                    <th>ACCIONES</th>
                 </tr>
             </thead>
             <tbody id="tbodyCobros">
-                <tr><td colspan="9" class="text-center p-4 text-muted">Cargando datos...</td></tr>
+                <tr><td colspan="9" class="text-center p-4 text-muted">Use el buscador para ver los cobros.</td></tr>
             </tbody>
         </table>
     </div>
@@ -147,7 +143,7 @@
                     <div class="col-md-6">
                         <label class="form-label-sm">MANDATARIA</label>
                         <div class="buscador-wrapper">
-                            <input type="text" class="form-control fw-bold" id="txtCobroMandataria" placeholder="Escriba para buscar..." autocomplete="off">
+                            <input type="text" class="form-control fw-bold" id="txtCobroMandataria" placeholder="Buscar..." autocomplete="off">
                             <input type="hidden" id="cobroMandataria" value="0">
                             <div id="listaCobroMandataria" class="lista-sugerencias"></div>
                         </div>
@@ -208,8 +204,8 @@
                 </div>
             </div>
             <div class="modal-footer bg-light py-2">
-                <button type="button" class="btn btn-secondary btn-action" data-bs-dismiss="modal">CANCELAR</button>
-                <button type="button" class="btn btn-success btn-action px-4" onclick="guardarCobro()">💾 GUARDAR COBRO</button>
+                <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal">CANCELAR</button>
+                <button type="button" class="btn btn-success fw-bold px-4" onclick="guardarCobro()">💾 GUARDAR COBRO</button>
             </div>
         </div>
     </div>
@@ -217,58 +213,48 @@
 
 @section Scripts {
 <script>
-    // 1. DATOS GLOBALES
-    var datosMandatarias = @Html.Raw(jsonMandatarias);
-    var datosOS_Filtro = [];
-    var datosOS_Modal = [];
-
-    const modalCobro = new bootstrap.Modal(document.getElementById('modalCobro'));
+    var fuentesDatos = {
+        'txtFiltroMandataria': @Html.Raw(jsonMandatarias),
+        'txtCobroMandataria': @Html.Raw(jsonMandatarias),
+        'txtFiltroOS': [],  
+        'txtCobroOS': []    
+    };
+    var modalCobro;
 
     document.addEventListener("DOMContentLoaded", () => {
+        modalCobro = new bootstrap.Modal(document.getElementById('modalCobro'));
+
+        // INICIALIZACIÓN
+        setupBuscador('txtFiltroMandataria', 'listaFiltroMandataria', 'filtroMandataria', onSelectMandatariaFiltro);
+        setupBuscador('txtFiltroOS', 'listaFiltroOS', 'filtroOS', null);
+        setupBuscador('txtCobroMandataria', 'listaCobroMandataria', 'cobroMandataria', onSelectMandatariaModal);
+        setupBuscador('txtCobroOS', 'listaCobroOS', 'cobroOS', null);
+
         buscarCobros();
-        // Inicializamos los 4 buscadores con la lógica personalizada
-        setupBuscador('txtFiltroMandataria', 'listaFiltroMandataria', datosMandatarias, 'filtroMandataria', onSelectMandatariaFiltro);
-        setupBuscador('txtCobroMandataria', 'listaCobroMandataria', datosMandatarias, 'cobroMandataria', onSelectMandatariaModal);
-        
-        // Los de OS se inicializan vacíos hasta que se elija mandataria
-        setupBuscador('txtFiltroOS', 'listaFiltroOS', [], 'filtroOS', null);
-        setupBuscador('txtCobroOS', 'listaCobroOS', [], 'cobroOS', null);
     });
 
-    // =========================================================================
-    // 2. MOTOR DEL BUSCADOR PERSONALIZADO (Tipo Select + Autocomplete)
-    // =========================================================================
-    function setupBuscador(inputId, listaId, fuenteDatos, hiddenId, callbackSelect) {
+    // MOTOR BUSCADOR
+    function setupBuscador(inputId, listaId, hiddenId, callbackSelect) {
         const input = document.getElementById(inputId);
         const lista = document.getElementById(listaId);
         const hidden = document.getElementById(hiddenId);
 
-        // FUNCIÓN: MOSTRAR OPCIONES
-        function mostrarOpciones(filtro = "") {
+        function dibujarLista() {
+            const texto = input.value.toLowerCase().trim();
+            const datos = fuentesDatos[inputId]; 
+
             lista.innerHTML = '';
-            // Si el campo de datos es una función (porque cambia dinámicamente para OS), la evaluamos
-            let datos = (typeof fuenteDatos === 'function') ? fuenteDatos() : fuenteDatos;
+            if (!datos || datos.length === 0) { lista.style.display = 'none'; return; }
 
-            if (!datos || datos.length === 0) {
-                lista.style.display = 'none';
-                return;
-            }
+            const filtrados = (texto === "") ? datos : datos.filter(item => item.nombre.toLowerCase().includes(texto));
+            if (filtrados.length === 0) { lista.style.display = 'none'; return; }
 
-            const textoFiltro = filtro.toLowerCase().trim();
-            
-            // Filtramos (o mostramos todo si no hay filtro)
-            const coincidencias = datos.filter(item => item.nombre.toLowerCase().includes(textoFiltro));
-
-            if (coincidencias.length === 0) {
-                lista.style.display = 'none';
-                return;
-            }
-
-            coincidencias.forEach(item => {
+            filtrados.forEach(item => {
                 const div = document.createElement('div');
                 div.className = 'item-sugerencia';
                 div.textContent = item.nombre;
-                div.onmousedown = function() { // Usamos onmousedown para evitar conflicto con blur
+                div.onmousedown = function(e) {
+                    e.preventDefault();
                     input.value = item.nombre;
                     hidden.value = item.id;
                     lista.style.display = 'none';
@@ -279,80 +265,99 @@
             lista.style.display = 'block';
         }
 
-        // EVENTOS
-        input.addEventListener('focus', function() { mostrarOpciones(this.value); }); // Al hacer clic, muestra todo
-        input.addEventListener('input', function() { mostrarOpciones(this.value); }); // Al escribir, filtra
-
-        // Cerrar al hacer clic fuera
-        document.addEventListener('click', function(e) {
-            if (e.target !== input && e.target !== lista) {
-                lista.style.display = 'none';
-            }
-        });
+        input.addEventListener('focus', dibujarLista);
+        input.addEventListener('input', () => { hidden.value = "0"; dibujarLista(); });
+        input.addEventListener('blur', () => { setTimeout(() => { lista.style.display = 'none'; }, 200); });
     }
 
-    // --- CALLBACKS ESPECÍFICOS ---
-    
-    // Al elegir Mandataria en el Filtro Principal
-    function onSelectMandatariaFiltro(id) {
-        cargarOS_Ajax(id, 'txtFiltroOS', 'filtroOS', (datos) => { 
-            datosOS_Filtro = datos; // Actualizamos la fuente de datos global para este buscador
-            // Re-configuramos el buscador de OS para que use los nuevos datos
-            setupBuscador('txtFiltroOS', 'listaFiltroOS', datosOS_Filtro, 'filtroOS', null);
-        });
-    }
-
-    // Al elegir Mandataria en el Modal
-    function onSelectMandatariaModal(id) {
-        // Limpiamos la OS elegida previamente
+    // CARGA OBRAS SOCIALES
+    function onSelectMandatariaFiltro(id) { cargarOS_Ajax(id, 'txtFiltroOS', 'filtroOS'); }
+    function onSelectMandatariaModal(id) { 
         document.getElementById('txtCobroOS').value = "";
         document.getElementById('cobroOS').value = "0";
-        
-        cargarOS_Ajax(id, 'txtCobroOS', 'cobroOS', (datos) => {
-            datosOS_Modal = datos;
-            setupBuscador('txtCobroOS', 'listaCobroOS', datosOS_Modal, 'cobroOS', null);
-        });
+        cargarOS_Ajax(id, 'txtCobroOS', 'cobroOS'); 
     }
 
-    // Carga AJAX de Obras Sociales
-    async function cargarOS_Ajax(idMand, inputId, hiddenId, callbackSetup) {
+    async function cargarOS_Ajax(idMand, inputId, hiddenId) {
         const input = document.getElementById(inputId);
         const hidden = document.getElementById(hiddenId);
-        
-        input.placeholder = "Cargando...";
-        input.disabled = true;
-        hidden.value = "0"; // Reseteamos ID
+        input.disabled = true; input.placeholder = "Cargando..."; input.value = ""; hidden.value = "0";
 
         try {
-            const r = await fetch(`@Url.Action("TraerObrasSocialesPorMandataria", "Home")?idMandataria=${idMand}`);
-            const res = await r.json();
-            
-            if(res.success && res.data.length > 0) {
-                // Mapeamos al formato estándar {id, nombre}
-                const datosNormalizados = res.data.map(os => ({ 
-                    id: os.idObrasSociales || os.IdObrasSociales, 
-                    nombre: os.nombre || os.Nombre 
+            const resp = await fetch(`@Url.Action("TraerObrasSocialesPorMandataria", "Home")?idMandataria=${idMand}`);
+            const json = await resp.json();
+            if (json.success && json.data.length > 0) {
+                fuentesDatos[inputId] = json.data.map(d => ({ 
+                    id: d.idObrasSociales || d.id || d.IdObrasSociales, 
+                    nombre: d.nombre || d.Nombre 
                 }));
-                
-                input.disabled = false;
-                input.placeholder = "Seleccione O.S...";
-                input.focus(); // Foco automático para que se abra la lista si el usuario quiere
-                
-                if(callbackSetup) callbackSetup(datosNormalizados);
+                input.disabled = false; input.placeholder = "Seleccione O.S..."; input.focus();
             } else {
-                input.placeholder = "Sin Obras Sociales";
-                input.disabled = false; // Dejamos habilitado por si quiere escribir nombre manual (opcional)
-                if(callbackSetup) callbackSetup([]);
+                fuentesDatos[inputId] = []; input.placeholder = "Sin Obras Sociales"; input.disabled = true;
             }
-        } catch(e) {
-            console.error(e);
-            input.placeholder = "Error de carga";
-        }
+        } catch (e) { fuentesDatos[inputId] = []; input.placeholder = "Error"; }
     }
 
-    // =========================================================================
-    // 3. CRUD Y LÓGICA DE NEGOCIO
-    // =========================================================================
+    // LÓGICA PRINCIPAL (TABLA)
+    async function buscarCobros() {
+        const idMand = document.getElementById('filtroMandataria').value;
+        const idOS = document.getElementById('filtroOS').value;
+        const comp = document.getElementById('filtroComprobante').value;
+        const desde = document.getElementById('filtroFechaDesde').value;
+        const hasta = document.getElementById('filtroFechaHasta').value;
+
+        const tbody = document.getElementById('tbodyCobros');
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center p-4"><div class="spinner-border text-success"></div></td></tr>';
+
+        let url = `@Url.Action("BuscarCobrosAjax", "Home")?dummy=1`;
+        if(idMand > 0) url += `&IdMandataria=${idMand}`;
+        if(idOS > 0) url += `&IdObraSocial=${idOS}`;
+        if(comp) url += `&numeroComprobante=${encodeURIComponent(comp)}`;
+        if(desde) url += `&desde=${desde}`;
+        if(hasta) url += `&hasta=${hasta}`;
+
+        try {
+            const r = await fetch(url);
+            const res = await r.json();
+
+            if (res.success && res.data && res.data.length > 0) {
+                tbody.innerHTML = '';
+                res.data.forEach(item => {
+                    let fecha = item.fechaCobro || item.FechaCobro;
+                    if(fecha && fecha.includes('T')) fecha = fecha.split('T')[0];
+
+                    const mand = item.nombreMandataria || item.NombreMandataria || '-';
+                    const os = item.nombreObraSocial || item.NombreObraSocial || '-';
+                    const comprobante = item.numeroComprobante || item.NumeroComprobante || '';
+                    const tipo = item.tipoPago || item.TipoPago || '';
+                    const imp = item.importeCobrado || item.ImporteCobrado || 0;
+                    const deb = item.montoDebitos || item.MontoDebitos || 0;
+                    const id = item.idCobros || item.IdCobros;
+                    const neto = imp - deb;
+
+                    // === CAMBIOS APLICADOS AQUÍ PARA CENTRADO VISUAL ===
+                    // ps-4 = Padding Start 4 (aprox 24px) para empujar el texto a la derecha
+                    tbody.innerHTML += `
+                    <tr>
+                        <td class="text-center">${fecha}</td>
+                        <td class="fw-bold text-success ps-4">${mand}</td>
+                        <td class="ps-4">${os}</td>
+                        <td class="fw-bold text-center">${comprobante}</td>
+                        <td class="ps-4"><span class="badge bg-secondary">${tipo}</span></td>
+                        <td class="text-end pe-4">$${imp.toFixed(2)}</td>
+                        <td class="text-end pe-4 text-danger">$${deb.toFixed(2)}</td>
+                        <td class="text-end pe-4 fw-bold fs-6">$${neto.toFixed(2)}</td>
+                        <td class="text-center">
+                            <button class="btn btn-warning btn-sm" onclick="editarCobro(${id})">✏️</button>
+                            <button class="btn btn-danger btn-sm" onclick="eliminarCobro(${id})">🗑️</button>
+                        </td>
+                    </tr>`;
+                });
+            } else {
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center p-4 text-muted">No se encontraron cobros.</td></tr>';
+            }
+        } catch (e) { tbody.innerHTML = '<tr><td colspan="9" class="text-center text-danger">Error de conexión.</td></tr>'; }
+    }
 
     function calcularTotalNeto() {
         const imp = parseFloat(document.getElementById('cobroImporte').value) || 0;
@@ -360,164 +365,100 @@
         document.getElementById('lblTotalNeto').textContent = `$${(imp - deb).toFixed(2)}`;
     }
 
-    async function buscarCobros() {
-        const mand = document.getElementById('filtroMandataria').value;
-        const os = document.getElementById('filtroOS').value;
-        const comp = document.getElementById('filtroComprobante').value;
-        const d = document.getElementById('filtroFechaDesde').value;
-        const h = document.getElementById('filtroFechaHasta').value;
+    // MODAL
+    async function abrirModalCobro(id) {
+        document.getElementById('cobroId').value = id; // IMPORTANTE
+        document.getElementById('tituloModal').textContent = (id === 0) ? "REGISTRAR COBRO" : "EDITAR COBRO";
         
-        const tbody = document.getElementById('tbodyCobros');
-        tbody.innerHTML = '<tr><td colspan="9" class="text-center p-4"><div class="spinner-border text-success"></div></td></tr>';
+        if (id === 0) {
+            document.getElementById('txtCobroMandataria').value = ""; document.getElementById('cobroMandataria').value = "0";
+            document.getElementById('txtCobroOS').value = ""; document.getElementById('cobroOS').value = "0";
+            document.getElementById('txtCobroOS').disabled = true; document.getElementById('txtCobroOS').placeholder = "Primero Mandataria...";
+            fuentesDatos['txtCobroOS'] = [];
+            document.getElementById('cobroImporte').value = "0.00"; document.getElementById('cobroDebitos').value = "0.00";
+            document.getElementById('cobroComprobante').value = ""; document.getElementById('cobroMotivoDebito').value = "";
+            calcularTotalNeto();
+            modalCobro.show();
+        } else {
+            await editarCobro(id);
+        }
+    }
 
-        const url = `@Url.Action("BuscarCobrosAjax", "Home")?IdMandataria=${mand}&IdObraSocial=${os}&numeroComprobante=${comp}&desde=${d}&hasta=${h}`;
+    async function editarCobro(id) {
+        document.getElementById('cobroId').value = id; // FIX EDICIÓN
 
         try {
-            const r = await fetch(url);
+            const r = await fetch(`@Url.Action("ObtenerCobroPorId", "Home")?idCobro=${id}`);
             const res = await r.json();
-            if(res.success && res.data.length > 0) {
-                tbody.innerHTML = '';
-                res.data.forEach(x => {
-                    const f = new Date(x.fechaCobro || x.FechaCobro).toLocaleDateString('es-AR');
-                    const mandNombre = x.nombreMandataria || x.NombreMandataria || "-";
-                    const osNombre = x.nombreObraSocial || x.NombreObraSocial || "-";
-                    
-                    // FIX IMPORTE: Usar ImporteCobrado
-                    const imp = x.importeCobrado || x.ImporteCobrado || 0;
-                    const deb = x.montoDebitos || x.MontoDebitos || 0;
-                    const id = x.idCobros || x.IdCobros;
-                    const compNum = x.numeroComprobante || x.NumeroComprobante || "";
-                    const tipo = x.tipoPago || x.TipoPago || "";
 
-                    const neto = imp - deb;
+            if (res.success) {
+                const d = res.data;
+                const idMand = res.idMandataria;
 
-                    // TABLA CON 2 COLUMNAS SEPARADAS
-                    tbody.innerHTML += `<tr>
-                        <td class="text-center">${f}</td>
-                        <td class="fw-bold">${mandNombre}</td>
-                        <td>${osNombre}</td>
-                        <td>${compNum}</td>
-                        <td><span class="badge bg-secondary">${tipo}</span></td>
-                        <td class="text-end">$${imp.toFixed(2)}</td>
-                        <td class="text-end text-danger">$${deb.toFixed(2)}</td>
-                        <td class="text-end fw-bold">$${neto.toFixed(2)}</td>
-                        <td class="text-center">
-                            <button class="btn btn-warning btn-sm fw-bold" onclick="editarCobro(${id})">✏️</button>
-                            <button class="btn btn-danger btn-sm fw-bold" onclick="eliminarCobro(${id})">🗑️</button>
-                        </td></tr>`;
-                });
-            } else { tbody.innerHTML = '<tr><td colspan="9" class="text-center p-4 text-muted">No se encontraron resultados.</td></tr>'; }
-        } catch(e) { tbody.innerHTML = '<tr><td colspan="9" class="text-center text-danger">Error de conexión.</td></tr>'; }
+                const mandInfo = fuentesDatos['txtCobroMandataria'].find(m => m.id == idMand);
+                document.getElementById('cobroMandataria').value = idMand;
+                document.getElementById('txtCobroMandataria').value = mandInfo ? mandInfo.nombre : "Desconocida";
+
+                await cargarOS_Ajax(idMand, 'txtCobroOS', 'cobroOS');
+                
+                const idOS = d.idObrasSociales || d.IdObrasSociales;
+                const osInfo = fuentesDatos['txtCobroOS'].find(o => o.id == idOS);
+                document.getElementById('cobroOS').value = idOS;
+                document.getElementById('txtCobroOS').value = osInfo ? osInfo.nombre : "Desconocida";
+
+                let fecha = d.fechaCobro || d.FechaCobro;
+                if(fecha) document.getElementById('cobroFecha').value = fecha.split('T')[0];
+                
+                document.getElementById('cobroTipo').value = d.tipoPago || d.TipoPago;
+                document.getElementById('cobroComprobante').value = d.numeroComprobante || d.NumeroComprobante;
+                document.getElementById('cobroImporte').value = d.importeCobrado || d.ImporteCobrado;
+                document.getElementById('cobroDebitos').value = d.montoDebitos || d.MontoDebitos;
+                document.getElementById('cobroMotivoDebito').value = d.motivoDebito || d.MotivoDebito || "";
+
+                calcularTotalNeto();
+                modalCobro.show();
+            } else { alert("Error: " + res.message); }
+        } catch (e) { alert("Error obteniendo datos."); }
     }
 
     async function guardarCobro() {
-        if(document.getElementById('cobroOS').value == "0" || document.getElementById('cobroOS').value == "") { 
-            alert("Debe seleccionar una Obra Social válida de la lista."); return; 
-        }
-        
+        if(document.getElementById('cobroOS').value == "0") { alert("Seleccione Obra Social."); return; }
+
         const fd = new FormData();
         fd.append("IdCobro", document.getElementById('cobroId').value);
         fd.append("IdObraSocial", document.getElementById('cobroOS').value);
         fd.append("FechaCobro", document.getElementById('cobroFecha').value);
         fd.append("TipoPago", document.getElementById('cobroTipo').value);
         fd.append("NumeroComprobante", document.getElementById('cobroComprobante').value);
-        
-        // FIX: Enviar ImporteCobrado (antes Precio)
         fd.append("ImporteCobrado", document.getElementById('cobroImporte').value.replace('.', ','));
         fd.append("MontoDebitos", document.getElementById('cobroDebitos').value.replace('.', ','));
         fd.append("MotivoDebito", document.getElementById('cobroMotivoDebito').value);
-        fd.append("IdLiquidacion", 0); 
+        fd.append("IdLiquidacion", 0);
 
         try {
             const r = await fetch('@Url.Action("GuardarCobro", "Home")', { method: 'POST', body: fd });
             const res = await r.json();
-            if(res.success) { alert("✅ Guardado."); modalCobro.hide(); buscarCobros(); } else { alert("❌ " + res.message); }
-        } catch(e) { alert("Error guardando."); }
+            if (res.success) { alert("✅ " + res.message); modalCobro.hide(); buscarCobros(); } 
+            else { alert("❌ " + res.message); }
+        } catch (e) { alert("Error al guardar."); }
     }
 
     async function eliminarCobro(id) {
-        if(!confirm("¿Eliminar?")) return;
+        if (!confirm("¿Eliminar cobro?")) return;
         const fd = new FormData(); fd.append("idCobro", id);
-        try { if((await (await fetch('@Url.Action("EliminarCobro", "Home")', {method:'POST', body:fd})).json()).success) buscarCobros(); } catch(e){}
-    }
-
-    async function editarCobro(id) {
         try {
-            const r = await fetch(`@Url.Action("ObtenerCobroPorId", "Home")?idCobro=${id}`);
+            const r = await fetch('@Url.Action("EliminarCobro", "Home")', { method: 'POST', body: fd });
             const res = await r.json();
-            if(res.success) {
-                const d = res.data;
-                // Obtenemos ID de Mandataria (backend debe enviarlo como 'idMandataria')
-                const mandID = res.idMandataria || d.idMandataria || 0; 
-
-                abrirModalCobro(id);
-
-                // 1. Pre-llenar Mandataria
-                const mandObj = datosMandatarias.find(m => m.id == mandID);
-                if(mandObj) {
-                    document.getElementById('txtCobroMandataria').value = mandObj.nombre;
-                    document.getElementById('cobroMandataria').value = mandID;
-                    
-                    // 2. Cargar OS y seleccionar la correcta
-                    cargarOS_Ajax(mandID, 'txtCobroOS', 'cobroOS', (datos) => {
-                        datosOS_Modal = datos;
-                        setupBuscador('txtCobroOS', 'listaCobroOS', datosOS_Modal, 'cobroOS', null);
-                        
-                        const idOS = d.idObrasSociales || d.IdObrasSociales;
-                        const osObj = datosOS_Modal.find(o => o.id == idOS);
-                        if(osObj) {
-                            document.getElementById('txtCobroOS').value = osObj.nombre;
-                            document.getElementById('cobroOS').value = idOS;
-                        }
-                    });
-                }
-
-                // 3. Resto de campos
-                document.getElementById('cobroFecha').value = (d.fechaCobro||d.FechaCobro).split('T')[0];
-                document.getElementById('cobroTipo').value = d.tipoPago||d.TipoPago;
-                document.getElementById('cobroComprobante').value = d.numeroComprobante||d.NumeroComprobante;
-                
-                // FIX: Leer ImporteCobrado correctamente
-                document.getElementById('cobroImporte').value = d.importeCobrado || d.ImporteCobrado;
-                
-                document.getElementById('cobroDebitos').value = d.montoDebitos||d.MontoDebitos;
-                document.getElementById('cobroMotivoDebito').value = d.motivoDebito||d.MotivoDebito||"";
-                calcularTotalNeto();
-            }
-        } catch(e) { alert("Error cargando."); }
-    }
-
-    function abrirModalCobro(id) {
-        document.getElementById('cobroId').value = id;
-        document.getElementById('tituloModal').textContent = (id===0) ? "REGISTRAR COBRO" : "EDITAR COBRO";
-        if(id===0) {
-            // Limpieza total
-            document.getElementById('txtCobroMandataria').value = ""; 
-            document.getElementById('cobroMandataria').value = "0";
-            
-            document.getElementById('txtCobroOS').value = ""; 
-            document.getElementById('cobroOS').value = "0"; 
-            document.getElementById('txtCobroOS').disabled = true;
-            document.getElementById('txtCobroOS').placeholder = "Primero Mandataria...";
-            
-            document.getElementById('cobroImporte').value = "0.00"; 
-            document.getElementById('cobroDebitos').value = "0.00";
-            document.getElementById('cobroComprobante').value = ""; 
-            document.getElementById('cobroMotivoDebito').value = "";
-            calcularTotalNeto();
-        }
-        modalCobro.show();
+            if (res.success) { buscarCobros(); } else { alert("Error: " + res.message); }
+        } catch (e) { alert("Error al eliminar."); }
     }
 
     function limpiarFiltros() {
-        document.getElementById('txtFiltroMandataria').value = ""; 
-        document.getElementById('filtroMandataria').value = "0";
-        document.getElementById('txtFiltroOS').value = ""; 
-        document.getElementById('filtroOS').value = "0";
-        document.getElementById('txtFiltroOS').disabled = true;
+        document.getElementById('txtFiltroMandataria').value = ""; document.getElementById('filtroMandataria').value = "0";
+        document.getElementById('txtFiltroOS').value = ""; document.getElementById('filtroOS').value = "0";
+        document.getElementById('txtFiltroOS').disabled = true; fuentesDatos['txtFiltroOS'] = [];
         document.getElementById('filtroComprobante').value = "";
-        document.getElementById('filtroFechaDesde').value = ""; 
-        document.getElementById('filtroFechaHasta').value = "";
+        document.getElementById('filtroFechaDesde').value = ""; document.getElementById('filtroFechaHasta').value = "";
         buscarCobros();
     }
 </script>
