@@ -12,28 +12,9 @@ public class Cobros
     public int? IdLiquidaciones { get; set; }
     [JsonProperty]
     public int? IdObrasSociales { get;  set; }
-    [JsonProperty]
-    [DataType(DataType.Date)]
-    public DateTime? FechaCobro { get; set; }
-
-        [JsonProperty]
-        [Required]
-        [Column(TypeName = "decimal(18,2)")] // <--- OBLIGATORIO PARA SQL
-        [DataType(DataType.Currency)] // Para que se vea con el signo $ en la vista
-       public decimal ImporteCobrado { get; set; }
 
     [JsonProperty]
     public string NumeroComprobante { get; set; }
-    [JsonProperty]
-    public string? TipoPago { get;  set; }
-
-    [JsonProperty]
-        [Required]
-        [Column(TypeName = "decimal(18,2)")] // <--- OBLIGATORIO PARA SQL
-        [DataType(DataType.Currency)] // Para que se vea con el signo $ en la vista
-       public decimal MontoDebitos { get; set; }
-    [JsonProperty]
-    public string? MotivoDebito { get;  set; }
     
 
     public Cobros()
