@@ -12,11 +12,15 @@ public class Cobros
     public int? IdLiquidaciones { get; set; }
     [JsonProperty]
     public int? IdObrasSociales { get;  set; }
-
+[JsonProperty]
+    [Required]
+    [DataType(DataType.Date)]
+    public DateTime FechaCobro { get; set; }
     [JsonProperty]
     public string NumeroComprobante { get; set; }
     
-
+[JsonProperty]
+    public int? IdMandatarias { get; set; }
     public Cobros()
     {
         

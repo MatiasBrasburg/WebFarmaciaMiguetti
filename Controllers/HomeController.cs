@@ -577,179 +577,235 @@ BD.ModificarUsuario(userDeSesion.IdUsuario, Contraseña ?? usuarioCompleto.Contr
     }
 
 
-    [HttpGet]
-    public IActionResult TraerObrasSocialesPorMandataria(int idMandataria)
-    {
-        try
+public class CobrosDetalleRequest
         {
-            var lista = BD.TraerOSPorIdMandataria(idMandataria);
-            return Json(new { success = true, data = lista });
-        }
-        catch (Exception ex)
-        {
-            return Json(new { success = false, message = ex.Message });
-        }
-    }
+            // Datos del Maestro (Cabecera)
+            public DateTime FechaCobroMaestro { get; set; }
+            public string NumeroComprobanteMaestro { get; set; }
+            public int IdMandatariasMaestro { get; set; }
 
-    [HttpGet]
-    public IActionResult TraerLiquidacionesPendientesPorOS(int idObraSocial)
-    {
-        try
-        {
-            var lista = BD.TraerLiquidacionesPendientesPorOS(idObraSocial);
-            return Json(new { success = true, data = lista });
+            // Datos del Detalle (Item)
+            public int IdObrasSociales { get; set; }
+            public DateTime? FechaCobroDetalle { get; set; } // Opcional, puede usar la del maestro
+            public string TipoPago { get; set; }
+            public decimal ImporteCobrado { get; set; }
+            public decimal MontoDebito { get; set; }
+            public string MotivoDebito { get; set; }
         }
-        catch (Exception ex)
-        {
-            return Json(new { success = false, message = ex.Message });
-        }
-    }
 
-    [HttpGet]
-public IActionResult BuscarCobrosAjax(string? numeroComprobante, DateTime? desde, DateTime? hasta, int? IdObraSocial, int? IdMandataria)
-{
-    try
-    {
-        // Usamos la nueva búsqueda agrupada
-        var lista = BD.BuscarCobros(desde, hasta, IdMandataria, IdObraSocial);
+        // ====================================================================
+        // MÉTODOS DE LECTURA Y FILTROS
+        // ====================================================================
+
+        [HttpGet]
+        public IActionResult TraerObrasSocialesPorMandataria(int idMandataria)
+        {
+            try
+            {
+                var lista = BD.TraerOSPorIdMandataria(idMandataria);
+                return Json(new { success = true, data = lista });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpGet]
+        public IActionResult TraerLiquidacionesPendientesPorOS(int idObraSocial)
+        {
+            try
+            {
+                var lista = BD.TraerLiquidacionesPendientesPorOS(idObraSocial);
+                return Json(new { success = true, data = lista });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpGet]
+        public IActionResult BuscarCobrosAjax(string? numeroComprobante, DateTime? desde, DateTime? hasta, int? IdObraSocial, int? IdMandataria)
+        {
+            try
+            {
+                // Usamos la nueva búsqueda que agrupa Padre+Hijos
+                var lista = BD.BuscarCobros(desde, hasta, IdMandataria, IdObraSocial);
+                
+                // Filtro memoria opcional
+                if (!string.IsNullOrEmpty(numeroComprobante))
+                {
+                    lista = lista.Where(x => x.NumeroComprobante.ToString().Contains(numeroComprobante)).ToList();
+                }
+
+                return Json(new { success = true, data = lista });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpPost]
+        // IMPORTANTE: Agregué IdMandataria, es vital para el Padre.
+        public IActionResult GuardarCobro(int IdCobro, int? IdLiquidacion, int? IdObraSocial, int? IdMandataria, DateTime? FechaCobro, decimal ImporteCobrado, string NumeroComprobante, string? TipoPago, decimal MontoDebitos, string? MotivoDebito)
+        {
+            try
+            {
+                // IdCobro = 0 -> NUEVO PAGO (Puede ser Lote Nuevo o Existente)
+                // IdCobro > 0 -> EDITAR PAGO EXISTENTE (Detalle)
+
+                if (IdCobro == 0)
+                {
+                    // 1. Buscamos si ya existe el Padre (Lote)
+                    // Usamos Comprobante y Mandataria como clave única del Lote
+                    if (IdMandataria == null || IdMandataria == 0) 
+                        return Json(new { success = false, message = "Falta la Mandataria para crear el lote." });
+
+                    int? idPadre = BD.BuscarIdPadre(NumeroComprobante, IdMandataria.Value);
+
+                    // 2. Si no existe, lo creamos
+                    if (idPadre == null || idPadre == 0)
+                    {
+                        // FechaCobro es la fecha del LOTE (Padre)
+                        idPadre = BD.AgregarCobroCabecera(IdMandataria.Value, FechaCobro ?? DateTime.Now, NumeroComprobante, IdLiquidacion);
+                    }
+
+                    // 3. Agregamos el Detalle (Hijo)
+                    // FechaCobro aqui se usa tambien como la fecha del detalle por defecto
+                    BD.AgregarCobroDetalle(idPadre.Value, IdObraSocial.Value, FechaCobro ?? DateTime.Now, ImporteCobrado, TipoPago, MontoDebitos, MotivoDebito);
+
+                    return Json(new { success = true, message = "Pago AGREGADO correctamente." });
+                }
+                else
+                {
+                    // EDITAR: Solo tocamos la tabla Detalle
+                    // IdCobro aqui es el IdCobrosDetalle
+                    BD.ModificarCobroDetalle(IdCobro, IdObraSocial.Value, FechaCobro ?? DateTime.Now, ImporteCobrado, TipoPago, MontoDebitos, MotivoDebito);
+                    
+                    return Json(new { success = true, message = "Pago MODIFICADO correctamente." });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Error: " + ex.Message });
+            }
+        }
+
+        [HttpPost]
+        public IActionResult EliminarCobro(int idCobro)
+        {
+            try
+            {
+                // Recibimos el ID del Detalle
+                BD.EliminarCobroDetalle(idCobro);
+                return Json(new { success = true, message = "Cobro eliminado correctamente." });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Error: " + ex.Message });
+            }
+        }
+
+        [HttpGet]
+        public IActionResult ObtenerCobroPorId(int idCobro)
+        {
+            try
+            {
+                // Buscamos en la tabla Detalle
+                var cobroDetalle = BD.TraerCobroDetallePorId(idCobro);
+                if (cobroDetalle == null) return Json(new { success = false, message = "No encontrado" });
+                
+                // NOTA: Para mantener compatibilidad con tu JS, devolvemos IdObrasSociales 
+                // para que el select se posicione solo.
+                return Json(new { success = true, data = cobroDetalle });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpGet]
+        public IActionResult TraerCobrosPorComprobante(string comprobante)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(comprobante)) 
+                    return Json(new { success = false, message = "Comprobante vacío" });
+
+                // Traemos los detalles del lote
+                var lista = BD.TraerCobrosDelMismoLote(comprobante);
+                return Json(new { success = true, data = lista });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpPost]
+        public IActionResult GuardarLoteCobros([FromBody] List<CobrosDetalleRequest> lote)
+        {
+            // Este método lo usa el Bucle optimizado del JS.
+            // Lo adaptamos para crear UN Padre y MUCHOS Hijos.
+            
+            if (lote == null || !lote.Any()) return Json(new { success = false, message = "Lista vacía." });
+
+            try
+            {
+                var primerItem = lote.First();
+                
+                // 1. Crear Padre
+                int idPadre = BD.AgregarCobroCabecera(
+                    primerItem.IdMandatariasMaestro, 
+                    primerItem.FechaCobroMaestro, 
+                    primerItem.NumeroComprobanteMaestro, 
+                    null
+                );
+
+                int guardados = 0;
+
+                // 2. Crear Hijos
+                foreach (var item in lote)
+                {
+                    if (item.IdObrasSociales == 0) continue;
+
+                    BD.AgregarCobroDetalle(
+                        idPadre, 
+                        item.IdObrasSociales, 
+                        item.FechaCobroDetalle ?? DateTime.Now, // Fecha específica del detalle
+                        item.ImporteCobrado, 
+                        item.TipoPago, // Tipo específico del detalle
+                        item.MontoDebito, 
+                        item.MotivoDebito
+                    );
+                    guardados++;
+                }
+
+                return Json(new { success = true, message = $"✅ Se generó el Lote con {guardados} pagos." });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Error crítico: " + ex.Message });
+            }
+        }
         
-        // Si el usuario busca por comprobante específico, filtramos en memoria (o podrías agregarlo al SQL)
-        if (!string.IsNullOrEmpty(numeroComprobante))
-        {
-            lista = lista.Where(x => x.NumeroComprobante.ToString().Contains(numeroComprobante)).ToList();
-        }
-
-        return Json(new { success = true, data = lista });
-    }
-    catch (Exception ex)
-    {
-         return StatusCode(500, new { success = false, message = ex.Message });
-    }
-}
-
-   [HttpPost]
-    public IActionResult GuardarCobro(int IdCobro, int? IdLiquidacion, int? IdObraSocial, DateTime? FechaCobro, decimal ImporteCobrado, string NumeroComprobante, string? TipoPago, decimal MontoDebitos, string? MotivoDebito)
-    {
-        try
-        {
-            if (IdCobro == 0)
-            {
-                // Pasamos ImporteCobrado al método de BD
-                BD.AgregarCobro(IdLiquidacion, IdObraSocial, FechaCobro, ImporteCobrado, NumeroComprobante, TipoPago, MontoDebitos, MotivoDebito);
-                return Json(new { success = true, message = "Cobro AGREGADO correctamente." });
-            }
-            else
-            {
-                BD.ModificarCobro(IdCobro, IdLiquidacion, IdObraSocial, FechaCobro, ImporteCobrado, NumeroComprobante, TipoPago, MontoDebitos, MotivoDebito);
-                return Json(new { success = true, message = "Cobro MODIFICADO correctamente." });
-            }
-        }
-        catch (Exception ex)
-        {
-            return Json(new { success = false, message = "Error: " + ex.Message });
-        }
+        // Clase auxiliar para recibir el JSON del lote completo
+       
+        
     }
 
-    [HttpPost]
-    public IActionResult EliminarCobro(int idCobro)
-    {
-        try
-        {
-            BD.EliminarCobro(idCobro);
-            return Json(new { success = true, message = "Cobro eliminado correctamente." });
-        }
-        catch (Exception ex)
-        {
-            return Json(new { success = false, message = "Error: " + ex.Message });
-        }
-    }
-
-    [HttpGet]
- 
-    public IActionResult ObtenerCobroPorId(int idCobro)
-    {
-        try
-        {
-            var cobro = BD.TraerCobroPorId(idCobro);
-            if (cobro == null) return Json(new { success = false, message = "No encontrado" });
-            
-            Mandatarias mandataria = BD.TraerMandatariaPorIdOS(cobro.IdObrasSociales.Value); 
-            
-            return Json(new { success = true, data = cobro, idMandataria = mandataria.IdMandatarias });
-        }
-        catch (Exception ex)
-        {
-            return Json(new { success = false, message = ex.Message });
-        }
-    }
 
-[HttpPost]
-public IActionResult GuardarLoteCobros([FromBody] List<Cobros> lote)
-{
-    // 1. Validar que llegue algo
-    if (lote == null || !lote.Any())
-    {
-        return Json(new { success = false, message = "La lista de cobros llegó vacía." });
-    }
 
-    int guardados = 0;
-    int errores = 0;
-    string ultimoError = "";
 
-    // 2. Recorrer y Guardar
-    foreach (var item in lote)
-    {
-        // Saltamos si no tiene Obra Social (Integridad básica)
-        if ((item.IdObrasSociales ?? 0) == 0) continue;
 
-        try
-        {
-            // LLAMADA AL MODELO (ESTILO DAPPER)
-            BD.GuardarCobroDesdeObjeto(item);
-            guardados++;
-        }
-        catch (Exception ex)
-        {
-            errores++;
-            ultimoError = ex.Message;
-            // Seguimos con el siguiente (Soft Fail)
-        }
-    }
 
-    // 3. Respuesta
-    if (guardados > 0)
-    {
-        return Json(new { 
-            success = true, 
-            message = $"✅ Se guardaron {guardados} cobros correctamente." + (errores > 0 ? $" (Hubo {errores} errores)." : "") 
-        });
-    }
-    else
-    {
-        return Json(new { success = false, message = "❌ Error al guardar. Detalle: " + ultimoError });
-    }
-}
 
 
-// Agrega esto en tu HomeController
 
-[HttpGet]
-public IActionResult TraerCobrosPorComprobante(string comprobante)
-{
-    try
-    {
-        if (string.IsNullOrEmpty(comprobante)) 
-            return Json(new { success = false, message = "Comprobante vacío" });
 
-        // Llamamos al nuevo método de BD
-        var lista = BD.TraerCobrosDelMismoLote(comprobante);
-        return Json(new { success = true, data = lista });
-    }
-    catch (Exception ex)
-    {
-        return Json(new { success = false, message = ex.Message });
-    }
-}
 
 
 
@@ -815,16 +871,3 @@ public IActionResult TraerCobrosPorComprobante(string comprobante)
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-}

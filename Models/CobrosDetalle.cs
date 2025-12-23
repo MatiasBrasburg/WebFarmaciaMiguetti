@@ -10,7 +10,9 @@ public class CobrosDetalle
 
     [JsonProperty]
     public int IdCobros { get; set; }
-    
+        [JsonProperty]
+    public int IdObrasSociales { get; set; }
+
     [JsonProperty]
     [DataType(DataType.Date)]
     public DateTime? FechaCobroDetalle { get; set; }
@@ -31,7 +33,7 @@ public class CobrosDetalle
         [DataType(DataType.Currency)] // Para que se vea con el signo $ en la vista
        public decimal MontoDebito { get; set; }
     
-    
+    public string? MotivoDebito { get;  set; }
 
     public CobrosDetalle()
     {
