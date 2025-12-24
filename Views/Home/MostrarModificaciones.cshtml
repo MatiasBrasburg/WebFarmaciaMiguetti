@@ -73,6 +73,9 @@
     .lista-sugerencias { position: absolute; top: 100%; left: 0; width: 100%; background: white; border: 4px solid #000; border-top: none; z-index: 10000; display: none; max-height: 300px; overflow-y: auto; box-shadow: 0px 10px 20px rgba(0,0,0,0.4); }
     .item-sugerencia { padding: 15px; cursor: pointer; border-bottom: 2px solid #ccc; font-weight: 800; font-size: 1.1rem; color: #333; }
     .item-sugerencia:hover { background-color: #0d6efd; color: white; }
+    
+    .estado-pagado { background-color: #d1e7dd; color: #0f5132; padding: 5px 10px; border-radius: 5px; font-weight: bold; border: 2px solid #0f5132; }
+    .estado-pendiente { background-color: #f8d7da; color: #842029; padding: 5px 10px; border-radius: 5px; font-weight: bold; border: 2px solid #842029; }
 </style>
 
 <div class="container-fluid mt-4">
@@ -419,7 +422,7 @@
                         const f = new Date(l.FechaPresentacion || l.fechaPresentacion).toLocaleDateString('es-AR');
                         const nm = l.NombreMandataria || mapaMandatarias[l.IdMandatarias || l.idMandatarias] || "---";
                         const idLiq = l.IdLiquidaciones || l.idLiquidaciones;
-                        const total = parseFloat(l.TotalPresentado || l.totalPresentado || 0);
+                        const total = parseFloat(l.TotalReal || l.totalReal || 0);
                         
                         tbody.innerHTML += `<tr>
                             <td class="fw-bold fs-5">${idLiq}</td>
@@ -445,17 +448,25 @@
 
                         contadorVisibles++;
                         const f = (x.FechaPresentacion||x.fechaPresentacion||'').split('T')[0];
-                        const bruto = parseFloat(x.TotalBruto||x.totalBruto||0);
+                        const neto = parseFloat(x.TotalBruto||x.totalBruto||0); // Este es el (Cargo - Bonif)
                         const saldo = parseFloat(x.SaldoPendiente);
-                        const visualSaldo = isNaN(saldo) ? bruto : saldo; 
+                        const visualSaldo = isNaN(saldo) ? neto : saldo; 
+                        
                         const idDet = x.IdLiquidacionDetalle || x.idLiquidacionDetalle;
                         const idPadre = x.IdLiquidaciones || x.idLiquidaciones;
 
-                        // Datos para impresión individual
+                        // --- DATOS COMPLETOS PARA IMPRESIÓN ---
+                        // Recuperamos todo lo que el backend nuevo nos manda
                         const datosPrint = JSON.stringify({
-                            os: x.NombreObraSocial||x.nombreObraSocial,
-                            periodo: x.Periodo||x.periodo,
-                            monto: bruto
+                            os: x.NombreObraSocial || x.nombreObraSocial,
+                            periodo: x.Periodo || x.periodo,
+                            plan: x.NombrePlan || "---",
+                            recetas: x.CantidadRecetas || 0,
+                            bruto: parseFloat(x.BrutoOriginal || 0), // Bruto real (suma recetas)
+                            cargo: parseFloat(x.MontoCargoOS || 0),
+                            bonif: parseFloat(x.MontoBonificacion || 0),
+                            neto: neto,
+                            deuda: visualSaldo
                         }).replace(/"/g, '&quot;');
 
                         tbody.innerHTML += `<tr>
@@ -464,7 +475,7 @@
                             <td class="small text-muted">${x.NombreMandataria||x.nombreMandataria}</td>
                             <td class="fw-bold text-primary fs-5">${x.NombreObraSocial||x.nombreObraSocial}</td>
                             <td class="text-center fw-bold">${x.CantidadRecetas||x.cantidadRecetas}</td>
-                            <td class="text-end text-muted">$${bruto.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+                            <td class="text-end text-muted">$${neto.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
                             <td class="text-end fw-black text-danger">$${visualSaldo.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
                             <td class="text-center">
                                 <button class="btn btn-sm btn-warning me-1" onclick="abrirItemABM(${idDet}, ${idPadre})">✏️</button>
@@ -752,13 +763,18 @@
         } catch(e){}
     }
 
-    // IMPRESIÓN REPORTE GLOBAL (MODAL)
+    // =========================================================
+    // FUNCIONES DE IMPRESIÓN CORREGIDAS
+    // =========================================================
+
+    // 1. IMPRIMIR REPORTE GLOBAL (Desde el Modal "VER")
     function imprimirReporteGlobal() {
         const idLiq = document.getElementById('verId').textContent;
         const fecha = document.getElementById('verFecha').textContent;
         const mandataria = document.getElementById('verMandataria').textContent;
         
         let filasHTML = "";
+        // Recorremos la tabla visible para armar el reporte
         document.querySelectorAll('#tbodyVerDetalle tr').forEach(tr => {
             const celdas = tr.querySelectorAll('td');
             if(celdas.length > 1) { 
@@ -773,59 +789,98 @@
                 </tr>`;
             }
         });
+        // Llamamos a la ventana común (sin deuda específica)
         abrirVentanaImpresion(idLiq, mandataria, fecha, filasHTML);
     }
 
-    // NUEVO: IMPRESIÓN INDIVIDUAL (SÁBANA)
+    // 2. IMPRIMIR ÍTEM INDIVIDUAL (Desde la "Sábana" por OS)
     function imprimirItemIndividual(datos) {
+        // Armamos la fila única con los datos COMPLETOS que vienen del objeto
         const filasHTML = `<tr>
             <td style="text-align:left; padding:5px;">${datos.os}</td>
-            <td style="text-align:center;">-</td>
-            <td style="text-align:center;">-</td>
-            <td style="text-align:right;">$${datos.monto.toFixed(2)}</td>
-            <td style="text-align:right;">-</td>
-            <td style="text-align:right;">-</td>
-            <td style="text-align:right; font-weight:bold;">$${datos.monto.toFixed(2)}</td>
+            <td style="text-align:center;">${datos.plan}</td>
+            <td style="text-align:center;">${datos.recetas}</td>
+            <td style="text-align:right;">$${datos.bruto.toFixed(2)}</td>
+            <td style="text-align:right;">$${datos.cargo.toFixed(2)}</td>
+            <td style="text-align:right;">$${datos.bonif.toFixed(2)}</td>
+            <td style="text-align:right; font-weight:bold;">$${datos.neto.toFixed(2)}</td>
         </tr>`;
-        abrirVentanaImpresion(datos.periodo, "Individual", new Date().toLocaleDateString(), filasHTML);
+        
+        // Pasamos la 'deuda' como último parámetro para que salga en rojo
+        abrirVentanaImpresion(datos.periodo, "IMPRESIÓN INDIVIDUAL", new Date().toLocaleDateString('es-AR'), filasHTML, datos.deuda);
     }
 
-    // FUNCIÓN COMÚN DE IMPRESIÓN CON DATOS DE FARMACIA
-    function abrirVentanaImpresion(ref, mand, fecha, filas) {
+    // 3. FUNCIÓN MAESTRA DE VENTANA (CON CABECERA FARMACIA Y ALERTA DE DEUDA)
+    function abrirVentanaImpresion(ref, mand, fecha, filas, saldoPendiente = null) {
         const v = window.open('', '', 'height=800,width=1000');
+        
+        // Si nos pasaron un saldo pendiente, creamos el cartel de alerta roja
+        const htmlDeuda = (saldoPendiente !== null && saldoPendiente !== undefined) 
+            ? `<div style="margin-top:20px; border: 3px solid #dc3545; background-color: #f8d7da; color: #842029; padding: 10px; font-weight:bold; font-size:18px; text-align:center; border-radius:8px;">
+                 ⚠️ DEUDA PENDIENTE ACTUAL: $${parseFloat(saldoPendiente).toLocaleString('es-AR', {minimumFractionDigits: 2})}
+               </div>` 
+            : '';
+
         v.document.write(`<html><head><title>Impresión Liquidación</title><style>
             body { font-family: 'Courier New', monospace; font-size: 14px; padding: 20px; }
-            h1 { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; }
-            .header-farmacia { text-align: center; margin-bottom: 20px; font-weight: bold; }
-            .info-box { border: 1px solid #000; padding: 10px; margin-bottom: 20px; background: #f0f0f0; }
-            .info-item { font-weight: bold; margin-right: 20px; font-size: 16px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-            th { border-bottom: 2px solid #000; padding: 5px; background: #ddd; }
-            td { border-bottom: 1px solid #ccc; padding: 5px; }
-            .firma { margin-top: 80px; text-align: right; font-weight: bold; }
+            h1 { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 30px; }
+            
+            .header-farmacia { text-align: center; margin-bottom: 30px; font-weight: bold; font-size: 1.2em; line-height: 1.4; }
+            
+            .info-box { border: 2px solid #000; padding: 15px; margin-bottom: 20px; background: #f8f9fa; }
+            .info-line { margin-bottom: 5px; font-size: 16px; }
+            .info-label { font-weight: 900; margin-right: 10px; }
+            
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th { border-bottom: 2px solid #000; padding: 8px; background: #e9ecef; text-align: center; font-size: 12px; font-weight:bold; }
+            td { border-bottom: 1px solid #ccc; padding: 8px; font-size: 13px; }
+            
+            .firma { margin-top: 100px; text-align: right; font-weight: bold; padding-right: 50px; }
+            .footer { text-align:center; margin-top:50px; font-size:10px; color: #666; border-top: 1px solid #ccc; padding-top: 10px;}
         </style></head><body>
             
             <div class="header-farmacia">
                 ${farmaciaInfo.nombre}<br>
-                ${farmaciaInfo.domicilio} - CUIT: ${farmaciaInfo.cuit}<br>
-                Condición IVA: ${farmaciaInfo.iva}
+                ${farmaciaInfo.domicilio}<br>
+                CUIT: ${farmaciaInfo.cuit} - Condición IVA: ${farmaciaInfo.iva}
             </div>
 
             <h1>DETALLE DE LIQUIDACIÓN</h1>
+            
             <div class="info-box">
-                <span class="info-item">REF: ${ref}</span> <br><br>
-                <span class="info-item">MANDATARIA: ${mand}</span> <br><br>
-                <span class="info-item">FECHA: ${fecha}</span>
+                <div class="info-line"><span class="info-label">REFERENCIA / PERIODO:</span> ${ref}</div>
+                <div class="info-line"><span class="info-label">MANDATARIA / GRUPO:</span> ${mand}</div>
+                <div class="info-line"><span class="info-label">FECHA IMPRESIÓN:</span> ${fecha}</div>
+                
+                ${htmlDeuda}
             </div>
-            <table><thead><tr>
-                <th style="text-align:left;">OBRA SOCIAL</th><th>PLAN</th><th>RECETAS</th>
-                <th style="text-align:right;">TOTAL</th><th style="text-align:right;">CARGO O.S.</th>
-                <th style="text-align:right;">BONIF.</th><th style="text-align:right;">A PAGAR</th>
-            </tr></thead><tbody>${filas}</tbody></table>
-            <div class="firma">_______________________________<br>Firma Responsable</div>
-            <div style="text-align:center; margin-top:50px; font-size:10px;">Generado el: ${new Date().toLocaleString()}</div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th style="text-align:left;">OBRA SOCIAL</th>
+                        <th>PLAN</th>
+                        <th>RECETAS</th>
+                        <th style="text-align:right;">BRUTO ORIG.</th>
+                        <th style="text-align:right;">CARGO O.S.</th>
+                        <th style="text-align:right;">BONIFICACIÓN</th>
+                        <th style="text-align:right;">NETO A PAGAR</th>
+                    </tr>
+                </thead>
+                <tbody>${filas}</tbody>
+            </table>
+
+            <div class="firma">
+                _______________________________<br>
+                Firma Responsable
+            </div>
+            
+            <div class="footer">Documento generado el: ${new Date().toLocaleString()}</div>
         </body></html>`);
-        v.document.close(); v.focus(); setTimeout(() => { v.print(); v.close(); }, 500);
+        
+        v.document.close(); 
+        v.focus(); 
+        setTimeout(() => { v.print(); v.close(); }, 500);
     }
 </script>
 }

@@ -506,11 +506,13 @@ public static void ModificarLiquidacionCabecera(int id, int idMandataria, DateTi
 // =============================================================================
 // BÚSQUEDA GLOBAL DE DETALLES (Para la vista "Por Obra Social")
 // =============================================================================
+// EN Models/BD.cs
+
 public static List<dynamic> BuscarDetallesGlobales(DateTime? desde, DateTime? hasta, int? idMandataria, int? idOS)
 {
     using (SqlConnection connection = new SqlConnection(_connectionString))
     {
-        // CAMBIO: Devolvemos (Cargo - Bonif) como 'TotalBruto' visual para que la tabla muestre la deuda real original
+        // CAMBIO: Agregamos JOIN con PlanBonificacion y traemos columnas de desglose
         string query = @"
             SELECT 
                 LD.IdLiquidacionDetalle,
@@ -519,14 +521,24 @@ public static List<dynamic> BuscarDetallesGlobales(DateTime? desde, DateTime? ha
                 L.Periodo,
                 M.RazonSocial as NombreMandataria,
                 OS.Nombre as NombreObraSocial,
+                PB.NombrePlan,                       -- <--- NUEVO: Nombre del Plan
                 LD.CantidadRecetas,
-                (LD.MontoCargoOS - LD.MontoBonificacion) as TotalBruto, -- <--- CAMBIO: MOSTRAMOS EL NETO COMO BASE
+                
+                -- Valores Desglosados para Impresión
+                LD.TotalBruto as BrutoOriginal,      -- <--- NUEVO: Bruto Real (Total Recetas)
+                LD.MontoCargoOS,                     -- <--- NUEVO: Cargo
+                LD.MontoBonificacion,                -- <--- NUEVO: Bonif
+
+                -- Este es el 'A Cobrar' (Neto) que usamos para la suma
+                (LD.MontoCargoOS - LD.MontoBonificacion) as TotalBruto,
+                
                 LD.SaldoPendiente,
                 LD.Pagado
             FROM LiquidacionDetalle LD
             INNER JOIN Liquidaciones L ON LD.IdLiquidaciones = L.IdLiquidaciones
             INNER JOIN Mandatarias M ON L.IdMandatarias = M.IdMandatarias
             INNER JOIN ObrasSociales OS ON LD.IdObrasSociales = OS.IdObrasSociales
+            LEFT JOIN PlanBonificacion PB ON LD.IdPlanBonificacion = PB.IdPlanBonificacion -- <--- JOIN NUEVO
             WHERE 1=1 ";
 
         if (desde.HasValue) query += " AND L.FechaPresentacion >= @pDesde";
