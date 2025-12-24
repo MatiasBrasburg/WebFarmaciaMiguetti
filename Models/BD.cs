@@ -617,7 +617,54 @@ public static int AgregarCobroCabecera(int idMandataria, DateTime fecha, string 
         });
     }
 }
+public static void EliminarLoteCompleto(int idCobroPadre)
+{
+    using (SqlConnection connection = new SqlConnection(_connectionString))
+    {
+        connection.Open();
+        using (var transaction = connection.BeginTransaction())
+        {
+            try
+            {
+                // Primero borramos los hijos
+                string sqlHijos = "DELETE FROM CobrosDetalle WHERE IdCobros = @pId";
+                connection.Execute(sqlHijos, new { pId = idCobroPadre }, transaction);
 
+                // Luego borramos el padre
+                string sqlPadre = "DELETE FROM Cobros WHERE IdCobros = @pId";
+                connection.Execute(sqlPadre, new { pId = idCobroPadre }, transaction);
+
+                transaction.Commit();
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw; // Re-lanzar para que el Controller lo capture
+            }
+        }
+    }
+}
+
+
+public static void ModificarCobroCabecera(int idCobro, int idMandataria, DateTime fecha, string comprobante)
+{
+    using (SqlConnection connection = new SqlConnection(_connectionString))
+    {
+        string query = @"
+            UPDATE Cobros 
+            SET IdMandatarias = @pMand, 
+                FechaCobro = @pFecha, 
+                NumeroComprobante = @pComp
+            WHERE IdCobros = @pId";
+
+        connection.Execute(query, new { 
+            pId = idCobro, 
+            pMand = idMandataria, 
+            pFecha = fecha, 
+            pComp = comprobante 
+        });
+    }
+}
 // -----------------------------------------------------------------------------------
 // 3. AGREGAR DETALLE (HIJO)
 // -----------------------------------------------------------------------------------

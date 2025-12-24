@@ -648,7 +648,7 @@ public class CobrosDetalleRequest
         }
 
         [HttpPost]
-        // IMPORTANTE: Agregué IdMandataria, es vital para el Padre.
+  
         public IActionResult GuardarCobro(int IdCobro, int? IdLiquidacion, int? IdObraSocial, int? IdMandataria, DateTime? FechaCobro, decimal ImporteCobrado, string NumeroComprobante, string? TipoPago, decimal MontoDebitos, string? MotivoDebito)
         {
             try
@@ -745,54 +745,81 @@ public class CobrosDetalleRequest
             }
         }
 
-        [HttpPost]
-        public IActionResult GuardarLoteCobros([FromBody] List<CobrosDetalleRequest> lote)
-        {
-            // Este método lo usa el Bucle optimizado del JS.
-            // Lo adaptamos para crear UN Padre y MUCHOS Hijos.
-            
-            if (lote == null || !lote.Any()) return Json(new { success = false, message = "Lista vacía." });
-
-            try
-            {
-                var primerItem = lote.First();
-                
-                // 1. Crear Padre
-                int idPadre = BD.AgregarCobroCabecera(
-                    primerItem.IdMandatariasMaestro, 
-                    primerItem.FechaCobroMaestro, 
-                    primerItem.NumeroComprobanteMaestro, 
-                    null
-                );
-
-                int guardados = 0;
-
-                // 2. Crear Hijos
-                foreach (var item in lote)
-                {
-                    if (item.IdObrasSociales == 0) continue;
-
-                    BD.AgregarCobroDetalle(
-                        idPadre, 
-                        item.IdObrasSociales, 
-                        item.FechaCobroDetalle ?? DateTime.Now, // Fecha específica del detalle
-                        item.ImporteCobrado, 
-                        item.TipoPago, // Tipo específico del detalle
-                        item.MontoDebito, 
-                        item.MotivoDebito
-                    );
-                    guardados++;
-                }
-
-                return Json(new { success = true, message = $"✅ Se generó el Lote con {guardados} pagos." });
-            }
-            catch (Exception ex)
-            {
-                return Json(new { success = false, message = "Error crítico: " + ex.Message });
-            }
-        }
         
-        // Clase auxiliar para recibir el JSON del lote completo
+        
+       [HttpPost]
+    public IActionResult EliminarLoteCompleto(int idCobroPadre)
+    {
+        try
+        {
+            BD.EliminarLoteCompleto(idCobroPadre);
+            return Json(new { success = true, message = "✅ Lote eliminado correctamente." });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = "Error al eliminar: " + ex.Message });
+        }
+    }
+
+    // NUEVO: EDITAR CABECERA
+    [HttpPost]
+    public IActionResult ModificarCabeceraLote(int IdCobro, int IdMandataria, DateTime Fecha, string Comprobante)
+    {
+        try
+        {
+            BD.ModificarCobroCabecera(IdCobro, IdMandataria, Fecha, Comprobante);
+            return Json(new { success = true, message = "✅ Cabecera actualizada." });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = "Error: " + ex.Message });
+        }
+    }
+
+    // ACTUALIZADO: GUARDAR LOTE (Soporta fechas y tipos individuales)
+    [HttpPost]
+    public IActionResult GuardarLoteCobros([FromBody] List<CobrosDetalleRequest> lote)
+    {
+        if (lote == null || !lote.Any()) return Json(new { success = false, message = "Lista vacía." });
+
+        try
+        {
+            var primerItem = lote.First();
+            
+            // 1. Crear Padre (Usamos los datos del primer item como referencia del lote)
+            int idPadre = BD.AgregarCobroCabecera(
+                primerItem.IdMandatariasMaestro, 
+                primerItem.FechaCobroMaestro, 
+                primerItem.NumeroComprobanteMaestro, 
+                null
+            );
+
+            int guardados = 0;
+
+            // 2. Crear Hijos (Cada uno con SU fecha y SU tipo)
+            foreach (var item in lote)
+            {
+                if (item.IdObrasSociales == 0) continue;
+
+                BD.AgregarCobroDetalle(
+                    idPadre, 
+                    item.IdObrasSociales, 
+                    item.FechaCobroDetalle ?? DateTime.Now, // <--- FECHA INDIVIDUAL
+                    item.ImporteCobrado, 
+                    item.TipoPago,                          // <--- TIPO INDIVIDUAL
+                    item.MontoDebito, 
+                    item.MotivoDebito
+                );
+                guardados++;
+            }
+
+            return Json(new { success = true, message = $"✅ Se generó el Lote con {guardados} pagos." });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = "Error crítico: " + ex.Message });
+        }
+    }
        
         
     }

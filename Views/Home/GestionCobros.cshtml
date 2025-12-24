@@ -64,14 +64,12 @@
     .bg-header-add { background-color: #198754; color: white; border-bottom: 5px solid #0f5132; }
     .bg-header-view { background-color: #0d6efd; color: white; border-bottom: 5px solid #0a58ca; }
     .bg-header-edit { background-color: #ffc107; color: #000; border-bottom: 5px solid #000; }
-    
-    .loading-cell { display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: bold; color: #666; }
 </style>
 
 <div class="container-fluid mt-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h1>💰 GESTIÓN DE COBROS</h1>
-        <button class="btn btn-success btn-lg btn-super shadow" onclick="abrirModalNuevo()">➕ NUEVO LOTE (CHEQUE/TRANSF)</button>
+        <button class="btn btn-success btn-lg btn-super shadow" onclick="abrirModalNuevo()">➕ NUEVO LOTE</button>
     </div>
 
     <div class="card mb-4 shadow-sm" style="border: 3px solid #6c757d; background-color: #e2e3e5;">
@@ -107,10 +105,9 @@
         <table class="table table-striped table-hover mb-0">
             <thead>
                 <tr>
-                    <th>FECHA</th>
+                    <th>FECHA LOTE</th>
                     <th>MANDATARIA (ORIGEN)</th>
                     <th>COMPROBANTE</th>
-                    <th>TIPO</th>
                     <th class="text-center">ITEMS</th>
                     <th class="text-end pe-4">TOTAL IMPORTE</th>
                     <th class="text-end pe-4">TOTAL NETO</th>
@@ -118,14 +115,14 @@
                 </tr>
             </thead>
             <tbody id="tbodyResultados">
-                <tr><td colspan="8" class="text-center p-4 text-muted fs-4">Cargando datos...</td></tr>
+                <tr><td colspan="7" class="text-center p-4 text-muted fs-4">Cargando datos...</td></tr>
             </tbody>
         </table>
     </div>
 </div>
 
 <div class="modal fade" id="modalNuevo" tabindex="-1" data-bs-backdrop="static" aria-hidden="true">
-    <div class="modal-dialog modal-xl"> 
+    <div class="modal-dialog modal-xl" style="max-width: 95%;"> 
         <div class="modal-content border-0">
             <div class="modal-header bg-header-add py-3">
                 <h3 class="modal-title fw-bold">🧾 REGISTRAR NUEVO INGRESO</h3>
@@ -134,42 +131,74 @@
             <div class="modal-body bg-light p-4">
                 
                 <div class="row g-3 mb-4 p-3 border border-3 border-success rounded bg-white shadow-sm position-relative">
-                    <span class="position-absolute top-0 start-0 bg-success text-white px-3 fw-bold rounded-bottom-end">1. DATOS DE CABECERA</span>
+                    <span class="position-absolute top-0 start-0 bg-success text-white px-3 fw-bold rounded-bottom-end">1. DATOS DEL LOTE (CABECERA)</span>
                     <div class="col-12 mt-1"></div>
-                    <div class="col-md-3"><label class="form-label">📅 FECHA</label><input type="date" id="n_Fecha" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")"></div>
                     <div class="col-md-4">
-                        <label class="form-label">🏢 MANDATARIA (PAGADOR)</label>
+                        <label class="form-label">🏢 MANDATARIA</label>
                         <select id="n_Mand" class="form-select fw-bold border-success" onchange="alCambiarMandatariaNuevo()">
                             <option value="0">-- SELECCIONE PRIMERO --</option>
                             @foreach (var m in listaMandatarias) { <option value="@m.IdMandatarias">@m.RazonSocial</option> }
                         </select>
                     </div>
-                    <div class="col-md-3"><label class="form-label">💳 TIPO</label><select id="n_Tipo" class="form-select">@foreach(var t in listaTiposPago){<option value="@t">@t</option>}</select></div>
-                    <div class="col-md-2"><label class="form-label">📄 N° COMP</label><input type="text" id="n_Comp" class="form-control" placeholder="Ej: 5544"></div>
+                    <div class="col-md-4">
+                        <label class="form-label">📄 N° COMPROBANTE</label>
+                        <input type="text" id="n_Comp" class="form-control" placeholder="Ej: REC-5544">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">📅 FECHA REFERENCIA (LOTE)</label>
+                        <input type="date" id="n_FechaRef" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")" onchange="actualizarFechaDefault()">
+                    </div>
                 </div>
 
-                <h5 class="fw-bold text-success mb-2">2. IMPUTAR DETALLES (OBRAS SOCIALES)</h5>
-                <div class="card mb-3 border-2 border-secondary">
-                    <div class="card-body bg-white">
+                <h5 class="fw-bold text-success mb-2">2. CARGAR PAGOS (DETALLE INDIVIDUAL)</h5>
+                <div class="card mb-3 border-2 border-secondary shadow-sm">
+                    <div class="card-body bg-white py-3">
                         <div class="row g-2 align-items-end">
-                            <div class="col-md-5">
-                                <label class="form-label">OBRA SOCIAL</label>
+                            <div class="col-md-3">
+                                <label class="form-label small">OBRA SOCIAL</label>
                                 <div class="buscador-wrapper">
-                                    <input type="text" id="txtN_OS" class="form-control fw-bold" placeholder="Escriba para buscar..." autocomplete="off">
+                                    <input type="text" id="txtN_OS" class="form-control fw-bold" placeholder="Buscar..." autocomplete="off">
                                     <input type="hidden" id="valN_OS" value="0">
                                     <div id="listN_OS" class="lista-sugerencias"></div>
                                 </div>
                             </div>
-                            <div class="col-md-3"><label class="form-label text-success">IMPORTE</label><input type="number" id="n_Imp" class="form-control text-success fw-bold form-control-lg" placeholder="0.00" onkeypress="enterAdd(event)"></div>
-                            <div class="col-md-2"><label class="form-label text-danger">DÉBITOS</label><input type="number" id="n_Deb" class="form-control text-danger fw-bold" value="0.00" onkeypress="enterAdd(event)"></div>
-                            <div class="col-md-2"><button class="btn btn-success w-100 fw-bold py-2 btn-super" onclick="aggTemp()">⬇️ AGREGAR</button></div>
+                            <div class="col-md-2">
+                                <label class="form-label small">FECHA PAGO</label>
+                                <input type="date" id="n_ItemFecha" class="form-control fw-bold">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small">TIPO PAGO</label>
+                                <select id="n_ItemTipo" class="form-select fw-bold">
+                                    @foreach(var t in listaTiposPago){<option value="@t">@t</option>}
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small text-success">IMPORTE</label>
+                                <input type="number" id="n_Imp" class="form-control text-success fw-bold" placeholder="$" onkeypress="enterAdd(event)">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small text-danger">DÉBITOS</label>
+                                <input type="number" id="n_Deb" class="form-control text-danger fw-bold" value="0" onkeypress="enterAdd(event)">
+                            </div>
+                            <div class="col-md-1">
+                                <button class="btn btn-success w-100 fw-bold" onclick="aggTemp()">⬇️</button>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <div class="table-responsive border border-2 border-dark rounded bg-white" style="height:250px; overflow-y:auto;">
                     <table class="table table-bordered mb-0">
-                        <thead class="table-light sticky-top"><tr><th>OBRA SOCIAL</th><th class="text-end">IMPORTE</th><th class="text-end">DÉBITOS</th><th class="text-end">NETO</th><th class="text-center">X</th></tr></thead>
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th>OBRA SOCIAL</th>
+                                <th class="text-center">FECHA</th>
+                                <th class="text-center">TIPO</th>
+                                <th class="text-end">IMPORTE</th>
+                                <th class="text-end">DÉBITOS</th>
+                                <th class="text-center">X</th>
+                            </tr>
+                        </thead>
                         <tbody id="tbodyTemp"></tbody>
                     </table>
                 </div>
@@ -194,14 +223,14 @@
                 <div class="row mb-3 bg-white border p-3 rounded mx-1 shadow-sm">
                     <div class="col-md-6"><span class="text-muted small d-block">MANDATARIA:</span><h4 class="fw-bold text-primary m-0" id="v_Titulo">---</h4></div>
                     <div class="col-md-3"><span class="text-muted small d-block">COMPROBANTE:</span><h4 class="fw-bold m-0" id="v_Comp">---</h4></div>
-                    <div class="col-md-3"><span class="text-muted small d-block">FECHA:</span><h4 class="fw-bold m-0" id="v_Fecha">---</h4></div>
+                    <div class="col-md-3"><span class="text-muted small d-block">FECHA LOTE:</span><h4 class="fw-bold m-0" id="v_Fecha">---</h4></div>
                 </div>
                 
                 <div class="card mb-3 border-2 border-primary">
                     <div class="card-header bg-primary text-white fw-bold py-2">➕ AGREGAR PAGO EXTRA A ESTE LOTE</div>
                     <div class="card-body py-2">
                         <div class="row g-2 align-items-end">
-                            <div class="col-md-5">
+                            <div class="col-md-4">
                                 <label class="form-label small mb-1">OBRA SOCIAL</label>
                                 <div class="buscador-wrapper">
                                     <input type="text" id="txtV_OS" class="form-control form-control-sm fw-bold" placeholder="Buscar..." autocomplete="off">
@@ -209,32 +238,34 @@
                                     <div id="listV_OS" class="lista-sugerencias"></div>
                                 </div>
                             </div>
-                            <div class="col-md-3"><label class="form-label small mb-1 text-success">IMPORTE</label><input type="number" id="v_Imp" class="form-control form-control-sm text-success fw-bold"></div>
-                            <div class="col-md-2"><label class="form-label small mb-1 text-danger">DÉBITOS</label><input type="number" id="v_Deb" class="form-control form-control-sm text-danger fw-bold" value="0"></div>
+                            <div class="col-md-2">
+                                <label class="form-label small mb-1">FECHA</label>
+                                <input type="date" id="v_FechaItem" class="form-control form-control-sm">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small mb-1">TIPO</label>
+                                <select id="v_TipoItem" class="form-select form-select-sm">@foreach(var t in listaTiposPago){<option value="@t">@t</option>}</select>
+                            </div>
+                            <div class="col-md-2"><label class="form-label small mb-1 text-success">IMPORTE</label><input type="number" id="v_Imp" class="form-control form-control-sm text-success fw-bold"></div>
                             <div class="col-md-2"><button class="btn btn-primary fw-bold w-100 py-2 btn-sm mt-3" onclick="agregarAlLote()">⬇️ AGREGAR</button></div>
                         </div>
                     </div>
                 </div>
 
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h5 class="fw-bold text-primary m-0">DETALLES IMPUTADOS</h5>
-                    <input type="text" id="buscadorInterno" class="form-control w-50" placeholder="🔍 Filtrar en esta lista..." onkeyup="filtrarInterno()">
-                </div>
-                
                 <div class="table-responsive border border-2 border-dark rounded bg-white" style="height: 300px; overflow-y: auto;">
                     <table class="table table-bordered table-striped mb-0">
-                        <thead class="table-dark sticky-top"><tr><th>OBRA SOCIAL</th><th class="text-end">IMPORTE</th><th class="text-end">DÉBITOS</th><th class="text-end">NETO</th><th class="text-center">ACCIONES</th></tr></thead>
+                        <thead class="table-dark sticky-top">
+                            <tr>
+                                <th>OBRA SOCIAL</th>
+                                <th>FECHA</th>
+                                <th>TIPO</th>
+                                <th class="text-end">IMPORTE</th>
+                                <th class="text-end">NETO</th>
+                                <th class="text-center">ACCIONES</th>
+                            </tr>
+                        </thead>
                         <tbody id="tbodyVer"></tbody>
                     </table>
-                </div>
-                
-                <div class="row mt-3 justify-content-end">
-                    <div class="col-md-6">
-                        <div class="total-display">
-                            TOTAL BRUTO: <span id="lblTotalBrutoVer" class="text-dark">$0.00</span><br>
-                            TOTAL NETO: <span id="lblTotalNetoVer">$0.00</span>
-                        </div>
-                    </div>
                 </div>
             </div>
             <div class="modal-footer bg-light"><button class="btn btn-secondary btn-lg fw-bold px-5" data-bs-dismiss="modal">CERRAR</button></div>
@@ -245,19 +276,16 @@
 <div class="modal fade" id="modalEdit" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content border-warning">
-            <div class="modal-header bg-header-edit"><h4 class="modal-title fw-bold">✏️ CORREGIR DATOS (CABECERA)</h4><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-header bg-header-edit"><h4 class="modal-title fw-bold">✏️ CORREGIR LOTE (CABECERA)</h4><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
             <div class="modal-body bg-white p-4">
-                <div class="alert alert-warning fw-bold">⚠️ Si cambia estos datos, se actualizarán en TODOS los pagos de este lote.</div>
                 <input type="hidden" id="e_IdCobroRef">
                 <div class="row g-3">
-                    <div class="col-md-6"><label class="form-label">Mandataria</label><select id="e_Mandataria" class="form-select">@foreach (var m in listaMandatarias) { <option value="@m.IdMandatarias">@m.RazonSocial</option> }</select></div>
-                    <div class="col-md-6"><label class="form-label">Resumen Items</label><input type="text" id="e_NombreOS" class="form-control" readonly disabled></div>
-                    <div class="col-md-4"><label class="form-label">Fecha</label><input type="date" id="e_Fecha" class="form-control"></div>
-                    <div class="col-md-4"><label class="form-label">Comprobante</label><input type="text" id="e_Comp" class="form-control"></div>
-                    <div class="col-md-4"><label class="form-label">Tipo Pago</label><select id="e_Tipo" class="form-select">@foreach(var t in listaTiposPago){<option value="@t">@t</option>}</select></div>
+                    <div class="col-md-12"><label class="form-label">Mandataria</label><select id="e_Mandataria" class="form-select">@foreach (var m in listaMandatarias) { <option value="@m.IdMandatarias">@m.RazonSocial</option> }</select></div>
+                    <div class="col-md-6"><label class="form-label">Fecha Lote</label><input type="date" id="e_Fecha" class="form-control"></div>
+                    <div class="col-md-6"><label class="form-label">Comprobante</label><input type="text" id="e_Comp" class="form-control"></div>
                 </div>
             </div>
-            <div class="modal-footer"><button class="btn btn-warning fw-bold px-4" onclick="guardarEdicionLote()">APLICAR A TODO EL LOTE</button></div>
+            <div class="modal-footer"><button class="btn btn-warning fw-bold px-4" onclick="guardarEdicionLote()">GUARDAR CAMBIOS</button></div>
         </div>
     </div>
 </div>
@@ -268,14 +296,15 @@
             <div class="modal-header bg-warning py-2"><h5 class="modal-title fw-bold">EDITAR PAGO INDIVIDUAL</h5><button type="button" class="btn-close" onclick="cerrarEditDetalle()"></button></div>
             <div class="modal-body p-3">
                 <input type="hidden" id="ed_Id">
-                <label class="form-label">Obra Social</label>
-                <div class="buscador-wrapper mb-2">
-                    <input type="text" id="txtED_OS" class="form-control fw-bold" autocomplete="off">
-                    <input type="hidden" id="valED_OS">
-                    <div id="listED_OS" class="lista-sugerencias"></div>
+                <div class="mb-2"><label class="form-label">Obra Social</label><input type="text" id="txtED_OS" class="form-control fw-bold" readonly disabled></div>
+                <input type="hidden" id="valED_OS">
+                
+                <div class="row g-2">
+                    <div class="col-6"><label class="form-label">Fecha</label><input type="date" id="ed_Fecha" class="form-control"></div>
+                    <div class="col-6"><label class="form-label">Tipo</label><select id="ed_Tipo" class="form-select">@foreach(var t in listaTiposPago){<option value="@t">@t</option>}</select></div>
+                    <div class="col-6"><label class="form-label text-success">Importe</label><input type="number" id="ed_Imp" class="form-control fw-bold text-success"></div>
+                    <div class="col-6"><label class="form-label text-danger">Débitos</label><input type="number" id="ed_Deb" class="form-control fw-bold text-danger"></div>
                 </div>
-                <label class="form-label">Importe</label><input type="number" id="ed_Imp" class="form-control fw-bold text-success mb-2">
-                <label class="form-label">Débitos</label><input type="number" id="ed_Deb" class="form-control fw-bold text-danger">
             </div>
             <div class="modal-footer py-2"><button class="btn btn-warning fw-bold w-100 btn-super" onclick="guardarEditDetalle()">💾 GUARDAR CAMBIO</button></div>
         </div>
@@ -284,33 +313,36 @@
 
 <script>
     // == VARIABLES GLOBALES ==
-    // NOTA: datosOS contiene el idMandataria de cada OS
+    // Serializamos los datos de Obras Sociales que vienen del servidor
     var datosOS = @Html.Raw(jsonObrasSociales);
-    var itemsTemp = []; // Para Modal Nuevo
-    var datosAgrupados = {}; // Cache de Grupos (Lotes)
-    var loteContexto = {}; // Datos del lote actual en "Ver"
     
-    // Instancias de Modales
+    // Variables de estado
+    var itemsTemp = []; 
+    var datosAgrupados = {}; // Diccionario para guardar los lotes cargados en memoria
+    var loteContexto = {}; 
+    
+    // Referencias a los modales de Bootstrap
     var mVer, mNuevo, mEdit, mEditDetalle;
 
     document.addEventListener("DOMContentLoaded", () => {
-        // Inicializar Bootstrap Modals
+        // Inicializar todas las instancias de modales
         mVer = new bootstrap.Modal(document.getElementById('modalVer'));
         mNuevo = new bootstrap.Modal(document.getElementById('modalNuevo'));
         mEdit = new bootstrap.Modal(document.getElementById('modalEdit'));
         mEditDetalle = new bootstrap.Modal(document.getElementById('modalEditDetalle'));
 
-        // 1. Inicializar Buscador Principal (Todas las OS)
+        // Configurar los autocompletados
         setupAuto('txtFiltroOS', 'listaFiltroOS', 'filtroOS', datosOS);
-        
-        // 2. Inicializar Buscador de Edición Individual (Todas las OS)
         setupAuto('txtED_OS', 'listED_OS', 'valED_OS', datosOS);
-        
-        // 3. Inicializar Buscador "Nuevo Lote" (Al inicio vacío o todas, pero se actualiza luego)
         setupAuto('txtN_OS', 'listN_OS', 'valN_OS', datosOS);
 
-        // 4. Carga inicial de datos
+        // Cargar la grilla inicial
         buscarCobros(); 
+        
+        // Inicializar fecha items igual a hoy por defecto
+        if(document.getElementById('n_FechaRef')) {
+             document.getElementById('n_ItemFecha').value = document.getElementById('n_FechaRef').value;
+        }
     });
 
     // =================================================================
@@ -348,6 +380,7 @@
                     inp.value = x.nombre;
                     hid.value = x.id;
                     list.style.display = 'none';
+                    // UX: Saltar al siguiente campo lógico según el contexto
                     if (inpId === 'txtN_OS') document.getElementById('n_Imp').focus();
                     if (inpId === 'txtV_OS') document.getElementById('v_Imp').focus();
                 };
@@ -358,6 +391,7 @@
             list.style.display = 'block';
         };
 
+        // Cerrar lista al perder foco
         inp.onblur = function() {
             setTimeout(() => { 
                 list.style.display = 'none';
@@ -380,13 +414,19 @@
         document.getElementById('valN_OS').value = '0';
         setupAuto('txtN_OS', 'listN_OS', 'valN_OS', datosFiltrados);
     }
+    
+    function actualizarFechaDefault() {
+        if(itemsTemp.length === 0) {
+            document.getElementById('n_ItemFecha').value = document.getElementById('n_FechaRef').value;
+        }
+    }
 
     // =================================================================
-    // LÓGICA DE NEGOCIO (BÚSQUEDA Y GRILLA)
+    // LÓGICA DE NEGOCIO (BÚSQUEDA Y GRILLA PRINCIPAL)
     // =================================================================
     async function buscarCobros() {
         const tbody = document.getElementById('tbodyResultados');
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center p-4"><div class="spinner-border text-success"></div> Procesando datos...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center p-4"><div class="spinner-border text-success"></div> Procesando datos...</td></tr>';
 
         const filtroMandataria = document.getElementById('filtroMandataria').value;
         const filtroOS = document.getElementById('filtroOS').value;
@@ -405,57 +445,59 @@
             const res = await r.json();
 
             if(res.success && res.data.length > 0) {
-                datosAgrupados = {}; 
-                
-                res.data.forEach(x => {
-                    const comp = (x.NumeroComprobante||x.numeroComprobante||'S/N').trim();
-                    const idMand = x.IdMandatarias||x.idMandatarias||0; 
-                    const fecha = (x.FechaCobro||x.fechaCobro).split('T')[0];
-                    const tipo = x.TipoPago||x.tipoPago||'-';
-                    
-                    const key = comp + '_' + fecha + '_' + tipo;
-                    
-                    if(!datosAgrupados[key]) {
-                        datosAgrupados[key] = {
-                            key: key, comp: comp, fecha: fecha,
-                            mand: x.NombreMandataria||x.nombreMandataria||'---',
-                            idMand: idMand, tipo: tipo, items: [], 
-                            totalImp: 0, totalDeb: 0
-                        };
-                    }
-                    
-                    datosAgrupados[key].items.push(x);
-                    datosAgrupados[key].totalImp += parseFloat(x.ImporteCobrado||x.importeCobrado||0);
-                    datosAgrupados[key].totalDeb += parseFloat(x.MontoDebitos||x.montoDebitos||0);
-                });
-
+                datosAgrupados = {}; // Reiniciamos el caché
                 tbody.innerHTML = '';
-                Object.values(datosAgrupados).forEach(g => {
-                    const neto = g.totalImp - g.totalDeb;
-                    const cantPagos = g.items.length;
+                
+                // Iteramos los resultados que YA VIENEN AGRUPADOS desde SQL
+                res.data.forEach(x => {
+                    const idMand = x.IdMandatarias || x.idMandatarias || 0; 
+                    const fechaRaw = (x.FechaCobro || x.fechaCobro);
+                    const fecha = fechaRaw ? fechaRaw.split('T')[0] : '---';
+                    const comp = (x.NumeroComprobante || x.numeroComprobante || 'S/N').trim();
+                    const idPadre = x.IdCobros || x.idCobros;
+
+                    // Clave única para nuestro diccionario JS
+                    const key = `LOTE_${idPadre}`; 
                     
+                    // CORRECCIÓN DE TOTALES: Leemos TotalImporte/TotalDebitos del SQL
+                    const totalImp = parseFloat(x.TotalImporte || x.totalImporte || 0);
+                    const totalDeb = parseFloat(x.TotalDebitos || x.totalDebitos || 0);
+                    const neto = totalImp - totalDeb;
+                    const cantItems = x.CantidadItems || x.cantidadItems || 0;
+
+                    // Guardamos en memoria para usar al editar/ver
+                    datosAgrupados[key] = {
+                        key: key,
+                        idPadre: idPadre,
+                        comp: comp,
+                        fecha: fecha,
+                        mand: x.NombreMandataria || x.nombreMandataria || '---',
+                        idMand: idMand,
+                        totalImp: totalImp, // Guardamos para referencia
+                    };
+
+                    // Dibujamos la fila
                     tbody.innerHTML += `
-                    <tr data-key="${g.key}">
-                        <td class="text-center">${g.fecha}</td>
-                        <td class="fw-bold text-primary">${g.mand}</td>
-                        <td class="fw-bold text-center">${g.comp}</td>
-                        <td>${g.tipo}</td>
-                        <td class="text-center fw-bold fs-5">${cantPagos}</td>
-                        <td class="text-end fw-bold fs-5 text-dark">$${g.totalImp.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+                    <tr id="row-${key}">
+                        <td class="text-center">${fecha}</td>
+                        <td class="fw-bold text-primary">${datosAgrupados[key].mand}</td>
+                        <td class="fw-bold text-center">${comp}</td>
+                        <td class="text-center fw-bold fs-5">${cantItems}</td>
+                        <td class="text-end fw-bold fs-5 text-dark">$${totalImp.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
                         <td class="text-end fw-black fs-5 text-success border-start border-end bg-light">$${neto.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
-                        <td class="text-center" id="actions-${g.key}">
-                            <button class="btn btn-danger btn-sm me-1 btn-super p-2" onclick="eliminarLoteCompleto('${g.key}')" title="Eliminar Todo">🗑️</button>
-                            <button class="btn btn-warning btn-sm me-1 btn-super p-2" onclick="abrirEditarLote('${g.key}')" title="Editar Cabecera">✏️</button>
-                            <button class="btn btn-primary btn-sm fw-bold px-3 btn-super" onclick="abrirVer('${g.key}')">👁️ VER</button>
+                        <td class="text-center">
+                            <button class="btn btn-danger btn-sm me-1 btn-super p-2" onclick="eliminarLoteCompleto('${key}')" title="Eliminar Todo">🗑️</button>
+                            <button class="btn btn-warning btn-sm me-1 btn-super p-2" onclick="abrirEditarLote('${key}')" title="Editar Cabecera">✏️</button>
+                            <button class="btn btn-primary btn-sm fw-bold px-3 btn-super" onclick="abrirVer('${key}')">👁️ VER</button>
                         </td>
                     </tr>`;
                 });
             } else { 
-                tbody.innerHTML = '<tr><td colspan="8" class="text-center p-4 fs-4 text-secondary">No se encontraron cobros con estos filtros.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center p-4 fs-4 text-secondary">No se encontraron cobros con estos filtros.</td></tr>';
             }
         } catch(e) { 
             console.error(e);
-            tbody.innerHTML = `<tr><td colspan="8" class="text-danger text-center p-4">⚠️ Error de conexión: ${e.message}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7" class="text-danger text-center p-4">⚠️ Error de conexión: ${e.message}</td></tr>`;
         }
     }
 
@@ -469,15 +511,17 @@
     }
 
     // =================================================================
-    // MODAL NUEVO LOTE (USA MODELO Cobros.cs -> PLURAL)
+    // MODAL NUEVO LOTE
     // =================================================================
     function abrirModalNuevo() { 
         itemsTemp = [];
         document.getElementById('tbodyTemp').innerHTML=''; 
         document.getElementById('n_Comp').value=""; 
         document.getElementById('lblTotalLote').textContent="$0.00";
-        document.getElementById('n_Fecha').value = new Date().toISOString().substring(0, 10);
+        document.getElementById('n_FechaRef').value = new Date().toISOString().substring(0, 10);
         document.getElementById('n_Mand').value = "0";
+        
+        actualizarFechaDefault();
         alCambiarMandatariaNuevo();
         mNuevo.show();
     }
@@ -487,14 +531,17 @@
     function aggTemp() {
         const id = document.getElementById('valN_OS').value;
         const nom = document.getElementById('txtN_OS').value;
+        const fecha = document.getElementById('n_ItemFecha').value;
+        const tipo = document.getElementById('n_ItemTipo').value;
         const imp = parseFloat(document.getElementById('n_Imp').value)||0;
         const deb = parseFloat(document.getElementById('n_Deb').value)||0;
 
-        if(id==0 || imp==0) { alert("⚠️ Debe seleccionar Obra Social e ingresar Importe."); return; }
+        if(id==0 || imp==0 || fecha=="") { alert("⚠️ Faltan datos: Obra Social, Fecha o Importe."); return; }
         
-        itemsTemp.push({id:id, nom:nom, imp:imp, deb:deb});
+        itemsTemp.push({id:id, nom:nom, fecha:fecha, tipo:tipo, imp:imp, deb:deb});
         dibujarTemp();
         
+        // Reset inteligente
         document.getElementById('n_Imp').value=""; 
         document.getElementById('n_Deb').value="0.00";
         document.getElementById('txtN_OS').value=""; 
@@ -512,6 +559,8 @@
             b.innerHTML+=`
             <tr data-index="${i}">
                 <td class="fw-bold">${x.nom}</td>
+                <td class="text-center small">${x.fecha}</td>
+                <td class="text-center small">${x.tipo}</td>
                 <td class="text-end text-success">$${x.imp.toFixed(2)}</td>
                 <td class="text-end text-danger">$${x.deb.toFixed(2)}</td>
                 <td class="text-end fw-bold">$${neto.toFixed(2)}</td>
@@ -524,13 +573,12 @@
     }
 
     async function guardarNuevoLote() {
-        const mandId = document.getElementById('n_Mand').value;
+        const mandId = parseInt(document.getElementById('n_Mand').value) || 0;
         const comp = document.getElementById('n_Comp').value.trim();
-        const fecha = document.getElementById('n_Fecha').value;
-        const tipo = document.getElementById('n_Tipo').value;
+        const fechaRef = document.getElementById('n_FechaRef').value;
 
-        if(mandId=="0" || comp=="" || itemsTemp.length==0) { 
-            alert("⚠️ Faltan datos: Seleccione Mandataria, escriba N° Comprobante y agregue items."); return; 
+        if(mandId === 0 || comp === "" || itemsTemp.length === 0) { 
+            alert("⚠️ Faltan datos de Cabecera o Items."); return; 
         }
         
         if(!confirm("¿Confirmar el guardado de este lote?")) return;
@@ -538,18 +586,16 @@
         const originalFooter = document.querySelector('#modalNuevo .modal-footer').innerHTML;
         document.querySelector('#modalNuevo .modal-footer').innerHTML = '<span class="text-success fw-bold me-3">GUARDANDO...</span> <div class="spinner-border text-success"></div>';
 
-        // CORRECCIÓN: JSON respeta el modelo Cobros.cs (PLURAL) y envía números reales
         const loteFinal = itemsTemp.map(x => ({
-            IdCobros: 0, 
+            IdMandatariasMaestro: mandId,
+            FechaCobroMaestro: fechaRef,
+            NumeroComprobanteMaestro: comp,
             
-            // TU MODELO Cobros.cs USA "IdObrasSociales" (PLURAL)
-            IdObrasSociales: parseInt(x.id), 
-            
-            FechaCobro: fecha,
-            NumeroComprobante: comp,
-            TipoPago: tipo,
-            ImporteCobrado: x.imp, // Número puro (100.50), NO string ("100,50")
-            MontoDebitos: x.deb,
+            IdObrasSociales: parseInt(x.id),
+            FechaCobroDetalle: x.fecha,
+            TipoPago: x.tipo,
+            ImporteCobrado: x.imp, 
+            MontoDebito: x.deb,
             MotivoDebito: ""
         }));
 
@@ -576,23 +622,27 @@
     }
 
     // =================================================================
-    // MODAL VER DETALLES (BLINDADO CON DOBLE ID Y REPLACE DECIMAL)
+    // MODAL VER DETALLES
     // =================================================================
     function abrirVer(key) {
         const g = datosAgrupados[key];
-        if(!g) return;
+        if(!g) {
+            console.error("Error: No se encontró el lote en memoria para la key:", key);
+            return;
+        }
         
         loteContexto = { 
-            fecha: g.fecha, comp: g.comp, tipo: g.tipo, 
-            mandKey: key, mandatariaId: g.idMand 
+            fecha: g.fecha, comp: g.comp, mandKey: key, mandatariaId: g.idMand, idPadre: g.idPadre 
         };
 
         document.getElementById('v_Titulo').textContent = g.mand;
         document.getElementById('v_Comp').textContent = g.comp;
         document.getElementById('v_Fecha').textContent = g.fecha;
+        
+        // Fecha default para agregar item suelto = fecha del lote
+        document.getElementById('v_FechaItem').value = g.fecha;
 
         document.getElementById('buscadorInterno').value = '';
-        
         const osDeEstaMandataria = datosOS.filter(x => x.idMandataria == g.idMand);
         setupAuto('txtV_OS', 'listV_OS', 'valV_OS', osDeEstaMandataria);
         
@@ -601,7 +651,7 @@
     }
 
     async function traerDetallesYLlenarVer(comprobante) {
-        document.getElementById('tbodyVer').innerHTML = '<tr><td colspan="5" class="text-center p-4"><div class="spinner-border spinner-border-sm text-primary"></div> Cargando...</td></tr>';
+        document.getElementById('tbodyVer').innerHTML = '<tr><td colspan="6" class="text-center p-4"><div class="spinner-border spinner-border-sm text-primary"></div> Cargando...</td></tr>';
         
         try {
             const r = await fetch(`@Url.Action("TraerCobrosPorComprobante", "Home")?comprobante=${comprobante}`);
@@ -616,26 +666,28 @@
         b.innerHTML='';
         let totalImp = 0, totalDeb = 0;
         
-        if (items.length === 0) b.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Vacío</td></tr>';
+        if (items.length === 0) b.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Vacío</td></tr>';
 
         items.forEach(x => {
-            const nomOS = x.NombreObraSocial || x.nombreObraSocial || datosOS.find(o=>o.id == (x.IdObrasSociales||x.idObrasSociales))?.nombre || "---";
-            const imp = parseFloat(x.ImporteCobrado||x.importeCobrado||0);
-            const deb = parseFloat(x.MontoDebitos||x.montoDebitos||0);
-            const id = x.IdCobros||x.idCobros;
+            const nomOS = x.NombreObraSocial || datosOS.find(o=>o.id == x.IdObrasSociales)?.nombre || "---";
+            const imp = parseFloat(x.ImporteCobrado||0);
+            const deb = parseFloat(x.MontoDebitos||x.MontoDebito||0);
+            const id = x.IdCobrosDetalle||x.idCobrosDetalle;
             
             totalImp += imp;
             totalDeb += deb;
 
             b.innerHTML += `
             <tr data-id="${id}" class="detalle-cobro-row">
-                <td class="fw-bold">${nomOS}</td>
+                <td class="fw-bold small">${nomOS}</td>
+                <td class="text-center small">${(x.FechaCobroDetalle||'').split('T')[0]}</td>
+                <td class="text-center small">${x.TipoPago}</td>
                 <td class="text-end text-success">$${imp.toFixed(2)}</td>
                 <td class="text-end text-danger">$${deb.toFixed(2)}</td>
                 <td class="text-end fw-black">$${(imp-deb).toFixed(2)}</td>
                 <td class="text-center">
-                    <button class="btn btn-warning btn-sm me-1 fw-bold" onclick="abrirEditDetalle(${id})">✏️</button>
-                    <button class="btn btn-sm btn-danger fw-bold" onclick="eliminarDelLote(${id})">🗑️</button>
+                    <button class="btn btn-warning btn-sm me-1" onclick="abrirEditDetalle(${id})">✏️</button>
+                    <button class="btn btn-sm btn-danger" onclick="eliminarDelLote(${id})">🗑️</button>
                 </td>
             </tr>`;
         });
@@ -647,72 +699,53 @@
     async function agregarAlLote() {
         const idOS = document.getElementById('valV_OS').value;
         let impStr = document.getElementById('v_Imp').value; 
-        let debStr = document.getElementById('v_Deb').value || "0";
         
-        if(idOS==0 || !impStr || parseFloat(impStr)==0) { alert("⚠️ Seleccione OS e ingrese importe."); return; }
+        if(idOS==0 || !impStr || parseFloat(impStr)==0) { alert("⚠️ Faltan datos."); return; }
 
-        // Normalizar decimales a punto (10.50)
         impStr = impStr.replace(',','.');
-        debStr = debStr.replace(',','.');
 
         const fd = new FormData();
-        fd.append("IdCobro", 0);
-        
-        // ESTRATEGIA DE SEGURIDAD: Envío AMBOS por si el controlador espera Singular o Plural en los params
-        fd.append("IdObraSocial", idOS);      // Singular
-        fd.append("IdObrasSociales", idOS);   // Plural
-        
-        fd.append("FechaCobro", loteContexto.fecha);
+        fd.append("IdCobro", 0); 
+        fd.append("IdObraSocial", idOS);
+        fd.append("IdObrasSociales", idOS);
+        fd.append("IdMandataria", loteContexto.mandatariaId); 
+
+        fd.append("FechaCobro", document.getElementById('v_FechaItem').value);
+        fd.append("TipoPago", document.getElementById('v_TipoItem').value);
         fd.append("NumeroComprobante", loteContexto.comp);
-        fd.append("TipoPago", loteContexto.tipo);
         fd.append("ImporteCobrado", impStr); 
-        fd.append("MontoDebitos", debStr);
+        fd.append("MontoDebitos", 0);
         fd.append("MotivoDebito", "");
 
         try {
             const r = await fetch('@Url.Action("GuardarCobro", "Home")', { method:'POST', body:fd });
             const res = await r.json();
             if(res.success) {
-                document.getElementById('v_Imp').value=""; document.getElementById('v_Deb').value="0";
+                document.getElementById('v_Imp').value="";
                 document.getElementById('txtV_OS').value=""; document.getElementById('valV_OS').value="0";
                 buscarCobros(); 
                 traerDetallesYLlenarVer(loteContexto.comp);
-            } else {
-                alert("Error: " + res.message);
-            }
+            } else alert("Error: " + res.message);
         } catch(e) { alert("Error de red."); }
     }
 
-    function filtrarInterno() {
-        const t = document.getElementById('buscadorInterno').value.toLowerCase();
-        document.querySelectorAll('#tbodyVer tr.detalle-cobro-row').forEach(r => {
-            const texto = r.innerText.toLowerCase();
-            r.style.display = texto.includes(t) ? '' : 'none';
-        });
-    }
-
     // =================================================================
-    // EDICIÓN Y ELIMINACIÓN
+    // MANTENIMIENTO: ELIMINAR Y EDITAR
     // =================================================================
     async function eliminarLoteCompleto(key) {
         const g = datosAgrupados[key];
         if(!g) return;
-        if(!confirm(`⚠️ PELIGRO: ¿Eliminar TODO el lote ${g.comp} de ${g.mand}?\nSe borrarán ${g.items.length} pagos.`)) return;
+        if(!confirm(`⚠️ PELIGRO EXTREMO\n¿Eliminar TODO el lote ${g.comp} de ${g.mand}?\nSe borrarán TODOS los pagos asociados.`)) return;
         
-        const actionCell = document.getElementById(`actions-${key}`);
-        actionCell.innerHTML = '<div class="spinner-border text-danger"></div>';
-        
-        let errores = 0;
-        for(const item of g.items) {
-            const fd=new FormData(); fd.append("idCobro", item.IdCobros||item.idCobros);
-            try { await fetch('@Url.Action("EliminarCobro", "Home")', {method:'POST', body:fd}); } 
-            catch { errores++; }
-        }
-        
-        if(errores>0) alert(`Se completó con ${errores} errores.`);
-        else alert("✅ Lote eliminado.");
-        
-        buscarCobros();
+        try {
+            const r = await fetch('@Url.Action("EliminarLoteCompleto", "Home")', {
+                method:'POST', 
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: `idCobroPadre=${g.idPadre}`
+            });
+            const res = await r.json();
+            if(res.success) { alert(res.message); buscarCobros(); } else alert(res.message);
+        } catch(e) { alert("Error de red"); }
     }
 
     async function eliminarDelLote(id) {
@@ -727,53 +760,30 @@
 
     function abrirEditarLote(key) {
         const g = datosAgrupados[key];
-        document.getElementById('e_IdCobroRef').value = key; 
+        document.getElementById('e_IdCobroRef').value = g.idPadre; 
         document.getElementById('e_Mandataria').value = g.idMand;
-        document.getElementById('e_NombreOS').value = `Varios (${g.items.length} items)`;
         document.getElementById('e_Fecha').value = g.fecha;
         document.getElementById('e_Comp').value = g.comp;
-        document.getElementById('e_Tipo').value = g.tipo;
         mEdit.show();
     }
 
     async function guardarEdicionLote() {
-        if(!confirm("¿Aplicar cambios a TODO el lote?")) return;
-        const key = document.getElementById('e_IdCobroRef').value;
-        const g = datosAgrupados[key];
-        const nuevaFecha = document.getElementById('e_Fecha').value;
-        const nuevoComp = document.getElementById('e_Comp').value;
-        const nuevoTipo = document.getElementById('e_Tipo').value;
+        const fd = new FormData();
+        fd.append("IdCobro", document.getElementById('e_IdCobroRef').value);
+        fd.append("IdMandataria", document.getElementById('e_Mandataria').value);
+        fd.append("Fecha", document.getElementById('e_Fecha').value);
+        fd.append("Comprobante", document.getElementById('e_Comp').value);
 
-        document.querySelector('#modalEdit .modal-footer').innerHTML = 'Guardando...';
-
-        for(const item of g.items) {
-            const fd = new FormData();
-            fd.append("IdCobro", item.IdCobros||item.idCobros);
-            
-            // Envío DOBLE de ID para asegurar compatibilidad
-            const idOS = item.IdObrasSociales||item.idObrasSociales;
-            fd.append("IdObraSocial", idOS);
-            fd.append("IdObrasSociales", idOS);
-            
-            fd.append("FechaCobro", nuevaFecha);
-            fd.append("NumeroComprobante", nuevoComp);
-            fd.append("TipoPago", nuevoTipo);
-            
-            const impStr = (item.ImporteCobrado||item.importeCobrado).toString().replace(',','.');
-            const debStr = (item.MontoDebitos||item.montoDebitos).toString().replace(',','.');
-            
-            fd.append("ImporteCobrado", impStr);
-            fd.append("MontoDebitos", debStr);
-            
-            await fetch('@Url.Action("GuardarCobro", "Home")', { method:'POST', body:fd });
-        }
-        
-        mEdit.hide();
-        document.querySelector('#modalEdit .modal-footer').innerHTML = '<button class="btn btn-warning fw-bold px-4" onclick="guardarEdicionLote()">APLICAR A TODO EL LOTE</button>';
-        buscarCobros();
-        alert("✅ Lote actualizado.");
+        try {
+            const r = await fetch('@Url.Action("ModificarCabeceraLote", "Home")', { method:'POST', body:fd });
+            const res = await r.json();
+            if(res.success) { mEdit.hide(); buscarCobros(); alert("✅ Actualizado"); } else alert(res.message);
+        } catch(e) { alert("Error red"); }
     }
 
+    // =================================================================
+    // EDICIÓN DE DETALLE
+    // =================================================================
     async function abrirEditDetalle(id) {
         const r = await fetch(`@Url.Action("ObtenerCobroPorId", "Home")?idCobro=${id}`);
         const res = await r.json();
@@ -782,14 +792,13 @@
         const d = res.data;
         document.getElementById('ed_Id').value = id;
         document.getElementById('valED_OS').value = d.IdObrasSociales||d.idObrasSociales;
+        document.getElementById('txtED_OS').value = datosOS.find(x=>x.id == (d.IdObrasSociales||d.idObrasSociales))?.nombre || "---";
         
-        const nombreOS = datosOS.find(x=>x.id == (d.IdObrasSociales||d.idObrasSociales))?.nombre || "---";
-        document.getElementById('txtED_OS').value = nombreOS;
-        
+        document.getElementById('ed_Fecha').value = (d.FechaCobroDetalle||d.fechaCobroDetalle).split('T')[0];
+        document.getElementById('ed_Tipo').value = d.TipoPago||d.tipoPago;
         document.getElementById('ed_Imp').value = d.ImporteCobrado||d.importeCobrado;
-        document.getElementById('ed_Deb').value = d.MontoDebitos||d.montoDebitos;
+        document.getElementById('ed_Deb').value = d.MontoDebito||d.montoDebito;
         
-        document.getElementById('ed_Id').dataset.full = JSON.stringify(d);
         mEditDetalle.show();
     }
 
@@ -797,22 +806,18 @@
 
     async function guardarEditDetalle() {
         const id = document.getElementById('ed_Id').value;
-        const d = JSON.parse(document.getElementById('ed_Id').dataset.full);
+        const idOS = document.getElementById('valED_OS').value;
         
         let impStr = document.getElementById('ed_Imp').value.replace(',','.');
         let debStr = document.getElementById('ed_Deb').value.replace(',','.');
 
         const fd = new FormData();
         fd.append("IdCobro", id);
-        
-        // Envío DOBLE de ID
-        const idOS = document.getElementById('valED_OS').value;
         fd.append("IdObraSocial", idOS);
         fd.append("IdObrasSociales", idOS);
-        
-        fd.append("FechaCobro", (d.FechaCobro||d.fechaCobro).split('T')[0]); 
-        fd.append("NumeroComprobante", d.NumeroComprobante||d.numeroComprobante); 
-        fd.append("TipoPago", d.TipoPago||d.tipoPago);
+        fd.append("FechaCobro", document.getElementById('ed_Fecha').value);
+        fd.append("TipoPago", document.getElementById('ed_Tipo').value);
+        fd.append("NumeroComprobante", "---"); 
         fd.append("ImporteCobrado", impStr);
         fd.append("MontoDebitos", debStr);
 
@@ -826,5 +831,13 @@
                 alert("✅ Actualizado.");
             } else alert("Error: " + res.message);
         } catch(e) { alert("Error de red"); }
+    }
+    
+    function filtrarInterno() {
+        const t = document.getElementById('buscadorInterno').value.toLowerCase();
+        document.querySelectorAll('#tbodyVer tr.detalle-cobro-row').forEach(r => {
+            const texto = r.innerText.toLowerCase();
+            r.style.display = texto.includes(t) ? '' : 'none';
+        });
     }
 </script>
