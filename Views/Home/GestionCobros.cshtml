@@ -11,31 +11,76 @@
 }
 
 <style>
+    /* =========================================
+       ESTILOS DE ALTO IMPACTO (UX 85 AÑOS)
+       ========================================= */
     body { font-family: 'Verdana', sans-serif; background-color: #f4f6f9; color: #000; }
+    
     h1 { font-size: 2.2rem; font-weight: 900; color: #146c43; text-transform: uppercase; border-bottom: 5px solid #146c43; display: inline-block; margin-bottom: 20px; }
     
-    .form-control, .form-select { border: 3px solid #6c757d; font-size: 1.1rem; padding: 10px; color: #000; font-weight: 700; }
-    .form-control:focus, .form-select:focus { border-color: #198754; box-shadow: 0 0 0 0.25rem rgba(25,135,84, 0.25); background-color: #f0fff4; }
     .form-label { font-weight: 900; font-size: 0.9rem; text-transform: uppercase; margin-bottom: 5px; display: block; }
-    .btn-super { font-size: 1.1rem; font-weight: 800; padding: 10px 20px; border: 2px solid rgba(0,0,0,0.2); text-transform: uppercase; letter-spacing: 1px; }
-    
-    .table-container { border: 3px solid #000; border-radius: 4px; overflow: hidden; background: white; margin-top:15px; }
-    .table thead th { background-color: #146c43; color: white; font-size: 1.1rem; vertical-align: middle; text-align: center; border-bottom: 3px solid #000; padding: 15px; }
-    .table tbody td { font-size: 1.05rem; vertical-align: middle; font-weight: 600; padding: 12px; }
 
-    /* Buscadores */
-    .buscador-wrapper { position: relative; width: 100%; }
-    .lista-sugerencias { position: absolute; top: 100%; left: 0; width: 100%; background: white; border: 4px solid #000; border-top: none; z-index: 10000; display: none; max-height: 300px; overflow-y: auto; box-shadow: 0px 10px 20px rgba(0,0,0,0.4); }
-    .item-sugerencia { padding: 15px; cursor: pointer; border-bottom: 2px solid #ccc; font-weight: 800; font-size: 1.1rem; color: #333; }
+    /* --- ALINEACIÓN PERFECTA DE LA FILA DE CARGA --- */
+    /* Forzamos que TODOS los inputs, selects y botones de las filas de carga midan lo mismo */
+    .row.align-items-end .form-control, 
+    .row.align-items-end .form-select, 
+    .row.align-items-end .btn {
+        height: 42px !important; /* Altura fija estándar */
+        font-size: 1.05rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center; /* Centra el texto verticalmente */
+    }
+
+    /* Ajustes cosméticos generales */
+    .form-control, .form-select { 
+        border: 2px solid #6c757d; 
+        color: #000;
+        padding: 5px 10px;
+    }
+    
+    .form-control:focus, .form-select:focus { 
+        border-color: #198754; 
+        box-shadow: 0 0 0 0.25rem rgba(25,135,84, 0.25); 
+        background-color: #f0fff4; 
+    }
+
+    /* El grupo del buscador + botón deuda */
+    .input-group .btn {
+        border: 2px solid #0d6efd;
+        z-index: 5;
+        padding-left: 15px;
+        padding-right: 15px;
+    }
+    
+    .input-group .form-control {
+        border: 2px solid #6c757d; /* Restaurar borde del input pegado */
+    }
+
+    /* BUSCADORES FLOTANTES */
+    .buscador-wrapper { position: relative; flex-grow: 1; }
+    .lista-sugerencias { 
+        position: absolute; top: 100%; left: 0; width: 100%; 
+        background: white; border: 3px solid #000; border-top: none; 
+        z-index: 10000; display: none; max-height: 250px; overflow-y: auto; 
+        box-shadow: 0px 10px 20px rgba(0,0,0,0.4);
+    }
+    .item-sugerencia { padding: 10px 15px; cursor: pointer; border-bottom: 1px solid #ccc; font-weight: 700; font-size: 1rem; color: #333; }
     .item-sugerencia:hover { background-color: #198754; color: white; }
 
+    /* BOTONES GENERALES */
+    .btn-super { font-size: 1.1rem; font-weight: 800; padding: 10px 20px; border: 2px solid rgba(0,0,0,0.2); text-transform: uppercase; letter-spacing: 1px; }
+    
+    /* TOTALES Y TABLAS */
     .total-display { font-size: 2rem; font-weight: 900; color: #198754; text-align: right; padding: 15px; background: #d1e7dd; border: 3px solid #198754; border-radius: 6px; }
+    .table-container { border: 3px solid #000; border-radius: 4px; overflow: hidden; background: white; margin-top:15px; }
+    .table thead th { background-color: #146c43; color: white; font-size: 1.1rem; vertical-align: middle; text-align: center; border-bottom: 3px solid #000; padding: 15px; }
+    .table tbody td { font-size: 1.05rem; vertical-align: middle; font-weight: 600; padding: 10px; }
+
+    /* COLORES DE CABECERA MODAL */
     .bg-header-add { background-color: #198754; color: white; border-bottom: 5px solid #0f5132; }
     .bg-header-view { background-color: #0d6efd; color: white; border-bottom: 5px solid #0a58ca; }
     .bg-header-edit { background-color: #ffc107; color: #000; border-bottom: 5px solid #000; }
-    
-    /* Estilo para deuda seleccionada */
-    .deuda-seleccionada { background-color: #d1e7dd !important; border: 2px solid #198754; }
 </style>
 
 <div class="container-fluid mt-4">
@@ -196,6 +241,11 @@
                     </div>
                 </div>
 
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h5 class="fw-bold text-primary m-0">DETALLES IMPUTADOS</h5>
+                    <input type="text" id="buscadorInterno" class="form-control w-50" placeholder="🔍 Filtrar en esta lista..." onkeyup="filtrarInterno()">
+                </div>
+
                 <div class="table-responsive border border-2 border-dark rounded bg-white" style="height: 300px; overflow-y: auto;">
                     <table class="table table-bordered table-sm mb-0">
                         <thead class="table-dark sticky-top"><tr><th>OS</th><th>FECHA</th><th>TIPO</th><th class="text-end">IMPORTE</th><th class="text-center">X</th></tr></thead>
@@ -225,13 +275,7 @@
                 <div class="table-responsive" style="max-height: 400px;">
                     <table class="table table-hover mb-0">
                         <thead class="table-secondary sticky-top">
-                            <tr>
-                                <th>PERIODO</th>
-                                <th>FECHA LIQ.</th>
-                                <th class="text-end">IMPORTE ORIGINAL</th>
-                                <th class="text-end">SALDO PENDIENTE</th>
-                                <th>ACCIÓN</th>
-                            </tr>
+                            <tr><th>PERIODO</th><th>FECHA LIQ.</th><th class="text-end">IMPORTE ORIGINAL</th><th class="text-end">SALDO PENDIENTE</th><th>ACCIÓN</th></tr>
                         </thead>
                         <tbody id="tbodyDeudas"></tbody>
                     </table>
@@ -299,7 +343,6 @@
 
         buscarCobros(); 
         
-        // Inicializar fechas
         const hoy = new Date().toISOString().substring(0, 10);
         if(document.getElementById('n_FechaRef')) document.getElementById('n_FechaRef').value = hoy;
         if(document.getElementById('n_ItemFecha')) document.getElementById('n_ItemFecha').value = hoy;
@@ -461,7 +504,6 @@
     function cerrarModalDeudas() { mDeudas.hide(); }
 
     // --- NUEVO LOTE ---
-    // ESTA ES LA FUNCIÓN QUE FALTABA:
     function abrirModalNuevo() { 
         itemsTemp = [];
         document.getElementById('tbodyTemp').innerHTML=''; 
@@ -470,7 +512,6 @@
         document.getElementById('n_FechaRef').value = new Date().toISOString().substring(0, 10);
         document.getElementById('n_Mand').value = "0";
         
-        // Reset inputs de carga
         document.getElementById('txtN_OS').value = "";
         document.getElementById('valN_OS').value = "0";
         document.getElementById('n_Imp').value = "";
@@ -478,7 +519,7 @@
         document.getElementById('n_IdLiqDetalle').value = "";
         document.getElementById('lblDeudaSeleccionada').style.display = 'none';
 
-        actualizarFechaDefault();
+        if(document.getElementById('n_ItemFecha')) document.getElementById('n_ItemFecha').value = document.getElementById('n_FechaRef').value;
         alCambiarMandatariaNuevo();
         mNuevo.show();
     }
@@ -594,7 +635,7 @@
                         </td>
                     </tr>`;
                 });
-                document.getElementById('lblTotalNetoVer').textContent = `$${tot.toLocaleString('es-AR', {minimumFractionDigits: 2})}`;
+                document.getElementById('lblTotalBrutoVer').textContent = `$${tot.toLocaleString('es-AR', {minimumFractionDigits: 2})}`;
             } else alert(res.message);
         } catch (e) { console.error(e); }
     }
