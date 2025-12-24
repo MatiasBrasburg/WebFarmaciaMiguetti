@@ -505,6 +505,20 @@ public class HomeController : Controller
         }
     }
 
+    [HttpGet]
+public IActionResult BuscarDetallesGlobalesAjax(DateTime? desde, DateTime? hasta, int? idMandataria, int? idOS)
+{
+    try
+    {
+        var lista = BD.BuscarDetallesGlobales(desde, hasta, idMandataria, idOS);
+        return Json(new { success = true, data = lista });
+    }
+    catch (Exception ex)
+    {
+        return StatusCode(500, new { success = false, message = ex.Message });
+    }
+}
+
 //Configuracion de usuario
 
  public IActionResult IrAConfiguracion(){

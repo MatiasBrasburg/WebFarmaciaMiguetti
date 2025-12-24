@@ -1,5 +1,7 @@
 @using System.Text.Json
 @using WebFarmaciaMiguetti.Models
+@using Microsoft.AspNetCore.Http
+@inject IHttpContextAccessor HttpContextAccessor
 
 @{
     ViewData["Title"] = "Gestión de Liquidaciones";
@@ -9,6 +11,29 @@
     if (listaObrasSociales.Any())
     {
         try { listaObrasSociales = listaObrasSociales.OrderBy(x => x.Nombre).ToList(); } catch { }
+    }
+    
+    // Serializamos para el buscador de OS
+    var jsonObrasSociales = JsonSerializer.Serialize(listaObrasSociales.Select(x => new { id = x.IdObrasSociales, nombre = x.Nombre, idMandataria = x.IdMandataria }));
+
+    // --- RECUPERAR DATOS DE LA FARMACIA (USUARIO) DESDE SESIÓN ---
+    string nombreFarmacia = "FARMACIA";
+    string direccionFarmacia = "Domicilio no configurado";
+    string cuitFarmacia = "---";
+    string ivaFarmacia = "Consumidor Final";
+
+    var usuarioJson = HttpContextAccessor.HttpContext.Session.GetString("Usuario");
+    if (!string.IsNullOrEmpty(usuarioJson))
+    {
+        try {
+            var usuarioObj = JsonSerializer.Deserialize<Usuario>(usuarioJson);
+            if(usuarioObj != null) {
+                nombreFarmacia = usuarioObj.RazonSocial ?? "FARMACIA MIGUETTI";
+                direccionFarmacia = usuarioObj.Domicilio ?? "";
+                cuitFarmacia = usuarioObj.Cuit.ToString() ?? "";
+                ivaFarmacia = usuarioObj.Iva ?? "";
+            }
+        } catch { }
     }
 }
 
@@ -37,40 +62,62 @@
     /* ESTILO MINI-MODALES */
     .modal-warning-header { background-color: #ffc107; color: #000; border-bottom: 3px solid #000; }
     .modal-edit-header { background-color: #6610f2; color: #fff; border-bottom: 3px solid #000; }
+
+    /* TOGGLE Y BUSCADOR */
+    .view-toggle { display: flex; border: 3px solid #000; border-radius: 8px; overflow: hidden; margin-bottom: 20px; background: white; }
+    .view-toggle .btn-toggle { flex: 1; padding: 15px; font-weight: 900; font-size: 1.1rem; text-transform: uppercase; border: none; background: #e9ecef; color: #6c757d; transition: all 0.2s; }
+    .view-toggle .btn-toggle.active { background: #0d6efd; color: white; box-shadow: inset 0 0 10px rgba(0,0,0,0.3); }
+    .view-toggle .btn-toggle:hover:not(.active) { background: #dee2e6; }
+
+    .buscador-wrapper { position: relative; width: 100%; }
+    .lista-sugerencias { position: absolute; top: 100%; left: 0; width: 100%; background: white; border: 4px solid #000; border-top: none; z-index: 10000; display: none; max-height: 300px; overflow-y: auto; box-shadow: 0px 10px 20px rgba(0,0,0,0.4); }
+    .item-sugerencia { padding: 15px; cursor: pointer; border-bottom: 2px solid #ccc; font-weight: 800; font-size: 1.1rem; color: #333; }
+    .item-sugerencia:hover { background-color: #0d6efd; color: white; }
 </style>
 
 <div class="container-fluid mt-4">
     <h1>📚 GESTIÓN DE PRESENTACIONES (LIQUIDACIONES)</h1>
 
+    <div class="view-toggle">
+        <button class="btn-toggle active" id="btnModeMandataria" onclick="cambiarModo('Mandataria')">
+            📁 AGRUPADO POR MANDATARIA (CABECERAS)
+        </button>
+        <button class="btn-toggle" id="btnModeOS" onclick="cambiarModo('OS')">
+            💊 DETALLADO POR OBRA SOCIAL (SÁBANA)
+        </button>
+    </div>
+
     <div class="card mb-4" style="border: 3px solid #6c757d; background-color: #e2e3e5;">
         <div class="card-body">
-            <h4 class="mb-3 fw-bold">🔍 BUSCAR LIQUIDACIONES</h4>
+            <h4 class="mb-3 fw-bold">🔍 FILTROS DE BÚSQUEDA</h4>
             <div class="row g-3">
-                <div class="col-md-2">
-                    <label class="form-label">N° Liquidación</label>
-                    <input type="number" id="filtroId" class="form-control" placeholder="Ej: 105">
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Fecha Desde</label>
+                <div class="col-md-3">
+                    <label class="form-label">Desde</label>
                     <input type="date" id="filtroFechaDesde" class="form-control">
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label">Fecha Hasta</label>
+                <div class="col-md-3">
+                    <label class="form-label">Hasta</label>
                     <input type="date" id="filtroFechaHasta" class="form-control">
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Mandataria</label>
                     <select id="filtroMandataria" class="form-select">
                         <option value="0">-- TODAS --</option>
-                        @foreach (var m in listaMandatarias)
-                        {
-                            <option value="@m.IdMandatarias">@m.RazonSocial</option>
-                        }
+                        @foreach (var m in listaMandatarias) { <option value="@m.IdMandatarias">@m.RazonSocial</option> }
                     </select>
                 </div>
-                <div class="col-md-3 d-flex align-items-end gap-2">
-                    <button class="btn btn-primary btn-super w-100" onclick="buscarLiquidaciones()">🔍 BUSCAR</button>
-                    <button class="btn btn-secondary btn-super" onclick="limpiarFiltros()" title="Borrar filtros y ver todo">🔄</button>
+                <div class="col-md-3">
+                    <label class="form-label">Obra Social</label>
+                    <div class="buscador-wrapper">
+                        <input type="text" id="txtFiltroOS" class="form-control" placeholder="Buscar..." autocomplete="off">
+                        <input type="hidden" id="filtroOS" value="0">
+                        <div id="listaFiltroOS" class="lista-sugerencias"></div>
+                    </div>
+                </div>
+                
+                <div class="col-md-12 d-flex justify-content-end gap-2 mt-3">
+                    <button class="btn btn-primary btn-super px-5" onclick="buscarLiquidaciones()">🔍 BUSCAR</button>
+                    <button class="btn btn-secondary btn-super" onclick="limpiarFiltros()" title="Borrar filtros">🔄</button>
                 </div>
             </div>
         </div>
@@ -78,17 +125,16 @@
 
     <div class="card" style="border: 3px solid #000;">
         <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center p-3">
-            <h3 class="m-0 fw-bold">📋 LISTADO</h3>
+            <h3 class="m-0 fw-bold" id="tituloTabla">📋 LISTADO</h3>
             <button class="btn btn-success btn-super text-white" onclick="abrirModalNueva()">➕ NUEVA PRESENTACIÓN</button>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-striped table-hover mb-0" id="tablaResultados">
-                    <thead>
-                        <tr><th>N°</th><th>FECHA</th><th>MANDATARIA</th><th>OBSERVACIONES</th><th>ACCIONES</th></tr>
-                    </thead>
+                    <thead id="theadResultados">
+                        </thead>
                     <tbody id="tbodyResultados">
-                        <tr><td colspan="5" class="text-center p-4 text-muted fs-4">Use los filtros para buscar...</td></tr>
+                        <tr><td colspan="6" class="text-center p-4 text-muted fs-4">Cargando...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -169,7 +215,7 @@
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content border-4 border-info">
             <div class="modal-header bg-info text-white">
-                <h3 class="modal-title fw-bold text-dark">👁️ CONSULTA Y EDICIÓN DE ÍTEMS</h3>
+                <h3 class="modal-title fw-bold text-dark">👁️ CONSULTA Y EDICIÓN</h3>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body bg-white p-0">
@@ -202,7 +248,7 @@
                 </div>
             </div>
             <div class="modal-footer bg-light d-flex justify-content-between">
-                <button type="button" class="btn btn-primary btn-lg fw-bold" onclick="imprimirReporte()">
+                <button type="button" class="btn btn-primary btn-lg fw-bold" onclick="imprimirReporteGlobal()">
                     🖨️ IMPRIMIR REPORTE
                 </button>
                 <button type="button" class="btn btn-lg btn-dark fw-bold px-5" data-bs-dismiss="modal">CERRAR</button>
@@ -260,20 +306,14 @@
             <div class="modal-body bg-light">
                 <input type="hidden" id="edit_Id" value="0">
                 <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label">📅 FECHA</label>
-                        <input type="date" id="edit_Fecha" class="form-control">
-                    </div>
+                    <div class="col-md-6"><label class="form-label">📅 FECHA</label><input type="date" id="edit_Fecha" class="form-control"></div>
                     <div class="col-md-6">
                         <label class="form-label">🏢 MANDATARIA</label>
                         <select id="edit_Mandataria" class="form-select fw-bold">
                             @foreach (var m in listaMandatarias) { <option value="@m.IdMandatarias">@m.RazonSocial</option> }
                         </select>
                     </div>
-                    <div class="col-12">
-                        <label class="form-label">📝 OBSERVACIONES</label>
-                        <input type="text" id="edit_Obs" class="form-control">
-                    </div>
+                    <div class="col-12"><label class="form-label">📝 OBSERVACIONES</label><input type="text" id="edit_Obs" class="form-control"></div>
                 </div>
                 <div class="alert alert-info mt-3 fw-bold">
                     ℹ️ Para editar los ítems (recetas, montos), utilice el botón "VER" del listado principal.
@@ -289,6 +329,14 @@
 
 @section Scripts {
 <script>
+    // DATOS FARMACIA PARA IMPRESIÓN
+    const farmaciaInfo = {
+        nombre: "@Html.Raw(nombreFarmacia)",
+        domicilio: "@Html.Raw(direccionFarmacia)",
+        cuit: "@Html.Raw(cuitFarmacia)",
+        iva: "@Html.Raw(ivaFarmacia)"
+    };
+
     // VARIABLES GLOBALES
     let detallesTemporales = []; 
     let indiceTemporal = 0;      
@@ -297,15 +345,184 @@
     const modalItem = new bootstrap.Modal(document.getElementById('modalItemIndividual'));
     const modalEditCab = new bootstrap.Modal(document.getElementById('modalEditarCabecera'));
 
+    var datosOS = @Html.Raw(jsonObrasSociales);
+    var modoActual = 'Mandataria'; // ESTADO INICIAL DEL TOGGLE
+
     const mapaMandatarias = {};
     @foreach (var m in listaMandatarias) { @:mapaMandatarias["@m.IdMandatarias"] = "@Html.Raw(m.RazonSocial)";
     }
 
-    // LÓGICA COMÚN
+    // =========================================================
+    // INICIALIZACIÓN Y TOGGLE DE MODOS
+    // =========================================================
+    document.addEventListener("DOMContentLoaded", () => {
+        setupAuto('txtFiltroOS', 'listaFiltroOS', 'filtroOS', datosOS);
+        cambiarModo('Mandataria');
+    });
+
+    function cambiarModo(modo) {
+        modoActual = modo;
+        
+        if(modo === 'Mandataria') {
+            document.getElementById('btnModeMandataria').classList.add('active');
+            document.getElementById('btnModeOS').classList.remove('active');
+            document.getElementById('tituloTabla').textContent = "📋 LISTADO POR MANDATARIA";
+        } else {
+            document.getElementById('btnModeMandataria').classList.remove('active');
+            document.getElementById('btnModeOS').classList.add('active');
+            document.getElementById('tituloTabla').textContent = "💊 DETALLE GLOBAL POR OBRA SOCIAL (SOLO DEUDAS)";
+        }
+
+        // Reconstruir Cabecera de Tabla
+        const thead = document.getElementById('theadResultados');
+        if(modo === 'Mandataria') {
+            thead.innerHTML = `<tr><th>N°</th><th>FECHA</th><th>PERIODO</th><th>MANDATARIA</th><th>OBSERVACIONES</th><th class="text-end">TOTAL</th><th class="text-center">ACCIONES</th></tr>`;
+        } else {
+            // MODO SÁBANA (Sin ID visible para el usuario)
+            thead.innerHTML = `<tr><th>FECHA</th><th>PERIODO</th><th>MANDATARIA</th><th>OBRA SOCIAL</th><th class="text-center">RECETAS</th><th class="text-end">A COBRAR</th><th class="text-end">SALDO PEND.</th><th class="text-center">ACCIONES</th></tr>`;
+        }
+
+        buscarLiquidaciones();
+    }
+
+    // =========================================================
+    // BÚSQUEDA UNIFICADA
+    // =========================================================
+    async function buscarLiquidaciones() {
+        const id = ""; // YA NO USAMOS ID PARA BUSCAR
+        const desde = document.getElementById('filtroFechaDesde').value;
+        const hasta = document.getElementById('filtroFechaHasta').value;
+        const mand = document.getElementById('filtroMandataria').value;
+        const idOS = document.getElementById('filtroOS').value; 
+
+        const tbody = document.getElementById('tbodyResultados');
+        const cols = modoActual === 'Mandataria' ? 7 : 8;
+        tbody.innerHTML = `<tr><td colspan="${cols}" class="text-center p-4"><div class="spinner-border text-primary"></div></td></tr>`;
+
+        let url = "";
+        if (modoActual === 'Mandataria') {
+            url = `@Url.Action("BuscarLiquidacionesAjax", "Home")?desde=${desde}&hasta=${hasta}&mandataria=${mand}`; // Sacamos ID del query
+        } else {
+            url = `@Url.Action("BuscarDetallesGlobalesAjax", "Home")?desde=${desde}&hasta=${hasta}&idMandataria=${mand}&idOS=${idOS}`;
+        }
+
+        try {
+            const r = await fetch(url);
+            const res = await r.json();
+            
+            if (res.success && res.data.length > 0) {
+                tbody.innerHTML = ''; 
+                
+                if (modoActual === 'Mandataria') {
+                    // MODO CLÁSICO
+                    res.data.forEach(l => {
+                        const f = new Date(l.FechaPresentacion || l.fechaPresentacion).toLocaleDateString('es-AR');
+                        const nm = l.NombreMandataria || mapaMandatarias[l.IdMandatarias || l.idMandatarias] || "---";
+                        const idLiq = l.IdLiquidaciones || l.idLiquidaciones;
+                        const total = parseFloat(l.TotalPresentado || l.totalPresentado || 0);
+                        
+                        tbody.innerHTML += `<tr>
+                            <td class="fw-bold fs-5">${idLiq}</td>
+                            <td>${f}</td>
+                            <td class="fw-bold text-muted">${l.Periodo||l.periodo||'-'}</td>
+                            <td class="fw-bold text-primary">${nm}</td>
+                            <td>${l.Observaciones || l.observaciones || '-'}</td>
+                            <td class="text-end fw-bold">$${total.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+                            <td class="text-center">
+                                <button class="btn btn-warning btn-sm fw-bold me-1" onclick="editarCabecera(${idLiq})">✏️</button>
+                                <button class="btn btn-info btn-sm text-white fw-bold me-1" onclick="verLiquidacion(${idLiq}, '${f}', '${nm}')">👁️ VER</button>
+                                <button class="btn btn-danger btn-sm fw-bold" onclick="eliminarLiquidacion(${idLiq})">🗑️</button>
+                            </td></tr>`;
+                    });
+                } else {
+                    // MODO OS (SÁBANA) - SOLO DEUDAS (PAGADO = FALSE)
+                    let contadorVisibles = 0;
+                    res.data.forEach(x => {
+                        const pagado = (x.Pagado === true || x.Pagado === 1);
+                        
+                        // FILTRO VISUAL: SI ESTÁ PAGADO, NO SE MUESTRA
+                        if (pagado) return; 
+
+                        contadorVisibles++;
+                        const f = (x.FechaPresentacion||x.fechaPresentacion||'').split('T')[0];
+                        const bruto = parseFloat(x.TotalBruto||x.totalBruto||0);
+                        const saldo = parseFloat(x.SaldoPendiente);
+                        const visualSaldo = isNaN(saldo) ? bruto : saldo; 
+                        const idDet = x.IdLiquidacionDetalle || x.idLiquidacionDetalle;
+                        const idPadre = x.IdLiquidaciones || x.idLiquidaciones;
+
+                        // Datos para impresión individual
+                        const datosPrint = JSON.stringify({
+                            os: x.NombreObraSocial||x.nombreObraSocial,
+                            periodo: x.Periodo||x.periodo,
+                            monto: bruto
+                        }).replace(/"/g, '&quot;');
+
+                        tbody.innerHTML += `<tr>
+                            <td class="text-center small">${f}</td>
+                            <td class="text-center fw-bold">${x.Periodo||x.periodo}</td>
+                            <td class="small text-muted">${x.NombreMandataria||x.nombreMandataria}</td>
+                            <td class="fw-bold text-primary fs-5">${x.NombreObraSocial||x.nombreObraSocial}</td>
+                            <td class="text-center fw-bold">${x.CantidadRecetas||x.cantidadRecetas}</td>
+                            <td class="text-end text-muted">$${bruto.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+                            <td class="text-end fw-black text-danger">$${visualSaldo.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-warning me-1" onclick="abrirItemABM(${idDet}, ${idPadre})">✏️</button>
+                                <button class="btn btn-sm btn-danger me-1" onclick="eliminarItemIndividual(${idDet})">🗑️</button>
+                                <button class="btn btn-sm btn-primary" onclick="imprimirItemIndividual(${datosPrint})">🖨️</button>
+                            </td>
+                        </tr>`;
+                    });
+
+                    if(contadorVisibles === 0) {
+                        tbody.innerHTML = `<tr><td colspan="${cols}" class="text-center p-4 fs-4 text-success fw-bold">👏 ¡No hay deudas pendientes con estos filtros!</td></tr>`;
+                    }
+                }
+            } else { tbody.innerHTML = `<tr><td colspan="${cols}" class="text-center p-4 fs-4 text-muted">Sin resultados.</td></tr>`; }
+        } catch (e) { console.error(e); tbody.innerHTML = `<tr><td colspan="${cols}" class="text-danger text-center">Error de conexión.</td></tr>`; }
+    }
+
+    function limpiarFiltros() {
+        document.getElementById('filtroFechaDesde').value = "";
+        document.getElementById('filtroFechaHasta').value = "";
+        document.getElementById('filtroMandataria').value = "0";
+        document.getElementById('txtFiltroOS').value = ""; document.getElementById('filtroOS').value = "0";
+        buscarLiquidaciones(); 
+    }
+
+    // =========================================================
+    // AUTOCOMPLETADO
+    // =========================================================
+    function setupAuto(inpId, listId, hidId, fuenteDatos) {
+        const inp = document.getElementById(inpId);
+        const list = document.getElementById(listId);
+        const hid = document.getElementById(hidId);
+        inp.oninput = function() {
+            const t = this.value.toLowerCase();
+            list.innerHTML = '';
+            if (t.length < 1) { list.style.display = 'none'; hid.value="0"; return; }
+            const f = fuenteDatos.filter(x => x.nombre.toLowerCase().includes(t));
+            if (f.length === 0) { list.innerHTML = '<div class="item-sugerencia text-muted">🚫 NO EXISTE</div>'; list.style.display = 'block'; return; }
+            f.forEach(x => {
+                const item = document.createElement('div');
+                item.className = 'item-sugerencia'; item.textContent = x.nombre;
+                item.onclick = function() {
+                    inp.value = x.nombre; hid.value = x.id; list.style.display = 'none';
+                };
+                list.appendChild(item);
+            });
+            list.style.display = 'block';
+        };
+        inp.onblur = function() { setTimeout(() => { list.style.display = 'none'; }, 300); };
+    }
+
+    // =========================================================
+    // FUNCIONALIDADES ORIGINALES (NUEVO, EDITAR, VER)
+    // =========================================================
+    
     async function cargarPlanesDeOS(idOS, idSelectDestino) {
         const selectPlan = document.getElementById(idSelectDestino);
-        selectPlan.innerHTML = '<option value="0">Cargando...</option>';
-        selectPlan.disabled = true;
+        selectPlan.innerHTML = '<option value="0">Cargando...</option>'; selectPlan.disabled = true;
         if (idOS == "0") { selectPlan.innerHTML = '<option value="0">- Primero OS -</option>'; return; }
         try {
             const r = await fetch(`@Url.Action("ObtenerPlanesPorObrasSociales", "Home")?idObraSocial=${idOS}`);
@@ -330,7 +547,6 @@
         document.getElementById(idInNet).value = (total * (porc / 100.0)).toFixed(2);
     }
 
-    // ALTA NUEVA (TABLA TEMPORAL)
     document.getElementById('btnAgregarFila').addEventListener('click', function() {
         const os = document.getElementById('inputOS'); const plan = document.getElementById('inputPlan');
         if (os.value == "0" || plan.value == "0") { alert("⚠️ Faltan datos."); return; }
@@ -345,8 +561,7 @@
             nombreOSVisual: os.options[os.selectedIndex].text,
             nombrePlanVisual: plan.options[plan.selectedIndex].text
         };
-        detallesTemporales.push(nuevo);
-        dibujarTablaDetalles();
+        detallesTemporales.push(nuevo); dibujarTablaDetalles();
         os.value="0"; plan.value="0"; plan.disabled=true;
         document.getElementById('inputRecetas').value="0"; document.getElementById('inputTotal').value="0.00";
         document.getElementById('inputCargoOS').value="0.00"; document.getElementById('inputNeto').value="0.00";
@@ -367,8 +582,7 @@
     function quitarDetalle(id) { detallesTemporales = detallesTemporales.filter(d => d.idTemp !== id); dibujarTablaDetalles(); }
 
     document.getElementById('btnGuardarTodo').addEventListener('click', async function() {
-        const btn = this;
-        const idMand = document.getElementById('liqMandataria').value;
+        const btn = this; const idMand = document.getElementById('liqMandataria').value;
         if (idMand == "0") { alert("⚠️ Falta Mandataria."); return; }
         if (detallesTemporales.length === 0) { alert("⚠️ Lista vacía."); return; }
         if(!confirm("¿Confirmar?")) return;
@@ -387,51 +601,12 @@
         } catch (e) { alert("Error."); } finally { btn.disabled = false; btn.innerHTML = "💾 GUARDAR TODO"; }
     });
 
-    // BUSCADOR PRINCIPAL + RESET
     function abrirModalNueva() {
         document.getElementById('tituloModal').textContent = "NUEVA LIQUIDACIÓN";
         document.getElementById('liqId').value = "0"; document.getElementById('liqMandataria').value = "0";
         detallesTemporales = []; dibujarTablaDetalles(); modalABM.show();
     }
 
-    // --- NUEVA FUNCIÓN: LIMPIAR FILTROS ---
-    function limpiarFiltros() {
-        document.getElementById('filtroId').value = "";
-        document.getElementById('filtroFechaDesde').value = "";
-        document.getElementById('filtroFechaHasta').value = "";
-        document.getElementById('filtroMandataria').value = "0";
-        buscarLiquidaciones(); // Recarga automática
-    }
-
-    async function buscarLiquidaciones() {
-        const id = document.getElementById('filtroId').value;
-        const desde = document.getElementById('filtroFechaDesde').value;
-        const hasta = document.getElementById('filtroFechaHasta').value;
-        const mand = document.getElementById('filtroMandataria').value;
-        const tbody = document.getElementById('tbodyResultados');
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center p-3"><div class="spinner-border"></div></td></tr>';
-
-        try {
-            const r = await fetch(`@Url.Action("BuscarLiquidacionesAjax", "Home")?id=${id}&desde=${desde}&hasta=${hasta}&mandataria=${mand}`);
-            const res = await r.json();
-            if (res.success && res.data.length > 0) {
-                tbody.innerHTML = ''; 
-                res.data.forEach(l => {
-                    const f = new Date(l.fechaPresentacion).toLocaleDateString('es-AR');
-                    const nm = mapaMandatarias[l.idMandatarias] || "---";
-                    tbody.innerHTML += `<tr>
-                        <td class="fw-bold fs-5">${l.idLiquidaciones}</td><td>${f}</td><td class="fw-bold">${nm}</td><td>${l.observaciones||'-'}</td>
-                        <td>
-                            <button class="btn btn-warning btn-sm fw-bold me-1" onclick="editarCabecera(${l.idLiquidaciones})">✏️</button>
-                            <button class="btn btn-info btn-sm text-white fw-bold me-1" onclick="verLiquidacion(${l.idLiquidaciones}, '${f}', '${nm}')">👁️ VER</button>
-                            <button class="btn btn-danger btn-sm fw-bold" onclick="eliminarLiquidacion(${l.idLiquidaciones})">🗑️</button>
-                        </td></tr>`;
-                });
-            } else { tbody.innerHTML = '<tr><td colspan="5" class="text-center p-4">Sin resultados.</td></tr>'; }
-        } catch (e) { tbody.innerHTML = '<tr><td colspan="5" class="text-danger text-center">Error.</td></tr>'; }
-    }
-
-    // VISOR DE DETALLES Y CÁLCULO NETO REAL
     let idLiquidacionActualVisor = 0; 
     async function verLiquidacion(id, f, nm) {
         idLiquidacionActualVisor = id;
@@ -451,18 +626,14 @@
                 if(d.data.length === 0) { tbody.innerHTML = '<tr><td colspan="8" class="text-center p-3">Sin detalles.</td></tr>'; return; }
                 d.data.forEach(x => {
                     const nomOS = document.querySelector(`#inputOS option[value="${x.idObrasSociales}"]`)?.text || `ID ${x.idObrasSociales}`;
-                    
-                    // --- CÁLCULO NETO A PAGAR REAL ---
                     const aPagarReal = x.montoCargoOS - x.montoBonificacion;
-
-                    // --- ESTILO CORREGIDO: SIN COLOR VERDE EN A PAGAR ---
                     tbody.innerHTML += `<tr>
                         <td class="nombre-os">${nomOS}</td><td class="text-center">${x.idPlanBonificacion}</td><td class="text-center">${x.cantidadRecetas}</td>
                         <td class="text-end">$${x.totalBruto.toFixed(2)}</td><td class="text-end">$${x.montoCargoOS.toFixed(2)}</td>
                         <td class="text-end">$${x.montoBonificacion.toFixed(2)}</td>
                         <td class="text-end fw-bold border border-secondary">$${aPagarReal.toFixed(2)}</td>
                         <td class="text-center">
-                            <button class="btn btn-warning btn-sm" onclick="abrirItemABM(${x.idLiquidacionDetalle})">✏️</button>
+                            <button class="btn btn-warning btn-sm" onclick="abrirItemABM(${x.idLiquidacionDetalle}, ${idLiquidacionActualVisor})">✏️</button>
                             <button class="btn btn-danger btn-sm" onclick="eliminarItemIndividual(${x.idLiquidacionDetalle})">🗑️</button>
                         </td></tr>`;
                 });
@@ -470,7 +641,6 @@
         } catch(e) { tbody.innerHTML = '<tr><td colspan="8" class="text-danger">Error.</td></tr>'; }
     }
 
-    // EDICIÓN DE CABECERA
     async function editarCabecera(id) {
         try {
             const r = await fetch(`@Url.Action("ObtenerCabeceraLiquidacion", "Home")?id=${id}`);
@@ -492,7 +662,6 @@
         fd.append("Fecha", document.getElementById('edit_Fecha').value);
         fd.append("IdMandataria", document.getElementById('edit_Mandataria').value);
         fd.append("Observaciones", document.getElementById('edit_Obs').value);
-
         try {
             const r = await fetch('@Url.Action("GuardarEdicionCabecera", "Home")', { method: 'POST', body: fd });
             const res = await r.json();
@@ -501,7 +670,6 @@
         } catch(e) { alert("Error al guardar."); }
     }
 
-    // UTILS
     function filtrarDetalles() {
         const txt = document.getElementById('buscadorDetalles').value.toLowerCase();
         document.querySelectorAll('#tbodyVerDetalle tr').forEach(r => {
@@ -509,6 +677,7 @@
             if(c) r.style.display = c.textContent.toLowerCase().includes(txt) ? '' : 'none';
         });
     }
+    
     async function eliminarLiquidacion(id) {
         if (!confirm(`¿Borrar liquidación N° ${id}?`)) return;
         const fd = new FormData(); fd.append("QueToco", "Eliminar"); fd.append("IdLiquidacion", id);
@@ -516,12 +685,14 @@
         if((await r.json()).success) { alert("Borrado."); buscarLiquidaciones(); } else alert("Error."); } catch(e){}
     }
     
-    // FUNCIONES ABM ITEM INDIVIDUAL (MINI MODAL)
-    async function abrirItemABM(idItem) {
+    // ABM ITEM INDIVIDUAL (MINI MODAL)
+    // Nota: El parámetro idPadre es opcional, se usa para recargar visor si estamos en modo sabana
+    async function abrirItemABM(idItem, idPadre = 0) {
         document.getElementById('item_Id').value = idItem;
-        document.getElementById('item_IdLiquidacionPadre').value = idLiquidacionActualVisor;
+        // Si viene idPadre (Modo Sabana), lo usamos. Si no, usamos el del visor actual
+        document.getElementById('item_IdLiquidacionPadre').value = (idPadre > 0) ? idPadre : idLiquidacionActualVisor;
+        
         document.getElementById('tituloModalItem').textContent = (idItem === 0) ? "NUEVO ÍTEM" : "EDITAR ÍTEM";
-        // Reset Inputs
         document.getElementById('item_IdOS').value="0"; document.getElementById('item_IdPlan').innerHTML='<option value="0">- Primero OS -</option>';
         document.getElementById('item_IdPlan').disabled=true;
         document.getElementById('item_Recetas').value="0"; document.getElementById('item_Total').value="0.00";
@@ -560,18 +731,29 @@
 
         try {
             const r = await fetch('@Url.Action("GuardarItemIndividual", "Home")', { method: 'POST', body: fd });
-            if((await r.json()).success) { alert("✅ Guardado."); cerrarModalItem(); recargarTablaVisor(); }
+            if((await r.json()).success) { 
+                alert("✅ Guardado."); 
+                cerrarModalItem(); 
+                if(modoActual === 'OS') buscarLiquidaciones(); // Recarga sábana
+                else recargarTablaVisor(); // Recarga modal normal
+            }
             else alert("Error.");
         } catch(e) { alert("Error."); }
     }
+    
     async function eliminarItemIndividual(id) {
         if(!confirm("¿Borrar ítem?")) return;
-        const fd = new FormData(); fd.append("idItem", id); fd.append("idLiquidacionPadre", idLiquidacionActualVisor);
-        try { if((await (await fetch('@Url.Action("EliminarItemIndividual", "Home")', { method: 'POST', body: fd })).json()).success) recargarTablaVisor(); } catch(e){}
+        const fd = new FormData(); fd.append("idItem", id); fd.append("idLiquidacionPadre", 0); // No importa padre para borrar
+        try { 
+            if((await (await fetch('@Url.Action("EliminarItemIndividual", "Home")', { method: 'POST', body: fd })).json()).success) {
+                if(modoActual === 'OS') buscarLiquidaciones();
+                else recargarTablaVisor();
+            }
+        } catch(e){}
     }
 
-    // IMPRIMIR REPORTE
-    function imprimirReporte() {
+    // IMPRESIÓN REPORTE GLOBAL (MODAL)
+    function imprimirReporteGlobal() {
         const idLiq = document.getElementById('verId').textContent;
         const fecha = document.getElementById('verFecha').textContent;
         const mandataria = document.getElementById('verMandataria').textContent;
@@ -591,11 +773,30 @@
                 </tr>`;
             }
         });
+        abrirVentanaImpresion(idLiq, mandataria, fecha, filasHTML);
+    }
 
+    // NUEVO: IMPRESIÓN INDIVIDUAL (SÁBANA)
+    function imprimirItemIndividual(datos) {
+        const filasHTML = `<tr>
+            <td style="text-align:left; padding:5px;">${datos.os}</td>
+            <td style="text-align:center;">-</td>
+            <td style="text-align:center;">-</td>
+            <td style="text-align:right;">$${datos.monto.toFixed(2)}</td>
+            <td style="text-align:right;">-</td>
+            <td style="text-align:right;">-</td>
+            <td style="text-align:right; font-weight:bold;">$${datos.monto.toFixed(2)}</td>
+        </tr>`;
+        abrirVentanaImpresion(datos.periodo, "Individual", new Date().toLocaleDateString(), filasHTML);
+    }
+
+    // FUNCIÓN COMÚN DE IMPRESIÓN CON DATOS DE FARMACIA
+    function abrirVentanaImpresion(ref, mand, fecha, filas) {
         const v = window.open('', '', 'height=800,width=1000');
         v.document.write(`<html><head><title>Impresión Liquidación</title><style>
             body { font-family: 'Courier New', monospace; font-size: 14px; padding: 20px; }
             h1 { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; }
+            .header-farmacia { text-align: center; margin-bottom: 20px; font-weight: bold; }
             .info-box { border: 1px solid #000; padding: 10px; margin-bottom: 20px; background: #f0f0f0; }
             .info-item { font-weight: bold; margin-right: 20px; font-size: 16px; }
             table { width: 100%; border-collapse: collapse; margin-top: 10px; }
@@ -603,23 +804,28 @@
             td { border-bottom: 1px solid #ccc; padding: 5px; }
             .firma { margin-top: 80px; text-align: right; font-weight: bold; }
         </style></head><body>
-            <h1>DETALLE DE LIQUIDACIÓN DE OBRAS SOCIALES</h1>
+            
+            <div class="header-farmacia">
+                ${farmaciaInfo.nombre}<br>
+                ${farmaciaInfo.domicilio} - CUIT: ${farmaciaInfo.cuit}<br>
+                Condición IVA: ${farmaciaInfo.iva}
+            </div>
+
+            <h1>DETALLE DE LIQUIDACIÓN</h1>
             <div class="info-box">
-                <span class="info-item">N°: ${idLiq}</span> <br><br>
-                <span class="info-item">MANDATARIA: ${mandataria}</span> <br><br>
+                <span class="info-item">REF: ${ref}</span> <br><br>
+                <span class="info-item">MANDATARIA: ${mand}</span> <br><br>
                 <span class="info-item">FECHA: ${fecha}</span>
             </div>
             <table><thead><tr>
                 <th style="text-align:left;">OBRA SOCIAL</th><th>PLAN</th><th>RECETAS</th>
                 <th style="text-align:right;">TOTAL</th><th style="text-align:right;">CARGO O.S.</th>
                 <th style="text-align:right;">BONIF.</th><th style="text-align:right;">A PAGAR</th>
-            </tr></thead><tbody>${filasHTML}</tbody></table>
+            </tr></thead><tbody>${filas}</tbody></table>
             <div class="firma">_______________________________<br>Firma Responsable</div>
             <div style="text-align:center; margin-top:50px; font-size:10px;">Generado el: ${new Date().toLocaleString()}</div>
         </body></html>`);
         v.document.close(); v.focus(); setTimeout(() => { v.print(); v.close(); }, 500);
     }
-
-    document.addEventListener("DOMContentLoaded", () => { buscarLiquidaciones(); });
 </script>
 }

@@ -296,11 +296,13 @@ public static void InsertarLiquidacionDetalle(int idLiquidacion, int idOS, int i
 {
     using (SqlConnection connection = new SqlConnection(_connectionString))
     {
-        // CAMBIO: Insertamos también SaldoPendiente (igual al Bruto) y Pagado (0)
+        // CAMBIO: El SaldoPendiente inicial es (cargoOS - bonificacion)
+        decimal saldoInicial = cargoOS - bonificacion;
+
         string query = @"INSERT INTO LiquidacionDetalle 
                         (IdLiquidaciones, IdObrasSociales, IdPlanBonificacion, CantidadRecetas, TotalBruto, MontoCargoOS, MontoBonificacion, SaldoPendiente, Pagado)
                         VALUES 
-                        (@pIdLiq, @pIdOS, @pIdPlan, @pRecetas, @pBruto, @pCargoOS, @pBoni, @pBruto, 0)";
+                        (@pIdLiq, @pIdOS, @pIdPlan, @pRecetas, @pBruto, @pCargoOS, @pBoni, @pSaldo, 0)";
         
         connection.Execute(query, new { 
             pIdLiq = idLiquidacion, 
@@ -309,39 +311,42 @@ public static void InsertarLiquidacionDetalle(int idLiquidacion, int idOS, int i
             pRecetas = recetas, 
             pBruto = bruto, 
             pCargoOS = cargoOS, 
-            pBoni = bonificacion 
+            pBoni = bonificacion,
+            pSaldo = saldoInicial // <--- AQUÍ SE INICIA LA DEUDA REAL
         });
     }
 }
 
 // 3. BUSCAR CON FILTROS (MANDATARIA, FECHAS, ID)
-public static List<Liquidaciones> BuscarLiquidaciones(int? idLiq, DateTime? desde, DateTime? hasta, int? idMandataria)
+public static List<dynamic> BuscarLiquidaciones(int? id, DateTime? desde, DateTime? hasta, int? mandataria)
 {
     using (SqlConnection connection = new SqlConnection(_connectionString))
     {
-        // Construcción dinámica de la query (básica pero segura)
-        string query = "SELECT * FROM Liquidaciones WHERE 1=1 ";
-        
-        if (idLiq.HasValue && idLiq.Value > 0)
-            query += " AND IdLiquidaciones = @pIdLiq";
-        
-        if (desde.HasValue)
-            query += " AND FechaPresentacion >= @pDesde";
-            
-        if (hasta.HasValue)
-            query += " AND FechaPresentacion <= @pHasta";
-            
-        if (idMandataria.HasValue && idMandataria.Value > 0)
-            query += " AND IdMandatarias = @pIdMand";
+        // CAMBIO CLAVE: Sumamos (Cargo - Bonif) para el TotalReal
+        string query = @"
+            SELECT 
+                L.IdLiquidaciones,
+                L.FechaPresentacion,
+                L.Periodo,
+                L.Observaciones,
+                L.IdMandatarias,
+                M.RazonSocial as NombreMandataria,
+                ISNULL(SUM(LD.MontoCargoOS - LD.MontoBonificacion), 0) as TotalReal -- <--- AQUÍ ESTÁ EL CAMBIO
+            FROM Liquidaciones L
+            INNER JOIN Mandatarias M ON L.IdMandatarias = M.IdMandatarias
+            LEFT JOIN LiquidacionDetalle LD ON L.IdLiquidaciones = LD.IdLiquidaciones
+            WHERE 1=1 ";
 
-        query += " ORDER BY FechaPresentacion DESC";
+        if (id.HasValue) query += " AND L.IdLiquidaciones = @pId";
+        if (desde.HasValue) query += " AND L.FechaPresentacion >= @pDesde";
+        if (hasta.HasValue) query += " AND L.FechaPresentacion <= @pHasta";
+        if (mandataria.HasValue && mandataria.Value > 0) query += " AND L.IdMandatarias = @pMand";
 
-        return connection.Query<Liquidaciones>(query, new { 
-            pIdLiq = idLiq, 
-            pDesde = desde, 
-            pHasta = hasta, 
-            pIdMand = idMandataria 
-        }).ToList();
+        query += @" 
+            GROUP BY L.IdLiquidaciones, L.FechaPresentacion, L.Periodo, L.Observaciones, L.IdMandatarias, M.RazonSocial
+            ORDER BY L.FechaPresentacion DESC";
+
+        return connection.Query<dynamic>(query, new { pId = id, pDesde = desde, pHasta = hasta, pMand = mandataria }).ToList();
     }
 }
 
@@ -498,8 +503,47 @@ public static void ModificarLiquidacionCabecera(int id, int idMandataria, DateTi
         });
     }
 }
+// =============================================================================
+// BÚSQUEDA GLOBAL DE DETALLES (Para la vista "Por Obra Social")
+// =============================================================================
+public static List<dynamic> BuscarDetallesGlobales(DateTime? desde, DateTime? hasta, int? idMandataria, int? idOS)
+{
+    using (SqlConnection connection = new SqlConnection(_connectionString))
+    {
+        // CAMBIO: Devolvemos (Cargo - Bonif) como 'TotalBruto' visual para que la tabla muestre la deuda real original
+        string query = @"
+            SELECT 
+                LD.IdLiquidacionDetalle,
+                LD.IdLiquidaciones,
+                L.FechaPresentacion,
+                L.Periodo,
+                M.RazonSocial as NombreMandataria,
+                OS.Nombre as NombreObraSocial,
+                LD.CantidadRecetas,
+                (LD.MontoCargoOS - LD.MontoBonificacion) as TotalBruto, -- <--- CAMBIO: MOSTRAMOS EL NETO COMO BASE
+                LD.SaldoPendiente,
+                LD.Pagado
+            FROM LiquidacionDetalle LD
+            INNER JOIN Liquidaciones L ON LD.IdLiquidaciones = L.IdLiquidaciones
+            INNER JOIN Mandatarias M ON L.IdMandatarias = M.IdMandatarias
+            INNER JOIN ObrasSociales OS ON LD.IdObrasSociales = OS.IdObrasSociales
+            WHERE 1=1 ";
 
+        if (desde.HasValue) query += " AND L.FechaPresentacion >= @pDesde";
+        if (hasta.HasValue) query += " AND L.FechaPresentacion <= @pHasta";
+        if (idMandataria.HasValue && idMandataria.Value > 0) query += " AND M.IdMandatarias = @pMand";
+        if (idOS.HasValue && idOS.Value > 0) query += " AND OS.IdObrasSociales = @pOS";
 
+        query += " ORDER BY L.FechaPresentacion DESC, M.RazonSocial, OS.Nombre";
+
+        return connection.Query<dynamic>(query, new { 
+            pDesde = desde, 
+            pHasta = hasta, 
+            pMand = idMandataria, 
+            pOS = idOS 
+        }).ToList();
+    }
+}
 
 
 public static Usuario TraerUsuarioPorId(int idUsuario)
