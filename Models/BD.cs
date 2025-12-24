@@ -556,46 +556,38 @@ public static List<dynamic> BuscarCobros(DateTime? desde, DateTime? hasta, int? 
 {
     using (SqlConnection connection = new SqlConnection(_connectionString))
     {
-        // NOTA: El padre (C) NO tiene TipoPago. Agrupamos por el Lote físico.
         string query = @"
             SELECT 
                 C.IdCobros,
-                MAX(M.RazonSocial) as NombreMandataria,
                 C.NumeroComprobante,
-                C.FechaCobro, -- Fecha del Lote (Padre)
-                
-                -- Sumamos los detalles
-                ISNULL(SUM(D.ImporteCobrado), 0) as TotalImporte,
-                ISNULL(SUM(D.MontoDebito), 0) as TotalDebitos,
-                COUNT(D.IdCobrosDetalle) as CantidadItems,
-                
-                -- Datos para referencias
-                MAX(M.IdMandatarias) as IdMandatarias
+                CAST(C.FechaCobro AS DATE) as FechaCobro,
+                M.RazonSocial as NombreMandataria,
+                M.IdMandatarias,
+                COUNT(CD.IdCobrosDetalle) as CantidadItems,
+                COALESCE(SUM(CD.ImporteCobrado), 0) as TotalImporte,
+                COALESCE(SUM(CD.MontoDebito), 0) as TotalDebitos
             FROM Cobros C
             INNER JOIN Mandatarias M ON C.IdMandatarias = M.IdMandatarias
-            LEFT JOIN CobrosDetalle D ON C.IdCobros = D.IdCobros
+            LEFT JOIN CobrosDetalle CD ON C.IdCobros = CD.IdCobros
             WHERE 1=1 ";
 
         if (desde.HasValue) query += " AND C.FechaCobro >= @pDesde";
         if (hasta.HasValue) query += " AND C.FechaCobro <= @pHasta";
-        if (idMandataria.HasValue && idMandataria.Value > 0) query += " AND C.IdMandatarias = @pIdMand";
+        if (idMandataria.HasValue && idMandataria.Value > 0) query += " AND M.IdMandatarias = @pIdMand";
         
-        // El filtro de Obra Social aplica al DETALLE, pero queremos ver el Lote que la contiene
-        if (idObraSocial.HasValue && idObraSocial.Value > 0) query += " AND D.IdObrasSociales = @pIdOS";
+        // Filtro especial: Si busca por OS, mostramos los lotes que contengan esa OS
+        if (idObraSocial.HasValue && idObraSocial.Value > 0) 
+        {
+            query += " AND EXISTS (SELECT 1 FROM CobrosDetalle sub WHERE sub.IdCobros = C.IdCobros AND sub.IdObrasSociales = @pIdOS)";
+        }
 
-        query += @"
-            GROUP BY C.IdCobros, C.NumeroComprobante, C.FechaCobro
+        query += @" 
+            GROUP BY C.IdCobros, C.NumeroComprobante, CAST(C.FechaCobro AS DATE), M.RazonSocial, M.IdMandatarias
             ORDER BY C.FechaCobro DESC";
 
-        return connection.Query<dynamic>(query, new { 
-            pDesde = desde, 
-            pHasta = hasta, 
-            pIdMand = idMandataria,
-            pIdOS = idObraSocial
-        }).ToList();
+        return connection.Query<dynamic>(query, new { pDesde = desde, pHasta = hasta, pIdMand = idMandataria, pIdOS = idObraSocial }).ToList();
     }
 }
-
 // -----------------------------------------------------------------------------------
 // 2. GUARDAR CABECERA (PADRE) - Retorna el ID generado
 // -----------------------------------------------------------------------------------
@@ -743,33 +735,21 @@ public static void EliminarCobroDetalle(int idCobroDetalle)
 // -----------------------------------------------------------------------------------
 // 6. TRAER HIJOS DE UN LOTE (Por Comprobante) - Para el Modal VER
 // -----------------------------------------------------------------------------------
-public static List<dynamic> TraerCobrosDelMismoLote(string numeroComprobante)
+public static List<dynamic> TraerCobrosDelMismoLote(int idCobroPadre)
 {
     using (SqlConnection connection = new SqlConnection(_connectionString))
     {
-        // JOIN con el Padre para filtrar por comprobante
         string query = @"
             SELECT 
-                D.IdCobrosDetalle, -- ID único del detalle
-                D.IdCobros,        -- ID del padre
-                OS.Nombre as NombreObraSocial,
-                D.FechaCobroDetalle,
-                D.TipoPago,
-                D.ImporteCobrado,
-                D.MontoDebito as MontoDebitos, -- Alias para compatibilidad
-                D.MotivoDebito,
-                M.RazonSocial as NombreMandataria
-            FROM CobrosDetalle D
-            INNER JOIN Cobros C ON D.IdCobros = C.IdCobros
-            INNER JOIN ObrasSociales OS ON D.IdObrasSociales = OS.IdObrasSociales
-            INNER JOIN Mandatarias M ON C.IdMandatarias = M.IdMandatarias
-            WHERE C.NumeroComprobante = @pComp
-            ORDER BY D.IdCobrosDetalle DESC";
-
-        return connection.Query<dynamic>(query, new { pComp = numeroComprobante }).ToList();
+                CD.*, 
+                OS.Nombre as NombreObraSocial
+            FROM CobrosDetalle CD
+            INNER JOIN ObrasSociales OS ON CD.IdObrasSociales = OS.IdObrasSociales
+            WHERE CD.IdCobros = @pId
+            ORDER BY CD.IdCobrosDetalle DESC";
+        return connection.Query<dynamic>(query, new { pId = idCobroPadre }).ToList();
     }
 }
-
 // 7. Traer un Detalle por ID (Para editar)
 public static dynamic TraerCobroDetallePorId(int idCobroDetalle)
 {
