@@ -3,18 +3,18 @@
 
 @{
     ViewData["Title"] = "Gestión de Cobros";
-    // Datos maestros del servidor
+    // Datos del servidor
     var listaMandatarias = (ViewBag.Mandatarias as IEnumerable<dynamic>)?.ToList() ?? new List<dynamic>();
     var listaObrasSociales = (ViewBag.ObrasSociales as IEnumerable<dynamic>)?.ToList() ?? new List<dynamic>();
     var listaTiposPago = (ViewBag.TiposPago as List<string>) ?? new List<string> { "Transferencia", "Cheque", "Efectivo", "Depósito" };
 
-    // Serialización segura para JS
+    // Serialización para JS
     var jsonObrasSociales = JsonSerializer.Serialize(listaObrasSociales.Select(x => new { id = x.IdObrasSociales, nombre = x.Nombre, idMandataria = x.IdMandataria }));
 }
 
 <style>
     /* =========================================
-       ESTÉTICA Y ACCESIBILIDAD (UX 85 AÑOS)
+       ESTILOS DE ALTO IMPACTO (UX 85 AÑOS)
        ========================================= */
     body { font-family: 'Verdana', sans-serif; background-color: #f4f6f9; color: #000; }
     
@@ -30,30 +30,42 @@
     
     .form-label { font-weight: 900; font-size: 0.95rem; text-transform: uppercase; margin-bottom: 8px; display: block; letter-spacing: 0.5px; }
     
+    /* Botones Gigantes */
     .btn-super { font-size: 1.1rem; font-weight: 800; padding: 12px 25px; border: 2px solid rgba(0,0,0,0.2); text-transform: uppercase; letter-spacing: 1px; }
     
     .table-container { border: 3px solid #000; border-radius: 4px; overflow: hidden; background: white; margin-top:15px; }
     .table thead th { background-color: #146c43; color: white; font-size: 1.1rem; vertical-align: middle; text-align: center; border-bottom: 3px solid #000; padding: 15px; }
     .table tbody td { font-size: 1.05rem; vertical-align: middle; font-weight: 600; padding: 12px; }
 
-    /* Buscadores Flotantes (Fix Z-Index) */
+    /* --- BUSCADORES CORREGIDOS --- */
     .buscador-wrapper { position: relative; width: 100%; }
+    
     .lista-sugerencias { 
         position: absolute; top: 100%; left: 0; width: 100%; 
         background: white; border: 4px solid #000; border-top: none; 
-        z-index: 10000; /* Prioridad sobre modales */
+        z-index: 10000; /* Z-INDEX EXTREMO PARA ESTAR SOBRE MODALES */
         display: none; max-height: 300px; overflow-y: auto; 
         box-shadow: 0px 10px 20px rgba(0,0,0,0.4);
     }
-    .item-sugerencia { padding: 15px; cursor: pointer; border-bottom: 2px solid #ccc; font-weight: 800; font-size: 1.1rem; color: #333; }
-    .item-sugerencia:hover { background-color: #198754; color: white; }
+    
+    .item-sugerencia { 
+        padding: 15px; cursor: pointer; border-bottom: 2px solid #ccc; 
+        font-weight: 800; font-size: 1.1rem; color: #333;
+    }
+    
+    .item-sugerencia:hover, .item-sugerencia.active { 
+        background-color: #198754; color: white; border-color: #0f5132;
+    }
 
+    /* Totales */
     .total-display { font-size: 2rem; font-weight: 900; color: #198754; text-align: right; padding: 15px; background: #d1e7dd; border: 3px solid #198754; border-radius: 6px; }
     
-    /* Colores Temáticos */
+    /* Colores Modales */
     .bg-header-add { background-color: #198754; color: white; border-bottom: 5px solid #0f5132; }
     .bg-header-view { background-color: #0d6efd; color: white; border-bottom: 5px solid #0a58ca; }
     .bg-header-edit { background-color: #ffc107; color: #000; border-bottom: 5px solid #000; }
+    
+    .loading-cell { display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: bold; color: #666; }
 </style>
 
 <div class="container-fluid mt-4">
@@ -115,13 +127,13 @@
     <div class="modal-dialog modal-xl" style="max-width: 95%;"> 
         <div class="modal-content border-0">
             <div class="modal-header bg-header-add py-3">
-                <h3 class="modal-title fw-bold">🧾 REGISTRAR NUEVO LOTE</h3>
+                <h3 class="modal-title fw-bold">🧾 REGISTRAR NUEVO INGRESO</h3>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body bg-light p-4">
                 
                 <div class="row g-3 mb-4 p-3 border border-3 border-success rounded bg-white shadow-sm position-relative">
-                    <span class="position-absolute top-0 start-0 bg-success text-white px-3 fw-bold rounded-bottom-end">1. DATOS DE CABECERA (LOTE)</span>
+                    
                     <div class="col-12 mt-1"></div>
                     <div class="col-md-4">
                         <label class="form-label">🏢 MANDATARIA</label>
@@ -141,7 +153,7 @@
                 </div>
 
                 <h5 class="fw-bold text-success mb-2">2. CARGAR PAGOS (DETALLE INDIVIDUAL)</h5>
-                <div class="card mb-3 border-2 border-secondary">
+                <div class="card mb-3 border-2 border-secondary shadow-sm">
                     <div class="card-body bg-white py-3">
                         <div class="row g-2 align-items-end">
                             <div class="col-md-3">
@@ -168,7 +180,7 @@
                             </div>
                             <div class="col-md-2">
                                 <label class="form-label small text-danger">DÉBITOS</label>
-                                <input type="number" id="n_Deb" class="form-control text-danger fw-bold" value="0.00" onkeypress="enterAdd(event)">
+                                <input type="number" id="n_Deb" class="form-control text-danger fw-bold" placeholder="0.00"  onkeypress="enterAdd(event)">
                             </div>
                             <div class="col-md-1">
                                 <button class="btn btn-success w-100 fw-bold py-2 btn-super" onclick="aggTemp()">⬇️</button>
@@ -189,7 +201,7 @@
             </div>
             <div class="modal-footer bg-light py-3">
                 <button class="btn btn-secondary btn-lg btn-super me-auto" data-bs-dismiss="modal">CANCELAR</button>
-                <button class="btn btn-success btn-lg btn-super px-5 shadow" onclick="guardarNuevoLote()">💾 GUARDAR TODO</button>
+                <button class="btn btn-success btn-lg btn-super px-5 shadow" onclick="guardarNuevoLote()">💾 GUARDAR LOTE</button>
             </div>
         </div>
     </div>
@@ -199,7 +211,7 @@
     <div class="modal-dialog modal-xl">
         <div class="modal-content border-4 border-primary">
             <div class="modal-header bg-header-view">
-                <h4 class="modal-title fw-bold text-white">👁️ DETALLE DEL LOTE</h4>
+                <h4 class="modal-title fw-bold">👁️ VER / GESTIONAR LOTE</h4>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body bg-light p-4">
@@ -210,7 +222,7 @@
                 </div>
                 
                 <div class="card mb-3 border-2 border-primary">
-                    <div class="card-header bg-primary text-white fw-bold py-2">➕ AGREGAR PAGO EXTRA</div>
+                    <div class="card-header bg-primary text-white fw-bold py-2">➕ AGREGAR PAGO EXTRA A ESTE LOTE</div>
                     <div class="card-body py-2">
                         <div class="row g-2 align-items-end">
                             <div class="col-md-4">
@@ -221,23 +233,38 @@
                                     <div id="listV_OS" class="lista-sugerencias"></div>
                                 </div>
                             </div>
-                            <div class="col-md-2"><label class="form-label small mb-1">FECHA</label><input type="date" id="v_FechaItem" class="form-control form-control-sm"></div>
-                            <div class="col-md-2"><label class="form-label small mb-1">TIPO</label><select id="v_TipoItem" class="form-select form-select-sm">@foreach(var t in listaTiposPago){<option value="@t">@t</option>}</select></div>
-                            <div class="col-md-2"><label class="form-label small mb-1 text-success">IMPORTE</label><input type="number" id="v_Imp" class="form-control form-control-sm text-success fw-bold"></div>
+                            <div class="col-md-2">
+                                <label class="form-label small mb-1">FECHA</label>
+                                <input type="date" id="v_FechaItem" class="form-control form-control-sm">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small mb-1">TIPO</label>
+                                <select id="v_TipoItem" class="form-select form-select-sm">@foreach(var t in listaTiposPago){<option value="@t">@t</option>}</select>
+                            </div>
+                            <div class="col-md-2"><label class="form-label small mb-1 text-success">IMPORTE</label><input type="number" id="v_Imp" class="form-control form-control-sm text-success fw-bold" placeholder="0.00"></div>
+                            <div class="col-md-2"><label class="form-label small mb-1 text-success">DEBITADO</label><input type="number" id="v_Deb" class="form-control form-control-sm text-success fw-bold" placeholder="0.00"></div>
                             <div class="col-md-2"><button class="btn btn-primary fw-bold w-100 py-2 btn-sm mt-3" onclick="agregarAlLote()">⬇️ AGREGAR</button></div>
                         </div>
                     </div>
                 </div>
 
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h5 class="fw-bold text-primary m-0">DETALLES IMPUTADOS</h5>
+                    <input type="text" id="buscadorInterno" class="form-control w-50" placeholder="🔍 Filtrar en esta lista..." onkeyup="filtrarInterno()">
+                </div>
+                
                 <div class="table-responsive border border-2 border-dark rounded bg-white" style="height: 300px; overflow-y: auto;">
                     <table class="table table-bordered table-striped mb-0">
-                        <thead class="table-dark sticky-top"><tr><th>OBRA SOCIAL</th><th>FECHA</th><th>TIPO</th><th class="text-end">IMPORTE</th><th class="text-end">NETO</th><th class="text-center">X</th></tr></thead>
+                        <thead class="table-dark sticky-top"><tr><th>OBRA SOCIAL</th><th>FECHA</th><th>TIPO</th><th class="text-end">IMPORTE</th><th class="text-end">NETO</th><th class="text-center">ACCIONES</th></tr></thead>
                         <tbody id="tbodyVer"></tbody>
                     </table>
                 </div>
+                
                 <div class="row mt-3 justify-content-end">
                     <div class="col-md-6">
-                        <div class="total-display">TOTAL LOTE: <span id="lblTotalBrutoVer" class="text-dark">$0.00</span></div>
+                        <div class="total-display">
+                            TOTAL NETO: <span id="lblTotalNetoVer">$0.00</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -249,7 +276,7 @@
 <div class="modal fade" id="modalEdit" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content border-warning">
-            <div class="modal-header bg-header-edit"><h4 class="modal-title fw-bold">✏️ CORREGIR CABECERA</h4><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-header bg-header-edit"><h4 class="modal-title fw-bold">✏️ CORREGIR LOTE (CABECERA)</h4><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
             <div class="modal-body bg-white p-4">
                 <input type="hidden" id="e_IdCobroRef">
                 <div class="row g-3">
@@ -266,7 +293,7 @@
 <div class="modal fade" id="modalEditDetalle" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
     <div class="modal-dialog">
         <div class="modal-content border-warning">
-            <div class="modal-header bg-warning py-2"><h5 class="modal-title fw-bold">EDITAR PAGO</h5><button type="button" class="btn-close" onclick="cerrarEditDetalle()"></button></div>
+            <div class="modal-header bg-warning py-2"><h5 class="modal-title fw-bold">EDITAR PAGO INDIVIDUAL</h5><button type="button" class="btn-close" onclick="cerrarEditDetalle()"></button></div>
             <div class="modal-body p-3">
                 <input type="hidden" id="ed_Id">
                 <div class="mb-2"><label class="form-label">Obra Social</label><input type="text" id="txtED_OS" class="form-control fw-bold" readonly disabled></div>
@@ -288,7 +315,7 @@
     // == VARIABLES GLOBALES ==
     var datosOS = @Html.Raw(jsonObrasSociales);
     var itemsTemp = []; 
-    var datosAgrupados = {}; // Clave = ID Padre (Base de Datos)
+    var datosAgrupados = {}; // Diccionario: Key = IdCobros (Padre)
     var loteContexto = {}; 
     var mVer, mNuevo, mEdit, mEditDetalle;
 
@@ -304,35 +331,65 @@
         setupAuto('txtV_OS', 'listV_OS', 'valV_OS', datosOS);
 
         buscarCobros(); 
+        
         if(document.getElementById('n_FechaRef')) {
              document.getElementById('n_ItemFecha').value = document.getElementById('n_FechaRef').value;
         }
     });
 
-    // AUTOCOMPLETADO
+    // =================================================================
+    // MOTOR DE AUTOCOMPLETADO
+    // =================================================================
     function setupAuto(inpId, listId, hidId, fuenteDatos) {
         const inp = document.getElementById(inpId);
         const list = document.getElementById(listId);
         const hid = document.getElementById(hidId);
+        
         inp.oninput = function() {
-            const t = this.value.toLowerCase();
+            const texto = this.value.toLowerCase();
             list.innerHTML = '';
-            if (t.length < 1) { list.style.display = 'none'; hid.value = "0"; return; }
-            const f = fuenteDatos.filter(x => x.nombre.toLowerCase().includes(t));
-            if (f.length === 0) { list.innerHTML = '<div class="item-sugerencia text-muted">🚫 NO EXISTE</div>'; list.style.display = 'block'; return; }
-            f.forEach(x => {
+            
+            if (texto.length < 1) { 
+                list.style.display = 'none'; 
+                hid.value = "0"; 
+                return; 
+            }
+
+            const filtrados = fuenteDatos.filter(x => x.nombre.toLowerCase().includes(texto));
+
+            if (filtrados.length === 0) {
+                list.innerHTML = '<div class="item-sugerencia text-muted">🚫 NO EXISTE</div>';
+                list.style.display = 'block';
+                return;
+            }
+
+            filtrados.forEach(x => {
                 const item = document.createElement('div');
-                item.className = 'item-sugerencia'; item.textContent = x.nombre;
+                item.className = 'item-sugerencia';
+                item.textContent = x.nombre;
+                
                 item.onclick = function() {
-                    inp.value = x.nombre; hid.value = x.id; list.style.display = 'none';
+                    inp.value = x.nombre;
+                    hid.value = x.id;
+                    list.style.display = 'none';
                     if (inpId === 'txtN_OS') document.getElementById('n_Imp').focus();
                     if (inpId === 'txtV_OS') document.getElementById('v_Imp').focus();
                 };
+                
                 list.appendChild(item);
             });
+            
             list.style.display = 'block';
         };
-        inp.onblur = function() { setTimeout(() => { list.style.display = 'none'; }, 300); };
+
+        inp.onblur = function() {
+            setTimeout(() => { 
+                list.style.display = 'none';
+                if (hid.value == "0" && inp.value.trim() !== "") {
+                    inp.value = ""; 
+                }
+            }, 300);
+        };
     }
 
     function alCambiarMandatariaNuevo() {
@@ -343,22 +400,32 @@
     }
     
     function actualizarFechaDefault() {
-        if(itemsTemp.length === 0) document.getElementById('n_ItemFecha').value = document.getElementById('n_FechaRef').value;
+        if(itemsTemp.length === 0) {
+            document.getElementById('n_ItemFecha').value = document.getElementById('n_FechaRef').value;
+        }
     }
 
-    // --- CARGA DE GRILLA (DATOS YA AGRUPADOS POR SQL) ---
+    // =================================================================
+    // LÓGICA DE NEGOCIO (BÚSQUEDA Y GRILLA PRINCIPAL)
+    // =================================================================
     async function buscarCobros() {
         const tbody = document.getElementById('tbodyResultados');
         tbody.innerHTML = '<tr><td colspan="7" class="text-center p-4"><div class="spinner-border text-success"></div> Procesando datos...</td></tr>';
 
+        const filtroMandataria = document.getElementById('filtroMandataria').value;
+        const filtroOS = document.getElementById('filtroOS').value;
+        const filtroDesde = document.getElementById('filtroDesde').value;
+        const filtroHasta = document.getElementById('filtroHasta').value;
+
         let url = `@Url.Action("BuscarCobrosAjax", "Home")?dummy=1` +
-            `&IdMandataria=${document.getElementById('filtroMandataria').value}` +
-            `&IdObraSocial=${document.getElementById('filtroOS').value}` +
-            `&desde=${document.getElementById('filtroDesde').value}` +
-            `&hasta=${document.getElementById('filtroHasta').value}`;
+            `&IdMandataria=${filtroMandataria}` +
+            `&IdObraSocial=${filtroOS}` +
+            `&desde=${filtroDesde}` +
+            `&hasta=${filtroHasta}`;
         
         try {
             const r = await fetch(url);
+            if (!r.ok) throw new Error(`Error servidor: ${r.status}`);
             const res = await r.json();
 
             if(res.success && res.data.length > 0) {
@@ -366,38 +433,43 @@
                 tbody.innerHTML = '';
                 
                 res.data.forEach(x => {
-                    const idPadre = x.IdCobros; // CLAVE MAESTRA = ID DE BD
-                    const totalImp = parseFloat(x.TotalImporte||0);
-                    const totalDeb = parseFloat(x.TotalDebitos||0);
-                    const neto = totalImp - totalDeb;
-
+                    const idPadre = x.IdCobros || x.idCobros; // CLAVE ÚNICA DE BD
+                    
                     datosAgrupados[idPadre] = {
                         idPadre: idPadre,
-                        comp: (x.NumeroComprobante||'S/N'),
-                        fecha: (x.FechaCobro||'').split('T')[0],
-                        mand: x.NombreMandataria,
-                        idMand: x.IdMandatarias
+                        comp: (x.NumeroComprobante || x.numeroComprobante || 'S/N'),
+                        fecha: (x.FechaCobro || x.fechaCobro || '').split('T')[0],
+                        mand: x.NombreMandataria || x.nombreMandataria || '---',
+                        idMand: x.IdMandatarias || x.idMandatarias
                     };
+                    
+                    const totalImp = parseFloat(x.TotalImporte || x.totalImporte || 0);
+                    const totalDeb = parseFloat(x.TotalDebitos || x.totalDebitos || 0);
+                    const neto = totalImp - totalDeb;
+                    const cant = x.CantidadItems || x.cantidadItems || 0;
 
                     tbody.innerHTML += `
                     <tr>
                         <td class="text-center">${datosAgrupados[idPadre].fecha}</td>
                         <td class="fw-bold text-primary">${datosAgrupados[idPadre].mand}</td>
                         <td class="fw-bold text-center">${datosAgrupados[idPadre].comp}</td>
-                        <td class="text-center fw-bold fs-5">${x.CantidadItems}</td>
+                        <td class="text-center fw-bold fs-5">${cant}</td>
                         <td class="text-end fw-bold fs-5 text-dark">$${totalImp.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
                         <td class="text-end fw-black fs-5 text-success border-start border-end bg-light">$${neto.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
                         <td class="text-center">
-                            <button class="btn btn-danger btn-sm me-1" onclick="eliminarLoteCompleto(${idPadre})" title="Eliminar Todo">🗑️</button>
-                            <button class="btn btn-warning btn-sm me-1" onclick="abrirEditarLote(${idPadre})" title="Editar Cabecera">✏️</button>
-                            <button class="btn btn-primary btn-sm fw-bold px-3" onclick="abrirVer(${idPadre})">👁️ VER</button>
+                            <button class="btn btn-danger btn-sm me-1 btn-super p-2" onclick="eliminarLoteCompleto(${idPadre})" title="Eliminar Todo">🗑️</button>
+                            <button class="btn btn-warning btn-sm me-1 btn-super p-2" onclick="abrirEditarLote(${idPadre})" title="Editar Cabecera">✏️</button>
+                            <button class="btn btn-primary btn-sm fw-bold px-3 btn-super" onclick="abrirVer(${idPadre})">👁️ VER</button>
                         </td>
                     </tr>`;
                 });
             } else { 
-                tbody.innerHTML = '<tr><td colspan="7" class="text-center p-4 fs-4 text-secondary">No se encontraron cobros.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center p-4 fs-4 text-secondary">No se encontraron cobros con estos filtros.</td></tr>';
             }
-        } catch(e) { console.error(e); tbody.innerHTML = `<tr><td colspan="7" class="text-danger">Error conexión</td></tr>`; }
+        } catch(e) { 
+            console.error(e);
+            tbody.innerHTML = `<tr><td colspan="7" class="text-danger text-center p-4">⚠️ Error de conexión: ${e.message}</td></tr>`;
+        }
     }
 
     function limpiarFiltros() { 
@@ -406,7 +478,24 @@
         buscarCobros(); 
     }
 
-    // --- NUEVO LOTE ---
+    // =================================================================
+    // MODAL NUEVO LOTE
+    // =================================================================
+    function abrirModalNuevo() { 
+        itemsTemp = [];
+        document.getElementById('tbodyTemp').innerHTML=''; 
+        document.getElementById('n_Comp').value=""; 
+        document.getElementById('lblTotalLote').textContent="$0.00";
+        document.getElementById('n_FechaRef').value = new Date().toISOString().substring(0, 10);
+        document.getElementById('n_Mand').value = "0";
+        
+        actualizarFechaDefault();
+        alCambiarMandatariaNuevo();
+        mNuevo.show();
+    }
+    
+    function enterAdd(e) { if(e.key==='Enter') aggTemp(); }
+    
     function aggTemp() {
         const id = document.getElementById('valN_OS').value;
         const nom = document.getElementById('txtN_OS').value;
@@ -415,12 +504,12 @@
         const imp = parseFloat(document.getElementById('n_Imp').value)||0;
         const deb = parseFloat(document.getElementById('n_Deb').value)||0;
 
-        if(id==0 || imp==0 || fecha=="") { alert("⚠️ Faltan datos."); return; }
+        if(id==0 || imp==0 || fecha=="") { alert("⚠️ Faltan datos: Obra Social, Fecha o Importe."); return; }
         
         itemsTemp.push({id:id, nom:nom, fecha:fecha, tipo:tipo, imp:imp, deb:deb});
         dibujarTemp();
         
-        // Mantener Fecha y Tipo para carga rápida
+        // Reset inteligente: mantenemos fecha y tipo
         document.getElementById('n_Imp').value=""; 
         document.getElementById('n_Deb').value="0.00";
         document.getElementById('txtN_OS').value=""; 
@@ -429,17 +518,25 @@
     }
     
     function dibujarTemp() {
-        const b = document.getElementById('tbodyTemp'); b.innerHTML='';
+        const b = document.getElementById('tbodyTemp');
+        b.innerHTML='';
         let tot = 0;
         itemsTemp.forEach((x,i) => {
             tot += (x.imp - x.deb);
-            b.innerHTML+=`<tr>
-                <td class="fw-bold small">${x.nom}</td><td class="text-center small">${x.fecha}</td><td class="text-center small">${x.tipo}</td>
-                <td class="text-end text-success">$${x.imp}</td><td class="text-end text-danger">$${x.deb}</td>
-                <td class="text-center"><button class="btn btn-sm btn-danger py-0" onclick="itemsTemp.splice(${i},1);dibujarTemp()">x</button></td>
+            b.innerHTML+=`
+            <tr data-index="${i}">
+                <td class="fw-bold small">${x.nom}</td>
+                <td class="text-center small">${x.fecha}</td>
+                <td class="text-center small">${x.tipo}</td>
+                <td class="text-end text-success">$${x.imp.toFixed(2)}</td>
+                <td class="text-end text-danger">$${x.deb.toFixed(2)}</td>
+                <td class="text-end fw-bold">$${(x.imp - x.deb).toFixed(2)}</td>
+                <td class="text-center">
+                    <button class="btn btn-sm btn-danger fw-bold" onclick="itemsTemp.splice(${i},1);dibujarTemp()">🗑️</button>
+                </td>
             </tr>`;
         });
-        document.getElementById('lblTotalLote').textContent = `$${tot.toFixed(2)}`;
+        document.getElementById('lblTotalLote').textContent = `$${tot.toLocaleString('es-AR', {minimumFractionDigits: 2})}`;
     }
 
     async function guardarNuevoLote() {
@@ -447,35 +544,65 @@
         const comp = document.getElementById('n_Comp').value.trim();
         const fechaRef = document.getElementById('n_FechaRef').value;
 
-        if(mandId === 0 || comp === "" || itemsTemp.length === 0) { alert("⚠️ Faltan datos."); return; }
-        if(!confirm("¿Confirmar Lote?")) return;
+        if(mandId === 0 || comp === "" || itemsTemp.length === 0) { 
+            alert("⚠️ Faltan datos de Cabecera o Items."); return; 
+        }
+        
+        if(!confirm("¿Confirmar el guardado de este lote?")) return;
+
+        const originalFooter = document.querySelector('#modalNuevo .modal-footer').innerHTML;
+        document.querySelector('#modalNuevo .modal-footer').innerHTML = '<span class="text-success fw-bold me-3">GUARDANDO...</span> <div class="spinner-border text-success"></div>';
 
         const loteFinal = itemsTemp.map(x => ({
-            IdMandatariasMaestro: mandId, FechaCobroMaestro: fechaRef, NumeroComprobanteMaestro: comp,
-            IdObrasSociales: parseInt(x.id), FechaCobroDetalle: x.fecha, TipoPago: x.tipo,
-            ImporteCobrado: x.imp, MontoDebito: x.deb, MotivoDebito: ""
+            IdMandatariasMaestro: mandId,
+            FechaCobroMaestro: fechaRef,
+            NumeroComprobanteMaestro: comp,
+            
+            IdObrasSociales: parseInt(x.id),
+            FechaCobroDetalle: x.fecha,
+            TipoPago: x.tipo,
+            ImporteCobrado: x.imp, 
+            MontoDebito: x.deb,
+            MotivoDebito: ""
         }));
 
-        const btn = document.querySelector('#modalNuevo .btn-success'); btn.disabled=true; btn.textContent="GUARDANDO...";
         try {
             const r = await fetch('@Url.Action("GuardarLoteCobros", "Home")', { 
-                method:'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(loteFinal)
+                method:'POST', 
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(loteFinal)
             });
             const res = await r.json();
-            if(res.success) { alert(res.message); mNuevo.hide(); abrirModalNuevo(); buscarCobros(); } 
-            else alert("❌ " + res.message);
-        } catch(e) { alert("Error red"); }
-        finally { btn.disabled=false; btn.textContent="💾 GUARDAR TODO"; }
+            
+            if(res.success) {
+                alert(res.message);
+                mNuevo.hide(); 
+                buscarCobros();
+            } else {
+                alert("❌ Error: " + res.message);
+            }
+        } catch (e) {
+            alert("❌ Error de red: " + e.message);
+        } finally {
+            document.querySelector('#modalNuevo .modal-footer').innerHTML = originalFooter;
+        }
     }
 
-    // --- VER DETALLES ---
+    // =================================================================
+    // MODAL VER DETALLES
+    // =================================================================
     function abrirVer(idPadre) {
         const g = datosAgrupados[idPadre];
-        loteContexto = { fecha: g.fecha, comp: g.comp, mandatariaId: g.idMand, idPadre: idPadre };
+        if(!g) return;
+        
+        loteContexto = { 
+            fecha: g.fecha, comp: g.comp, mandatariaId: g.idMand, idPadre: idPadre 
+        };
+
         document.getElementById('v_Titulo').textContent = g.mand;
         document.getElementById('v_Comp').textContent = g.comp;
         document.getElementById('v_Fecha').textContent = g.fecha;
-        document.getElementById('v_FechaItem').value = g.fecha; // Default para nuevo item
+        document.getElementById('v_FechaItem').value = g.fecha; // Default para item nuevo
 
         document.getElementById('buscadorInterno').value = '';
         const osDeEstaMandataria = datosOS.filter(x => x.idMandataria == g.idMand);
@@ -485,33 +612,94 @@
         mVer.show();
     }
 
-   async function traerDetalles(idPadre) {
+    async function traerDetalles(idPadre) {
         const b = document.getElementById('tbodyVer');
         b.innerHTML = '<tr><td colspan="6" class="text-center p-4"><div class="spinner-border spinner-border-sm text-primary"></div> Cargando...</td></tr>';
         
-        // CORRECCIÓN: Llamamos a TraerCobrosPorIdPadre enviando el int
+        // CORRECCIÓN FINAL: Usamos ID Padre, no comprobante
         try {
             const r = await fetch(`@Url.Action("TraerCobrosPorIdPadre", "Home")?idCobroPadre=${idPadre}`);
             const res = await r.json();
-            if (res.success) dibujarTablaVer(res.data);
-            else alert(res.message);
+            
+            b.innerHTML='';
+            if(res.success) {
+                let totalNeto = 0;
+                res.data.forEach(x => {
+                    const nomOS = x.NombreObraSocial || x.nombreObraSocial || "---";
+                    const imp = parseFloat(x.ImporteCobrado||x.importeCobrado||0);
+                    const deb = parseFloat(x.MontoDebito||x.montoDebito||0); // Ojo al nombre
+                    const id = x.IdCobrosDetalle||x.idCobrosDetalle;
+                    
+                    totalNeto += (imp - deb);
+
+                    b.innerHTML += `
+                    <tr class="detalle-cobro-row">
+                        <td class="fw-bold small">${nomOS}</td>
+                        <td class="text-center small">${(x.FechaCobroDetalle||x.fechaCobroDetalle||'').split('T')[0]}</td>
+                        <td class="text-center small">${x.TipoPago||x.tipoPago}</td>
+                        <td class="text-end text-success">$${imp.toFixed(2)}</td>
+                        <td class="text-end fw-black">$${(imp-deb).toFixed(2)}</td>
+                        <td class="text-center">
+                            <button class="btn btn-warning btn-sm me-1" onclick="abrirEditDetalle(${id})">✏️</button>
+                            <button class="btn btn-sm btn-danger" onclick="eliminarDelLote(${id})">🗑️</button>
+                        </td>
+                    </tr>`;
+                });
+                document.getElementById('lblTotalNetoVer').textContent = `$${totalNeto.toLocaleString('es-AR', {minimumFractionDigits: 2})}`;
+            } else alert(res.message);
         } catch (e) { console.error(e); }
     }
 
-    // --- ELIMINAR / EDITAR ---
+    async function agregarAlLote() {
+        const idOS = document.getElementById('valV_OS').value;
+        const imp = document.getElementById('v_Imp').value.replace(',','.');
+        const deb = document.getElementById('v_Deb').value.replace(',','.');
+        if(idOS==0 || imp==0) { alert("Datos incompletos."); return; }
+
+        const fd = new FormData();
+        fd.append("IdCobro", 0); 
+        fd.append("IdObraSocial", idOS); fd.append("IdObrasSociales", idOS);
+        fd.append("IdMandataria", loteContexto.mandatariaId); 
+        fd.append("FechaCobro", document.getElementById('v_FechaItem').value);
+        fd.append("TipoPago", document.getElementById('v_TipoItem').value);
+        fd.append("NumeroComprobante", loteContexto.comp); // Solo ref
+        fd.append("ImporteCobrado", imp); fd.append("MontoDebitos", deb); fd.append("MotivoDebito", "");
+
+        try {
+            await fetch('@Url.Action("GuardarCobro", "Home")', { method:'POST', body:fd });
+            document.getElementById('v_Imp').value="";
+            document.getElementById('v_Deb').value="";
+            document.getElementById('txtV_OS').value=""; document.getElementById('valV_OS').value="0";
+            buscarCobros(); 
+            traerDetalles(loteContexto.idPadre);
+        } catch(e) { alert("Error de red."); }
+    }
+
+    // =================================================================
+    // MANTENIMIENTO: ELIMINAR Y EDITAR
+    // =================================================================
     async function eliminarLoteCompleto(idPadre) {
-        if(!confirm("¿Eliminar Lote completo?")) return;
-        await fetch('@Url.Action("EliminarLoteCompleto", "Home")', {
-            method:'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: `idCobroPadre=${idPadre}`
-        });
-        buscarCobros();
+        if(!confirm("¿Eliminar TODO el lote?")) return;
+        
+        try {
+            const r = await fetch('@Url.Action("EliminarLoteCompleto", "Home")', {
+                method:'POST', 
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: `idCobroPadre=${idPadre}`
+            });
+            const res = await r.json();
+            if(res.success) { alert(res.message); buscarCobros(); } else alert(res.message);
+        } catch(e) { alert("Error de red"); }
     }
 
     async function eliminarDelLote(id) {
-        if(!confirm("¿Borrar item?")) return;
+        if(!confirm("¿Eliminar este pago individual?")) return;
         const fd=new FormData(); fd.append("idCobro", id);
-        await fetch('@Url.Action("EliminarCobro", "Home")', {method:'POST', body:fd});
-        traerDetalles(loteContexto.idPadre); buscarCobros();
+        try {
+            await fetch('@Url.Action("EliminarCobro", "Home")', {method:'POST', body:fd});
+            buscarCobros();
+            traerDetalles(loteContexto.idPadre);
+        } catch(e) { alert("Error al eliminar."); }
     }
 
     function abrirEditarLote(idPadre) {
@@ -529,73 +717,70 @@
         fd.append("IdMandataria", document.getElementById('e_Mandataria').value);
         fd.append("Fecha", document.getElementById('e_Fecha').value);
         fd.append("Comprobante", document.getElementById('e_Comp').value);
-        await fetch('@Url.Action("ModificarCabeceraLote", "Home")', {method:'POST', body:fd});
-        mEdit.hide(); buscarCobros();
+
+        try {
+            const r = await fetch('@Url.Action("ModificarCabeceraLote", "Home")', { method:'POST', body:fd });
+            const res = await r.json();
+            if(res.success) { mEdit.hide(); buscarCobros(); alert("✅ Actualizado"); } else alert(res.message);
+        } catch(e) { alert("Error red"); }
     }
 
-    // --- AGREGAR ITEM SUELTO ---
-    async function agregarAlLote() {
-        const idOS = document.getElementById('valV_OS').value;
-        const imp = document.getElementById('v_Imp').value.replace(',','.');
-        if(idOS==0 || imp==0) return alert("Faltan datos");
-
-        const fd = new FormData();
-        fd.append("IdCobro", loteContexto.idPadre); // ID PADRE EXISTENTE
-        fd.append("IdObraSocial", idOS); fd.append("IdObrasSociales", idOS);
-        fd.append("IdMandataria", loteContexto.mandatariaId); 
-        fd.append("FechaCobro", document.getElementById('v_FechaItem').value);
-        fd.append("TipoPago", document.getElementById('v_TipoItem').value);
-        fd.append("NumeroComprobante", loteContexto.comp);
-        fd.append("ImporteCobrado", imp); fd.append("MontoDebitos", 0); fd.append("MotivoDebito", "");
-
-        await fetch('@Url.Action("GuardarCobro", "Home")', { method:'POST', body:fd });
-        traerDetalles(loteContexto.idPadre); buscarCobros();
-        document.getElementById('v_Imp').value=""; document.getElementById('txtV_OS').value=""; document.getElementById('valV_OS').value="0";
-    }
-
-    // --- EDITAR DETALLE ---
+    // =================================================================
+    // EDICIÓN DE DETALLE
+    // =================================================================
     async function abrirEditDetalle(id) {
         const r = await fetch(`@Url.Action("ObtenerCobroPorId", "Home")?idCobro=${id}`);
         const res = await r.json();
-        if(res.success) {
-            const d = res.data;
-            document.getElementById('ed_Id').value = id;
-            document.getElementById('valED_OS').value = d.IdObrasSociales;
-            document.getElementById('txtED_OS').value = datosOS.find(x=>x.id==d.IdObrasSociales)?.nombre||'---';
-            document.getElementById('ed_Fecha').value = (d.FechaCobroDetalle||'').split('T')[0];
-            document.getElementById('ed_Tipo').value = d.TipoPago;
-            document.getElementById('ed_Imp').value = d.ImporteCobrado;
-            document.getElementById('ed_Deb').value = d.MontoDebito;
-            mEditDetalle.show();
-        }
+        if(!res.success) return;
+        
+        const d = res.data;
+        document.getElementById('ed_Id').value = id;
+        document.getElementById('valED_OS').value = d.IdObrasSociales||d.idObrasSociales;
+        document.getElementById('txtED_OS').value = datosOS.find(x=>x.id == (d.IdObrasSociales||d.idObrasSociales))?.nombre || "---";
+        
+        document.getElementById('ed_Fecha').value = (d.FechaCobroDetalle||d.fechaCobroDetalle).split('T')[0];
+        document.getElementById('ed_Tipo').value = d.TipoPago||d.tipoPago;
+        document.getElementById('ed_Imp').value = d.ImporteCobrado||d.importeCobrado;
+        document.getElementById('ed_Deb').value = d.MontoDebito||d.montoDebito;
+        
+        mEditDetalle.show();
     }
 
+    function cerrarEditDetalle() { mEditDetalle.hide(); }
+
     async function guardarEditDetalle() {
-        const fd = new FormData();
-        fd.append("IdCobro", document.getElementById('ed_Id').value);
+        const id = document.getElementById('ed_Id').value;
         const idOS = document.getElementById('valED_OS').value;
+        
+        let impStr = document.getElementById('ed_Imp').value.replace(',','.');
+        let debStr = document.getElementById('ed_Deb').value.replace(',','.');
+
+        const fd = new FormData();
+        fd.append("IdCobro", id);
         fd.append("IdObraSocial", idOS); fd.append("IdObrasSociales", idOS);
         fd.append("FechaCobro", document.getElementById('ed_Fecha').value);
         fd.append("TipoPago", document.getElementById('ed_Tipo').value);
         fd.append("NumeroComprobante", "---"); 
-        fd.append("ImporteCobrado", document.getElementById('ed_Imp').value.replace(',','.'));
-        fd.append("MontoDebitos", document.getElementById('ed_Deb').value.replace(',','.'));
+        fd.append("ImporteCobrado", impStr);
+        fd.append("MontoDebitos", debStr);
 
-        await fetch('@Url.Action("GuardarCobro", "Home")', { method:'POST', body:fd });
-        mEditDetalle.hide(); buscarCobros(); traerDetalles(loteContexto.idPadre);
+        try {
+            const r = await fetch('@Url.Action("GuardarCobro", "Home")', { method:'POST', body:fd });
+            const res = await r.json();
+            if(res.success) {
+                mEditDetalle.hide();
+                buscarCobros();
+                traerDetalles(loteContexto.idPadre);
+                alert("✅ Actualizado.");
+            } else alert("Error: " + res.message);
+        } catch(e) { alert("Error de red"); }
     }
     
     function filtrarInterno() {
         const t = document.getElementById('buscadorInterno').value.toLowerCase();
         document.querySelectorAll('#tbodyVer tr.detalle-cobro-row').forEach(r => {
+            const texto = r.innerText.toLowerCase();
             r.style.display = texto.includes(t) ? '' : 'none';
         });
     }
-    
-    function abrirModalNuevo() { 
-        itemsTemp = []; document.getElementById('tbodyTemp').innerHTML=''; document.getElementById('n_Comp').value=""; 
-        document.getElementById('lblTotalLote').textContent="$0.00"; document.getElementById('n_FechaRef').value = new Date().toISOString().substring(0, 10);
-        document.getElementById('n_Mand').value = "0"; actualizarFechaDefault(); alCambiarMandatariaNuevo(); mNuevo.show();
-    }
-    function enterAdd(e) { if(e.key==='Enter') aggTemp(); }
 </script>
