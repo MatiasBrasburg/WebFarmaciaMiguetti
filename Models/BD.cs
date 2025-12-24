@@ -296,19 +296,20 @@ public static void InsertarLiquidacionDetalle(int idLiquidacion, int idOS, int i
 {
     using (SqlConnection connection = new SqlConnection(_connectionString))
     {
-        // CORRECCIÓN FINAL: La columna en BD se llama IdLiquidaciones (Plural)
-        string query = @"
-            INSERT INTO LiquidacionDetalle (IdLiquidaciones, IdObrasSociales, IdPlanBonificacion, CantidadRecetas, TotalBruto, MontoCargoOS, MontoBonificacion)
-            VALUES (@pIdLiq, @pIdOS, @pIdPlan, @pRecetas, @pBruto, @pCargoOS, @pBoni)";
-
+        // CAMBIO: Insertamos también SaldoPendiente (igual al Bruto) y Pagado (0)
+        string query = @"INSERT INTO LiquidacionDetalle 
+                        (IdLiquidaciones, IdObrasSociales, IdPlanBonificacion, CantidadRecetas, TotalBruto, MontoCargoOS, MontoBonificacion, SaldoPendiente, Pagado)
+                        VALUES 
+                        (@pIdLiq, @pIdOS, @pIdPlan, @pRecetas, @pBruto, @pCargoOS, @pBoni, @pBruto, 0)";
+        
         connection.Execute(query, new { 
             pIdLiq = idLiquidacion, 
             pIdOS = idOS, 
-            pIdPlan = idPlan,
-            pRecetas = recetas,
-            pBruto = bruto,
-            pCargoOS = cargoOS,
-            pBoni = bonificacion
+            pIdPlan = idPlan, 
+            pRecetas = recetas, 
+            pBruto = bruto, 
+            pCargoOS = cargoOS, 
+            pBoni = bonificacion 
         });
     }
 }
@@ -530,7 +531,37 @@ public static Usuario TraerUsuarioPorId(int idUsuario)
 // SECCIÓN COBROS (FALTABA TODO ESTO)
 // =============================================================================
 
+// =============================================================================
+    // TRAER DEUDAS (Con lógica de Fallback para datos viejos)
+    // =============================================================================
+    public static List<dynamic> TraerDeudasPendientesPorOS(int idObraSocial)
+    {
+        using (SqlConnection connection = new SqlConnection(_connectionString))
+        {
+            // TRUCO: 
+            // 1. Usamos ISNULL en Pagado para que no falle si es null.
+            // 2. En el SELECT, si SaldoPendiente es NULL o 0 (y no está pagado), mostramos el TotalBruto.
+            //    Así las liquidaciones viejas aparecen como "Deuda Total" en vez de ocultarse.
+            
+            string query = @"
+                SELECT 
+                    LD.IdLiquidacionDetalle,
+                    L.Periodo,
+                    L.FechaPresentacion,
+                    LD.TotalBruto as ImporteOriginal,
+                    CASE 
+                        WHEN LD.SaldoPendiente IS NULL OR LD.SaldoPendiente = 0 THEN LD.TotalBruto 
+                        ELSE LD.SaldoPendiente 
+                    END as SaldoPendiente
+                FROM LiquidacionDetalle LD
+                INNER JOIN Liquidaciones L ON LD.IdLiquidaciones = L.IdLiquidaciones
+                WHERE LD.IdObrasSociales = @pIdOS 
+                  AND (LD.Pagado = 0 OR LD.Pagado IS NULL) -- Traer si Pagado es 0 o NULL
+                ORDER BY L.FechaPresentacion ASC";
 
+            return connection.Query<dynamic>(query, new { pIdOS = idObraSocial }).ToList();
+        }
+    }
 // 2. Traer Liquidaciones donde participa esa Obra Social (Para imputar pagos)
 public static List<Liquidaciones> TraerLiquidacionesPendientesPorOS(int idObraSocial)
 {
@@ -660,23 +691,56 @@ public static void ModificarCobroCabecera(int idCobro, int idMandataria, DateTim
 // -----------------------------------------------------------------------------------
 // 3. AGREGAR DETALLE (HIJO)
 // -----------------------------------------------------------------------------------
-public static void AgregarCobroDetalle(int idCobroPadre, int idObraSocial, DateTime fechaDetalle, decimal importe, string tipoPago, decimal debitos, string motivoDebito)
+public static void AgregarCobroDetalle(int idCobroPadre, int idObraSocial, DateTime fecha, decimal importe, string tipo, decimal debito, string motivo, int? idLiquidacionDetalle = null)
 {
     using (SqlConnection connection = new SqlConnection(_connectionString))
     {
-        string query = @"
-            INSERT INTO CobrosDetalle (IdCobros, IdObrasSociales, FechaCobroDetalle, TipoPago, ImporteCobrado, MontoDebito, MotivoDebito)
-            VALUES (@pIdPadre, @pOS, @pFecha, @pTipo, @pImp, @pDeb, @pMot)";
+        connection.Open();
+        using (var transaction = connection.BeginTransaction())
+        {
+            try
+            {
+                // 1. Insertamos el Cobro (Ahora guardamos el link a la liquidación)
+                string sqlInsert = @"INSERT INTO CobrosDetalle 
+                                   (IdCobros, IdObrasSociales, FechaCobroDetalle, ImporteCobrado, TipoPago, MontoDebito, MotivoDebito, IdLiquidacionDetalle)
+                                   VALUES 
+                                   (@pIdPadre, @pOS, @pFecha, @pImporte, @pTipo, @pDebito, @pMotivo, @pIdLiqDet)";
+                
+                connection.Execute(sqlInsert, new { 
+                    pIdPadre = idCobroPadre, 
+                    pOS = idObraSocial, 
+                    pFecha = fecha, 
+                    pImporte = importe, 
+                    pTipo = tipo, 
+                    pDebito = debito, 
+                    pMotivo = motivo,
+                    pIdLiqDet = idLiquidacionDetalle // Puede ser null si es pago a cuenta
+                }, transaction);
 
-        connection.Execute(query, new {
-            pIdPadre = idCobroPadre,
-            pOS = idObraSocial,
-            pFecha = fechaDetalle,
-            pTipo = tipoPago,
-            pImp = importe,
-            pDeb = debitos,
-            pMot = motivoDebito
-        });
+                // 2. LOGICA DE IMPUTACIÓN (Si viene vinculado a una deuda)
+                if (idLiquidacionDetalle.HasValue && idLiquidacionDetalle.Value > 0)
+                {
+                    // Restamos el importe del SaldoPendiente
+                    string sqlUpdateLiq = @"
+                        UPDATE LiquidacionDetalle 
+                        SET SaldoPendiente = SaldoPendiente - @pPago
+                        WHERE IdLiquidacionDetalle = @pIdLiqDet";
+                    
+                    connection.Execute(sqlUpdateLiq, new { pPago = importe, pIdLiqDet = idLiquidacionDetalle }, transaction);
+
+                    // Verificamos si se pagó total (Saldo <= 0) para marcar Pagado = 1
+                    string sqlCheckPagado = @"
+                        UPDATE LiquidacionDetalle 
+                        SET Pagado = 1 
+                        WHERE IdLiquidacionDetalle = @pIdLiqDet AND SaldoPendiente <= 0.05"; // 0.05 de tolerancia por redondeo
+                    
+                    connection.Execute(sqlCheckPagado, new { pIdLiqDet = idLiquidacionDetalle }, transaction);
+                }
+
+                transaction.Commit();
+            }
+            catch { transaction.Rollback(); throw; }
+        }
     }
 }
 
@@ -716,18 +780,39 @@ public static void EliminarCobroDetalle(int idCobroDetalle)
 {
     using (SqlConnection connection = new SqlConnection(_connectionString))
     {
-        // 1. Obtenemos el ID del Padre antes de borrar
-        int idPadre = connection.QueryFirstOrDefault<int>("SELECT IdCobros FROM CobrosDetalle WHERE IdCobrosDetalle = @pId", new { pId = idCobroDetalle });
-
-        // 2. Borramos el detalle
-        connection.Execute("DELETE FROM CobrosDetalle WHERE IdCobrosDetalle = @pId", new { pId = idCobroDetalle });
-
-        // 3. Si el padre no tiene más hijos, lo borramos (Limpieza)
-        int hijosRestantes = connection.ExecuteScalar<int>("SELECT COUNT(*) FROM CobrosDetalle WHERE IdCobros = @pIdPadre", new { pIdPadre = idPadre });
-        
-        if (hijosRestantes == 0)
+        connection.Open();
+        using (var transaction = connection.BeginTransaction())
         {
-            connection.Execute("DELETE FROM Cobros WHERE IdCobros = @pIdPadre", new { pIdPadre = idPadre });
+            try
+            {
+                // 1. Obtenemos datos del cobro antes de borrarlo para saber si imputaba algo
+                var cobro = connection.QueryFirstOrDefault<dynamic>(
+                    "SELECT ImporteCobrado, IdLiquidacionDetalle FROM CobrosDetalle WHERE IdCobrosDetalle = @pId", 
+                    new { pId = idCobroDetalle }, 
+                    transaction
+                );
+
+                if (cobro != null && cobro.IdLiquidacionDetalle != null)
+                {
+                    // 2. Devolvemos el saldo a la liquidación (Deshacemos el pago)
+                    string sqlRestore = @"
+                        UPDATE LiquidacionDetalle 
+                        SET SaldoPendiente = SaldoPendiente + @pImporte,
+                            Pagado = 0 -- Volvemos a abrir la deuda
+                        WHERE IdLiquidacionDetalle = @pIdLiqDet";
+                    
+                    connection.Execute(sqlRestore, new { 
+                        pImporte = cobro.ImporteCobrado, 
+                        pIdLiqDet = cobro.IdLiquidacionDetalle 
+                    }, transaction);
+                }
+
+                // 3. Borramos el cobro físico
+                connection.Execute("DELETE FROM CobrosDetalle WHERE IdCobrosDetalle = @pId", new { pId = idCobroDetalle }, transaction);
+
+                transaction.Commit();
+            }
+            catch { transaction.Rollback(); throw; }
         }
     }
 }

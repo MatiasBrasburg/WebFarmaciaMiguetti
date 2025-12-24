@@ -34,7 +34,8 @@ public class CobrosDetalle
        public decimal MontoDebito { get; set; }
     
     public string? MotivoDebito { get;  set; }
-
+[JsonProperty]
+    public int? IdLiquidacionDetalle { get;  set; }
     public CobrosDetalle()
     {
         

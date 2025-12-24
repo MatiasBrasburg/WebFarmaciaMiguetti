@@ -22,19 +22,24 @@ namespace WebFarmaciaMiguetti.Models
     [JsonProperty]
         public int CantidadRecetas { get; set; }
     [JsonProperty]
-        // Columnas de Importes (Con formato Moneda)
+       
         [Column(TypeName = "decimal(18, 2)")]
-        [DataType(DataType.Currency)] // ✅ RESTAURADO
+        [DataType(DataType.Currency)] 
         public decimal TotalBruto { get; set; } 
     [JsonProperty]
         [Column(TypeName = "decimal(18, 2)")]
-        [DataType(DataType.Currency)] // ✅ RESTAURADO
+        [DataType(DataType.Currency)] 
         public decimal MontoCargoOS { get; set; }
     [JsonProperty]
         [Column(TypeName = "decimal(18, 2)")]
-        [DataType(DataType.Currency)] // ✅ RESTAURADO
-        public decimal MontoBonificacion { get; set; } // (Neto)
-
+        [DataType(DataType.Currency)] 
+        public decimal MontoBonificacion { get; set; } 
+[JsonProperty]
+        [Column(TypeName = "decimal(18, 2)")]
+        [DataType(DataType.Currency)] 
+        public decimal SaldoPendiente { get; set; }
+        [JsonProperty]
+        public bool Pagado { get; set; }
         public LiquidacionDetalle() { }
     }
 }
