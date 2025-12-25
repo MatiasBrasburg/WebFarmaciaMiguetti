@@ -13,10 +13,11 @@
         try { listaObrasSociales = listaObrasSociales.OrderBy(x => x.Nombre).ToList(); } catch { }
     }
     
-    // Serializamos para el buscador de OS
+    // Serializamos datos de forma SEGURA para evitar errores de script
     var jsonObrasSociales = JsonSerializer.Serialize(listaObrasSociales.Select(x => new { id = x.IdObrasSociales, nombre = x.Nombre, idMandataria = x.IdMandataria }));
+    var jsonMandatarias = JsonSerializer.Serialize(listaMandatarias.Select(x => new { id = x.IdMandatarias, nombre = x.RazonSocial }));
 
-    // --- RECUPERAR DATOS DE LA FARMACIA (USUARIO) DESDE SESIÓN ---
+    // --- RECUPERAR DATOS DE LA FARMACIA DESDE SESIÓN ---
     string nombreFarmacia = "FARMACIA";
     string direccionFarmacia = "Domicilio no configurado";
     string cuitFarmacia = "---";
@@ -38,21 +39,26 @@
 }
 
 <style>
+    /* ESTILOS DE ALTO IMPACTO (Estilo Unificado) */
     body { font-family: 'Verdana', sans-serif; background-color: #f4f6f9; color: #000; }
-    h1 { font-size: 2.5rem; font-weight: 900; color: #000; margin-bottom: 20px; text-transform: uppercase; }
+    h1 { font-size: 2.2rem; font-weight: 900; color: #000; margin-bottom: 20px; text-transform: uppercase; border-bottom: 5px solid #000; display: inline-block; }
     
+    /* INPUTS GRANDES Y CLAROS */
     .form-control, .form-select {
-        border: 3px solid #6c757d; font-size: 1.2rem; padding: 10px; color: #000; font-weight: 500;
+        border: 2px solid #6c757d; font-size: 1.1rem; padding: 8px 12px; color: #000; font-weight: 700; height: 45px;
     }
     .form-control:focus, .form-select:focus {
         border-color: #ffc107; box-shadow: 0 0 0 0.25rem rgba(255, 193, 7, 0.5); background-color: #fff3cd;
     }
-    .form-label { font-weight: 900; font-size: 1.1rem; text-transform: uppercase; }
-    .btn-super { font-size: 1.1rem; font-weight: 800; padding: 10px 20px; border: 3px solid rgba(0,0,0,0.2); text-transform: uppercase; }
+    .form-label { font-weight: 900; font-size: 0.9rem; text-transform: uppercase; margin-bottom: 5px; display: block; }
     
+    /* BOTONES */
+    .btn-super { font-size: 1.1rem; font-weight: 800; padding: 10px 20px; border: 2px solid rgba(0,0,0,0.2); text-transform: uppercase; letter-spacing: 1px; }
+    
+    /* TABLAS */
     .table-bordered { border: 2px solid #000; }
-    .table thead th { background-color: #343a40; color: white; font-size: 1.1rem; vertical-align: middle; }
-    .table tbody td { font-size: 1.1rem; vertical-align: middle; font-weight: 500; }
+    .table thead th { background-color: #343a40; color: white; font-size: 1.1rem; vertical-align: middle; padding: 15px; text-align: center; }
+    .table tbody td { font-size: 1.05rem; vertical-align: middle; font-weight: 600; padding: 10px; }
 
     .total-display { font-size: 1.8rem; font-weight: 900; color: #198754; text-align: right; padding: 15px; background: #d1e7dd; border: 4px solid #198754; border-radius: 8px; }
 
@@ -73,9 +79,7 @@
     .lista-sugerencias { position: absolute; top: 100%; left: 0; width: 100%; background: white; border: 4px solid #000; border-top: none; z-index: 10000; display: none; max-height: 300px; overflow-y: auto; box-shadow: 0px 10px 20px rgba(0,0,0,0.4); }
     .item-sugerencia { padding: 15px; cursor: pointer; border-bottom: 2px solid #ccc; font-weight: 800; font-size: 1.1rem; color: #333; }
     .item-sugerencia:hover { background-color: #0d6efd; color: white; }
-    
-    .estado-pagado { background-color: #d1e7dd; color: #0f5132; padding: 5px 10px; border-radius: 5px; font-weight: bold; border: 2px solid #0f5132; }
-    .estado-pendiente { background-color: #f8d7da; color: #842029; padding: 5px 10px; border-radius: 5px; font-weight: bold; border: 2px solid #842029; }
+    .active-sugerencia { background-color: #0d6efd; color: white; } /* Resaltado para flechas */
 </style>
 
 <div class="container-fluid mt-4">
@@ -134,8 +138,7 @@
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-striped table-hover mb-0" id="tablaResultados">
-                    <thead id="theadResultados">
-                        </thead>
+                    <thead id="theadResultados"></thead>
                     <tbody id="tbodyResultados">
                         <tr><td colspan="6" class="text-center p-4 text-muted fs-4">Cargando...</td></tr>
                     </tbody>
@@ -264,20 +267,20 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content border-success">
             <div class="modal-header bg-success text-white">
-                <h5 class="modal-title fw-bold">💰 COBROS ASOCIADOS A ESTE ÍTEM</h5>
+                <h5 class="modal-title fw-bold">💰 COBROS ASOCIADOS</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body bg-light">
                 <div class="table-responsive">
-                    <table class="table table-bordered table-hover bg-white">
+                    <table class="table table-bordered table-hover bg-white mb-0">
                         <thead class="table-secondary">
                             <tr>
-                                <th>FECHA PAGO</th>
+                                <th>FECHA</th>
                                 <th>COMPROBANTE</th>
                                 <th class="text-end">IMPORTE</th>
                                 <th class="text-end">DÉBITO</th>
                                 <th class="text-end">NETO</th>
-                                <th>MOTIVO DÉBITO</th>
+                                <th>MOTIVO</th>
                             </tr>
                         </thead>
                         <tbody id="tbodyVerCobrosLiq"></tbody>
@@ -360,7 +363,6 @@
 
 @section Scripts {
 <script>
-    // DATOS FARMACIA PARA IMPRESIÓN
     const farmaciaInfo = {
         nombre: "@Html.Raw(nombreFarmacia)",
         domicilio: "@Html.Raw(direccionFarmacia)",
@@ -368,33 +370,67 @@
         iva: "@Html.Raw(ivaFarmacia)"
     };
 
-    // VARIABLES GLOBALES
     let detallesTemporales = []; 
     let indiceTemporal = 0;      
     const modalABM = new bootstrap.Modal(document.getElementById('modalABM'));
     const modalVer = new bootstrap.Modal(document.getElementById('modalVerDetalle'));
     const modalItem = new bootstrap.Modal(document.getElementById('modalItemIndividual'));
     const modalEditCab = new bootstrap.Modal(document.getElementById('modalEditarCabecera'));
-    const modalCobros = new bootstrap.Modal(document.getElementById('modalVerCobrosLiq')); // NUEVO
+    const modalCobros = new bootstrap.Modal(document.getElementById('modalVerCobrosLiq'));
 
     var datosOS = @Html.Raw(jsonObrasSociales);
-    var modoActual = 'Mandataria'; // ESTADO INICIAL DEL TOGGLE
+    var datosMand = @Html.Raw(jsonMandatarias);
+    var modoActual = 'Mandataria'; 
+    var currentFocus = -1;
 
+    // Mapa seguro usando array serializado
     const mapaMandatarias = {};
-    @foreach (var m in listaMandatarias) { @:mapaMandatarias["@m.IdMandatarias"] = "@Html.Raw(m.RazonSocial)";
-    }
+    if(datosMand) datosMand.forEach(m => mapaMandatarias[m.id] = m.nombre);
 
-    // =========================================================
-    // INICIALIZACIÓN Y TOGGLE DE MODOS
-    // =========================================================
     document.addEventListener("DOMContentLoaded", () => {
         setupAuto('txtFiltroOS', 'listaFiltroOS', 'filtroOS', datosOS);
+        
+        // --- NAVEGACIÓN MEJORADA (ENTER Y FLECHAS) ---
+        // 1. Auto-Focus en Modales
+        document.getElementById('modalABM').addEventListener('shown.bs.modal', function () { document.getElementById('liqFecha').focus(); });
+        document.getElementById('modalVerDetalle').addEventListener('shown.bs.modal', function () { document.getElementById('buscadorDetalles').focus(); });
+
+        // 2. Navegación con Enter entre campos
+        setupEnterNavigation('inputRecetas', 'inputTotal');
+        setupEnterNavigation('inputTotal', 'inputCargoOS');
+        setupEnterNavigation('inputCargoOS', 'inputNeto');
+        
+        // Agregar fila con Enter
+        document.getElementById('inputNeto').addEventListener('keypress', function(e) {
+            if(e.key === 'Enter') { e.preventDefault(); document.getElementById('btnAgregarFila').click(); }
+        });
+        document.getElementById('inputCargoOS').addEventListener('keypress', function(e) {
+            if(e.key === 'Enter') { e.preventDefault(); document.getElementById('inputNeto').focus(); }
+        });
+
+        document.getElementById('filtroFechaHasta').addEventListener('keypress', function(e){
+            if(e.key==='Enter') { e.preventDefault(); buscarLiquidaciones(); }
+        });
+
         cambiarModo('Mandataria');
     });
 
+    // Helper para mover foco
+    function setupEnterNavigation(curr, next) {
+        const el = document.getElementById(curr);
+        if(el) {
+            el.addEventListener('keypress', function(e) {
+                if(e.key === 'Enter') {
+                    e.preventDefault();
+                    const n = document.getElementById(next);
+                    if(n) { n.focus(); if(n.select) n.select(); }
+                }
+            });
+        }
+    }
+
     function cambiarModo(modo) {
         modoActual = modo;
-        
         if(modo === 'Mandataria') {
             document.getElementById('btnModeMandataria').classList.add('active');
             document.getElementById('btnModeOS').classList.remove('active');
@@ -404,24 +440,16 @@
             document.getElementById('btnModeOS').classList.add('active');
             document.getElementById('tituloTabla').textContent = "💊 DETALLE GLOBAL POR OBRA SOCIAL (SOLO DEUDAS)";
         }
-
-        // Reconstruir Cabecera de Tabla
         const thead = document.getElementById('theadResultados');
         if(modo === 'Mandataria') {
             thead.innerHTML = `<tr><th>N°</th><th>FECHA</th><th>PERIODO</th><th>MANDATARIA</th><th>OBSERVACIONES</th><th class="text-end">TOTAL</th><th class="text-center">ACCIONES</th></tr>`;
         } else {
-            // MODO SÁBANA (Sin ID visible para el usuario)
             thead.innerHTML = `<tr><th>FECHA</th><th>PERIODO</th><th>MANDATARIA</th><th>OBRA SOCIAL</th><th class="text-center">RECETAS</th><th class="text-end">A COBRAR</th><th class="text-end">SALDO PEND.</th><th class="text-center">ACCIONES</th></tr>`;
         }
-
         buscarLiquidaciones();
     }
 
-    // =========================================================
-    // BÚSQUEDA UNIFICADA
-    // =========================================================
     async function buscarLiquidaciones() {
-        const id = ""; // YA NO USAMOS ID PARA BUSCAR
         const desde = document.getElementById('filtroFechaDesde').value;
         const hasta = document.getElementById('filtroFechaHasta').value;
         const mand = document.getElementById('filtroMandataria').value;
@@ -433,7 +461,7 @@
 
         let url = "";
         if (modoActual === 'Mandataria') {
-            url = `@Url.Action("BuscarLiquidacionesAjax", "Home")?desde=${desde}&hasta=${hasta}&mandataria=${mand}`; // Sacamos ID del query
+            url = `@Url.Action("BuscarLiquidacionesAjax", "Home")?desde=${desde}&hasta=${hasta}&mandataria=${mand}`; 
         } else {
             url = `@Url.Action("BuscarDetallesGlobalesAjax", "Home")?desde=${desde}&hasta=${hasta}&idMandataria=${mand}&idOS=${idOS}`;
         }
@@ -446,7 +474,6 @@
                 tbody.innerHTML = ''; 
                 
                 if (modoActual === 'Mandataria') {
-                    // MODO CLÁSICO
                     res.data.forEach(l => {
                         const f = new Date(l.FechaPresentacion || l.fechaPresentacion).toLocaleDateString('es-AR');
                         const nm = l.NombreMandataria || mapaMandatarias[l.IdMandatarias || l.idMandatarias] || "---";
@@ -467,30 +494,26 @@
                             </td></tr>`;
                     });
                 } else {
-                    // MODO OS (SÁBANA) - SOLO DEUDAS (PAGADO = FALSE)
                     let contadorVisibles = 0;
                     res.data.forEach(x => {
                         const pagado = (x.Pagado === true || x.Pagado === 1);
-                        
-                        // FILTRO VISUAL: SI ESTÁ PAGADO, NO SE MUESTRA
                         if (pagado) return; 
 
                         contadorVisibles++;
                         const f = (x.FechaPresentacion||x.fechaPresentacion||'').split('T')[0];
-                        const neto = parseFloat(x.TotalBruto||x.totalBruto||0); // Este es el (Cargo - Bonif)
+                        const neto = parseFloat(x.TotalBruto||x.totalBruto||0); 
                         const saldo = parseFloat(x.SaldoPendiente);
                         const visualSaldo = isNaN(saldo) ? neto : saldo; 
                         
                         const idDet = x.IdLiquidacionDetalle || x.idLiquidacionDetalle;
                         const idPadre = x.IdLiquidaciones || x.idLiquidaciones;
 
-                        // --- DATOS COMPLETOS PARA IMPRESIÓN ---
                         const datosPrint = JSON.stringify({
                             os: x.NombreObraSocial || x.nombreObraSocial,
                             periodo: x.Periodo || x.periodo,
                             plan: x.NombrePlan || "---",
                             recetas: x.CantidadRecetas || 0,
-                            bruto: parseFloat(x.BrutoOriginal || 0), // Bruto real (suma recetas)
+                            bruto: parseFloat(x.BrutoOriginal || 0), 
                             cargo: parseFloat(x.MontoCargoOS || 0),
                             bonif: parseFloat(x.MontoBonificacion || 0),
                             neto: neto,
@@ -530,36 +553,71 @@
         buscarLiquidaciones(); 
     }
 
-    // =========================================================
-    // AUTOCOMPLETADO
-    // =========================================================
+    // --- AUTOCOMPLETADO (Flechas + Enter) ---
     function setupAuto(inpId, listId, hidId, fuenteDatos) {
         const inp = document.getElementById(inpId);
         const list = document.getElementById(listId);
         const hid = document.getElementById(hidId);
-        inp.oninput = function() {
+        
+        inp.addEventListener("input", function() {
             const t = this.value.toLowerCase();
             list.innerHTML = '';
+            currentFocus = -1;
             if (t.length < 1) { list.style.display = 'none'; hid.value="0"; return; }
-            const f = fuenteDatos.filter(x => x.nombre.toLowerCase().includes(t));
+            
+            const f = fuenteDatos.filter(x => x.nombre.toLowerCase().includes(t)).slice(0, 50); // LIMITAMOS A 50 RESULTADOS PARA NO CONGELAR
             if (f.length === 0) { list.innerHTML = '<div class="item-sugerencia text-muted">🚫 NO EXISTE</div>'; list.style.display = 'block'; return; }
+            
             f.forEach(x => {
                 const item = document.createElement('div');
-                item.className = 'item-sugerencia'; item.textContent = x.nombre;
-                item.onclick = function() {
-                    inp.value = x.nombre; hid.value = x.id; list.style.display = 'none';
-                };
+                item.className = 'item-sugerencia'; 
+                item.textContent = x.nombre;
+                item.dataset.id = x.id; item.dataset.nombre = x.nombre;
+                item.addEventListener("click", function() {
+                    inp.value = this.dataset.nombre;
+                    hid.value = this.dataset.id;
+                    list.style.display = 'none';
+                });
                 list.appendChild(item);
             });
             list.style.display = 'block';
-        };
-        inp.onblur = function() { setTimeout(() => { list.style.display = 'none'; }, 300); };
+        });
+
+        inp.addEventListener("keydown", function(e) {
+            let x = list.getElementsByTagName("div");
+            if (e.key === "ArrowDown") {
+                currentFocus++;
+                addActive(x);
+            } else if (e.key === "ArrowUp") {
+                currentFocus--;
+                addActive(x);
+            } else if (e.key === "Enter") {
+                e.preventDefault();
+                if (currentFocus > -1) {
+                    if (x) x[currentFocus].click();
+                } else if (list.style.display === "block" && x.length > 0) {
+                     x[0].click();
+                } else {
+                    if(inpId === 'txtFiltroOS') buscarLiquidaciones();
+                }
+            }
+        });
+
+        inp.addEventListener("blur", function() { setTimeout(() => { list.style.display = 'none'; }, 200); });
     }
 
-    // =========================================================
-    // FUNCIONALIDADES ORIGINALES (NUEVO, EDITAR, VER)
-    // =========================================================
-    
+    function addActive(x) {
+        if (!x) return false;
+        removeActive(x);
+        if (currentFocus >= x.length) currentFocus = 0;
+        if (currentFocus < 0) currentFocus = (x.length - 1);
+        x[currentFocus].classList.add("active-sugerencia");
+        x[currentFocus].scrollIntoView({ block: "nearest" });
+    }
+    function removeActive(x) {
+        for (let i = 0; i < x.length; i++) x[i].classList.remove("active-sugerencia");
+    }
+
     async function cargarPlanesDeOS(idOS, idSelectDestino) {
         const selectPlan = document.getElementById(idSelectDestino);
         selectPlan.innerHTML = '<option value="0">Cargando...</option>'; selectPlan.disabled = true;
@@ -602,9 +660,10 @@
             nombrePlanVisual: plan.options[plan.selectedIndex].text
         };
         detallesTemporales.push(nuevo); dibujarTablaDetalles();
-        os.value="0"; plan.value="0"; plan.disabled=true;
+        
         document.getElementById('inputRecetas').value="0"; document.getElementById('inputTotal').value="0.00";
         document.getElementById('inputCargoOS').value="0.00"; document.getElementById('inputNeto').value="0.00";
+        document.getElementById('inputTotal').focus();
     });
 
     function dibujarTablaDetalles() {
@@ -664,21 +723,59 @@
             if (d.success) {
                 tbody.innerHTML = '';
                 if(d.data.length === 0) { tbody.innerHTML = '<tr><td colspan="8" class="text-center p-3">Sin detalles.</td></tr>'; return; }
+                
                 d.data.forEach(x => {
                     const nomOS = document.querySelector(`#inputOS option[value="${x.idObrasSociales}"]`)?.text || `ID ${x.idObrasSociales}`;
                     const aPagarReal = x.montoCargoOS - x.montoBonificacion;
+                    
+                    // --- BOTÓN OJITO EN MODAL VISOR ---
                     tbody.innerHTML += `<tr>
                         <td class="nombre-os">${nomOS}</td><td class="text-center">${x.idPlanBonificacion}</td><td class="text-center">${x.cantidadRecetas}</td>
                         <td class="text-end">$${x.totalBruto.toFixed(2)}</td><td class="text-end">$${x.montoCargoOS.toFixed(2)}</td>
                         <td class="text-end">$${x.montoBonificacion.toFixed(2)}</td>
                         <td class="text-end fw-bold border border-secondary">$${aPagarReal.toFixed(2)}</td>
                         <td class="text-center">
+                            <button class="btn btn-sm btn-info text-white me-1" onclick="verCobrosDeLiquidacion(${x.idLiquidacionDetalle})" title="Ver Pagos">👁️</button>
                             <button class="btn btn-warning btn-sm" onclick="abrirItemABM(${x.idLiquidacionDetalle}, ${idLiquidacionActualVisor})">✏️</button>
                             <button class="btn btn-danger btn-sm" onclick="eliminarItemIndividual(${x.idLiquidacionDetalle})">🗑️</button>
                         </td></tr>`;
                 });
             } else { tbody.innerHTML = `<tr><td colspan="8" class="text-danger">${d.message}</td></tr>`; }
         } catch(e) { tbody.innerHTML = '<tr><td colspan="8" class="text-danger">Error.</td></tr>'; }
+    }
+
+    async function verCobrosDeLiquidacion(idDet) {
+        const tbody = document.getElementById('tbodyVerCobrosLiq');
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center p-3">Cargando...</td></tr>';
+        modalCobros.show();
+        
+        try {
+            const r = await fetch(`@Url.Action("ObtenerCobrosPorLiquidacionDetalle", "Home")?idDetalle=${idDet}`);
+            const res = await r.json();
+            tbody.innerHTML = '';
+            
+            if(res.success && res.data.length > 0) {
+                res.data.forEach(c => {
+                    const imp = parseFloat(c.ImporteCobrado||0);
+                    const deb = parseFloat(c.MontoDebito||0);
+                    const motivo = c.MotivoDebito || '-';
+                    const fecha = (c.FechaCobro||'').split('T')[0];
+                    
+                    tbody.innerHTML += `<tr>
+                        <td>${fecha}</td>
+                        <td>${c.NumeroComprobante}</td>
+                        <td class="text-end fw-bold">$${imp.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+                        <td class="text-end text-danger">$${deb.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+                        <td class="text-end fw-black text-success">$${(imp-deb).toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+                        <td class="small text-muted fst-italic">${motivo}</td>
+                    </tr>`;
+                });
+            } else {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted p-3">🚫 Aún no se han registrado cobros para este ítem.</td></tr>';
+            }
+        } catch(e) { 
+            tbody.innerHTML = '<tr><td colspan="6" class="text-danger text-center">Error al conectar con el servidor.</td></tr>'; 
+        }
     }
 
     async function editarCabecera(id) {
@@ -726,10 +823,8 @@
     }
     
     // ABM ITEM INDIVIDUAL (MINI MODAL)
-    // Nota: El parámetro idPadre es opcional, se usa para recargar visor si estamos en modo sabana
     async function abrirItemABM(idItem, idPadre = 0) {
         document.getElementById('item_Id').value = idItem;
-        // Si viene idPadre (Modo Sabana), lo usamos. Si no, usamos el del visor actual
         document.getElementById('item_IdLiquidacionPadre').value = (idPadre > 0) ? idPadre : idLiquidacionActualVisor;
         
         document.getElementById('tituloModalItem').textContent = (idItem === 0) ? "NUEVO ÍTEM" : "EDITAR ÍTEM";
@@ -774,8 +869,8 @@
             if((await r.json()).success) { 
                 alert("✅ Guardado."); 
                 cerrarModalItem(); 
-                if(modoActual === 'OS') buscarLiquidaciones(); // Recarga sábana
-                else recargarTablaVisor(); // Recarga modal normal
+                if(modoActual === 'OS') buscarLiquidaciones(); 
+                else recargarTablaVisor(); 
             }
             else alert("Error.");
         } catch(e) { alert("Error."); }
@@ -783,7 +878,7 @@
     
     async function eliminarItemIndividual(id) {
         if(!confirm("¿Borrar ítem?")) return;
-        const fd = new FormData(); fd.append("idItem", id); fd.append("idLiquidacionPadre", 0); // No importa padre para borrar
+        const fd = new FormData(); fd.append("idItem", id); fd.append("idLiquidacionPadre", 0);
         try { 
             if((await (await fetch('@Url.Action("EliminarItemIndividual", "Home")', { method: 'POST', body: fd })).json()).success) {
                 if(modoActual === 'OS') buscarLiquidaciones();
@@ -792,42 +887,7 @@
         } catch(e){}
     }
 
-    // --- NUEVO: VER COBROS ASOCIADOS A UN ÍTEM ---
-    async function verCobrosDeLiquidacion(idDet) {
-        const tbody = document.getElementById('tbodyVerCobrosLiq');
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center p-3">Cargando...</td></tr>';
-        modalCobros.show();
-        
-        try {
-            const r = await fetch(`@Url.Action("ObtenerCobrosPorLiquidacionDetalle", "Home")?idDetalle=${idDet}`);
-            const res = await r.json();
-            tbody.innerHTML = '';
-            
-            if(res.success && res.data.length > 0) {
-                res.data.forEach(c => {
-                    const imp = parseFloat(c.ImporteCobrado||0);
-                    const deb = parseFloat(c.MontoDebito||0);
-                    const motivo = c.MotivoDebito || '-';
-                    const fecha = (c.FechaCobro||'').split('T')[0];
-                    
-                    tbody.innerHTML += `<tr>
-                        <td>${fecha}</td>
-                        <td>${c.NumeroComprobante}</td>
-                        <td class="text-end fw-bold">$${imp.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
-                        <td class="text-end text-danger">$${deb.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
-                        <td class="text-end fw-black text-success">$${(imp-deb).toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
-                        <td class="small text-muted fst-italic">${motivo}</td>
-                    </tr>`;
-                });
-            } else {
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted p-3">🚫 Aún no se han registrado cobros para este ítem.</td></tr>';
-            }
-        } catch(e) { 
-            tbody.innerHTML = '<tr><td colspan="6" class="text-danger text-center">Error al conectar con el servidor.</td></tr>'; 
-        }
-    }
-
-    // 1. IMPRIMIR REPORTE GLOBAL (Desde el Modal "VER") - AHORA CON TOTALES
+    // IMPRESIÓN (AHORA CON TOTALES)
     function imprimirReporteGlobal() {
         const idLiq = document.getElementById('verId').textContent;
         const fecha = document.getElementById('verFecha').textContent;
@@ -840,28 +900,25 @@
             const celdas = tr.querySelectorAll('td');
             if(celdas.length > 1) { 
                 const rec = parseInt(celdas[2].textContent) || 0;
-                // Limpiamos el signo $ para sumar
                 const bruto = parseFloat(celdas[3].textContent.replace('$','').replace('.','').replace(',','.')) || 0; 
                 const cargo = parseFloat(celdas[4].textContent.replace('$','').replace('.','').replace(',','.')) || 0; 
                 const bonif = parseFloat(celdas[5].textContent.replace('$','').replace('.','').replace(',','.')) || 0; 
                 const neto  = parseFloat(celdas[6].textContent.replace('$','').replace('.','').replace(',','.')) || 0;
 
-                // Acumulamos
                 tRec += rec; tBruto += bruto; tCargo += cargo; tBonif += bonif; tNeto += neto;
 
                 filasHTML += `<tr>
                     <td style="text-align:left; padding:5px;">${celdas[0].textContent}</td>
                     <td style="text-align:center;">${celdas[1].textContent}</td>
-                    <td style="text-align:center;">${celdas[2].textContent}</td>
-                    <td style="text-align:right;">${celdas[3].textContent}</td>
-                    <td style="text-align:right;">${celdas[4].textContent}</td>
-                    <td style="text-align:right;">${celdas[5].textContent}</td>
-                    <td style="text-align:right; font-weight:bold;">${celdas[6].textContent}</td>
+                    <td style="text-align:center;">${rec}</td>
+                    <td style="text-align:right;">$${bruto.toFixed(2)}</td>
+                    <td style="text-align:right;">$${cargo.toFixed(2)}</td>
+                    <td style="text-align:right;">$${bonif.toFixed(2)}</td>
+                    <td style="text-align:right; font-weight:bold;">$${neto.toFixed(2)}</td>
                 </tr>`;
             }
         });
 
-        // AGREGAMOS FILA DE TOTALES AL FINAL
         filasHTML += `<tr style="background-color:#e9ecef; font-weight:bold;">
             <td colspan="2" style="text-align:right; padding:8px;">TOTALES:</td>
             <td style="text-align:center;">${tRec}</td>
@@ -871,13 +928,10 @@
             <td style="text-align:right;">$${tNeto.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
         </tr>`;
 
-        // Llamamos a la ventana común (sin deuda específica)
         abrirVentanaImpresion(idLiq, mandataria, fecha, filasHTML);
     }
 
-    // 2. IMPRIMIR ÍTEM INDIVIDUAL (Desde la "Sábana" por OS)
     function imprimirItemIndividual(datos) {
-        // Armamos la fila única con los datos COMPLETOS que vienen del objeto
         const filasHTML = `<tr>
             <td style="text-align:left; padding:5px;">${datos.os}</td>
             <td style="text-align:center;">${datos.plan}</td>
@@ -888,81 +942,56 @@
             <td style="text-align:right; font-weight:bold;">$${datos.neto.toFixed(2)}</td>
         </tr>`;
         
-        // Pasamos la 'deuda' como último parámetro para que salga en rojo
         abrirVentanaImpresion(datos.periodo, "IMPRESIÓN INDIVIDUAL", new Date().toLocaleDateString('es-AR'), filasHTML, datos.deuda);
     }
 
-    // 3. FUNCIÓN MAESTRA DE VENTANA (CON CABECERA FARMACIA Y ALERTA DE DEUDA)
     function abrirVentanaImpresion(ref, mand, fecha, filas, saldoPendiente = null) {
         const v = window.open('', '', 'height=800,width=1000');
-        
-        // Si nos pasaron un saldo pendiente, creamos el cartel de alerta roja
         const htmlDeuda = (saldoPendiente !== null && saldoPendiente !== undefined) 
-            ? `<div style="margin-top:15px; border: 3px solid #dc3545; background-color: #f8d7da; color: #842029; padding: 10px; font-weight:bold; font-size:18px; text-align:center; border-radius:5px;">
+            ? `<div style="margin-top:20px; border: 3px solid #dc3545; background-color: #f8d7da; color: #842029; padding: 10px; font-weight:bold; font-size:18px; text-align:center; border-radius:8px;">
                  ⚠️ DEUDA PENDIENTE ACTUAL: $${parseFloat(saldoPendiente).toLocaleString('es-AR', {minimumFractionDigits: 2})}
                </div>` 
             : '';
 
         v.document.write(`<html><head><title>Impresión Liquidación</title><style>
             body { font-family: 'Courier New', monospace; font-size: 14px; padding: 20px; }
-            h1 { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
-            
+            h1 { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 30px; }
             .header-farmacia { text-align: center; margin-bottom: 30px; font-weight: bold; font-size: 1.2em; line-height: 1.5; }
-            
             .info-box { border: 2px solid #000; padding: 15px; margin-bottom: 20px; background: #f8f9fa; }
             .info-line { margin-bottom: 5px; font-size: 16px; }
             .info-label { font-weight: 900; margin-right: 10px; }
-            
             table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th { border-bottom: 2px solid #000; padding: 8px; background: #e9ecef; text-align: center; font-size: 12px; }
+            th { border-bottom: 2px solid #000; padding: 8px; background: #e9ecef; text-align: center; font-size: 12px; font-weight:bold; }
             td { border-bottom: 1px solid #ccc; padding: 8px; font-size: 13px; }
-            
             .firma { margin-top: 100px; text-align: right; font-weight: bold; padding-right: 50px; }
             .footer { text-align:center; margin-top:50px; font-size:10px; color: #666; border-top: 1px solid #ccc; padding-top: 10px;}
         </style></head><body>
-            
             <div class="header-farmacia">
                 ${farmaciaInfo.nombre}<br>
                 ${farmaciaInfo.domicilio}<br>
                 CUIT: ${farmaciaInfo.cuit} - Condición IVA: ${farmaciaInfo.iva}
             </div>
-
             <h1>DETALLE DE LIQUIDACIÓN</h1>
-            
             <div class="info-box">
                 <div class="info-line"><span class="info-label">REFERENCIA / PERIODO:</span> ${ref}</div>
                 <div class="info-line"><span class="info-label">MANDATARIA / GRUPO:</span> ${mand}</div>
                 <div class="info-line"><span class="info-label">FECHA IMPRESIÓN:</span> ${fecha}</div>
-                
                 ${htmlDeuda}
             </div>
-
             <table>
                 <thead>
                     <tr>
-                        <th style="text-align:left;">OBRA SOCIAL</th>
-                        <th>PLAN</th>
-                        <th>RECETAS</th>
-                        <th style="text-align:right;">BRUTO ORIG.</th>
-                        <th style="text-align:right;">CARGO O.S.</th>
-                        <th style="text-align:right;">BONIFICACIÓN</th>
-                        <th style="text-align:right;">NETO A PAGAR</th>
+                        <th style="text-align:left;">OBRA SOCIAL</th><th>PLAN</th><th>RECETAS</th>
+                        <th style="text-align:right;">BRUTO ORIG.</th><th style="text-align:right;">CARGO O.S.</th>
+                        <th style="text-align:right;">BONIFICACIÓN</th><th style="text-align:right;">NETO A PAGAR</th>
                     </tr>
                 </thead>
                 <tbody>${filas}</tbody>
             </table>
-
-            <div class="firma">
-                _______________________________<br>
-                Firma Responsable
-            </div>
-            
+            <div class="firma">_______________________________<br>Firma Responsable</div>
             <div class="footer">Documento generado el: ${new Date().toLocaleString()}</div>
         </body></html>`);
-        
-        v.document.close(); 
-        v.focus(); 
-        setTimeout(() => { v.print(); v.close(); }, 500);
+        v.document.close(); v.focus(); setTimeout(() => { v.print(); v.close(); }, 500);
     }
 </script>
 }

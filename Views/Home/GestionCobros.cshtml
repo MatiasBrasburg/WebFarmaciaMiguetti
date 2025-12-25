@@ -11,7 +11,7 @@
 
     var jsonObrasSociales = JsonSerializer.Serialize(listaObrasSociales.Select(x => new { id = x.IdObrasSociales, nombre = x.Nombre, idMandataria = x.IdMandataria }));
 
-    // Recuperar datos de farmacia para impresión
+    // --- RECUPERAR DATOS DE LA FARMACIA DESDE SESIÓN ---
     string nombreFarmacia = "FARMACIA";
     string direccionFarmacia = "Domicilio no configurado";
     string cuitFarmacia = "---";
@@ -46,13 +46,14 @@
     .row.align-items-end .form-control, 
     .row.align-items-end .form-select, 
     .row.align-items-end .btn {
-        height: 42px !important; 
+        height: 42px !important; /* Altura fija estándar */
         font-size: 1.05rem;
         font-weight: 700;
         display: flex;
         align-items: center; 
     }
 
+    /* Ajustes cosméticos generales */
     .form-control, .form-select { 
         border: 2px solid #6c757d; 
         color: #000;
@@ -66,22 +67,15 @@
     }
 
     /* El grupo del buscador + botón deuda */
-    .input-group {
-        display: flex;
-        width: 100%;
-    }
     .input-group .btn {
         border: 2px solid #0d6efd;
         z-index: 5;
         padding-left: 15px;
         padding-right: 15px;
-        border-top-left-radius: 0;
-        border-bottom-left-radius: 0;
     }
-    .input-group .buscador-wrapper .form-control {
-        border-top-right-radius: 0;
-        border-bottom-right-radius: 0;
-        border-right: none;
+    
+    .input-group .form-control {
+        border: 2px solid #6c757d; 
     }
 
     /* BUSCADORES FLOTANTES */
@@ -120,8 +114,8 @@
         <div class="card-body">
             <h4 class="mb-3 fw-bold">🔍 BUSCAR LOTES</h4>
             <div class="row g-3 align-items-end">
-                <div class="col-md-2"><label class="form-label">Desde</label><input type="date" id="filtroDesde" class="form-control"></div>
-                <div class="col-md-2"><label class="form-label">Hasta</label><input type="date" id="filtroHasta" class="form-control"></div>
+                <div class="col-md-2"><label class="form-label">Desde</label><input type="date" id="filtroDesde" class="form-control" data-enter="buscarCobros"></div>
+                <div class="col-md-2"><label class="form-label">Hasta</label><input type="date" id="filtroHasta" class="form-control" data-enter="buscarCobros"></div>
                 <div class="col-md-3">
                     <label class="form-label">Mandataria</label>
                     <select id="filtroMandataria" class="form-select">
@@ -210,8 +204,8 @@
                             </div>
                             <div class="col-md-2"><label class="form-label small">FECHA PAGO</label><input type="date" id="n_ItemFecha" class="form-control fw-bold"></div>
                             <div class="col-md-2"><label class="form-label small">TIPO</label><select id="n_ItemTipo" class="form-select fw-bold">@foreach(var t in listaTiposPago){<option value="@t">@t</option>}</select></div>
-                            <div class="col-md-2"><label class="form-label small text-success">IMPORTE</label><input type="number" id="n_Imp" class="form-control text-success fw-bold" placeholder="$" onkeypress="enterAdd(event)"></div>
-                            <div class="col-md-1"><label class="form-label small text-danger">DÉB.</label><input type="number" id="n_Deb" class="form-control text-danger fw-bold" value="0" onkeypress="enterAdd(event)"></div>
+                            <div class="col-md-2"><label class="form-label small text-success">IMPORTE</label><input type="number" id="n_Imp" class="form-control text-success fw-bold" placeholder="$" data-enter="aggTemp"></div>
+                            <div class="col-md-1"><label class="form-label small text-danger">DÉB.</label><input type="number" id="n_Deb" class="form-control text-danger fw-bold" value="0" data-enter="aggTemp"></div>
                             <div class="col-md-1"><button class="btn btn-success w-100 fw-bold" onclick="aggTemp()">⬇️</button></div>
                         </div>
                         <input type="hidden" id="n_IdLiqDetalle" value=""> <small id="lblDeudaSeleccionada" class="text-primary fw-bold ms-1" style="display:none;"></small>
@@ -264,7 +258,7 @@
                             </div>
                             <div class="col-md-2"><input type="date" id="v_FechaItem" class="form-control form-control-sm"></div>
                             <div class="col-md-2"><select id="v_TipoItem" class="form-select form-select-sm">@foreach(var t in listaTiposPago){<option value="@t">@t</option>}</select></div>
-                            <div class="col-md-2"><input type="number" id="v_Imp" class="form-control form-control-sm text-success fw-bold" placeholder="$"></div>
+                            <div class="col-md-2"><input type="number" id="v_Imp" class="form-control form-control-sm text-success fw-bold" placeholder="$" data-enter="agregarAlLote"></div>
                             <div class="col-md-2"><button class="btn btn-primary fw-bold w-100 btn-sm" onclick="agregarAlLote()">AGREGAR</button></div>
                         </div>
                         <input type="hidden" id="v_IdLiqDetalle" value="">
@@ -338,10 +332,7 @@
 <div class="modal fade" id="modalEditDetalle" tabindex="-1" style="z-index: 1060;">
     <div class="modal-dialog">
         <div class="modal-content border-warning">
-            <div class="modal-header bg-warning py-2">
-                <h5 class="modal-title fw-bold">EDITAR PAGO</h5>
-                <button type="button" class="btn-close" onclick="cerrarEditDetalle()"></button>
-            </div>
+            <div class="modal-header bg-warning py-2"><h5 class="modal-title fw-bold">EDITAR PAGO</h5><button type="button" class="btn-close" onclick="cerrarEditDetalle()"></button></div>
             <div class="modal-body p-3">
                 <input type="hidden" id="ed_Id">
                 <input type="hidden" id="valED_OS">
@@ -359,7 +350,7 @@
 </div>
 
 <script>
-    // DATOS FARMACIA PARA IMPRESIÓN
+    // DATOS DE FARMACIA (Para Impresión)
     const farmaciaInfo = {
         nombre: "@Html.Raw(nombreFarmacia)",
         domicilio: "@Html.Raw(direccionFarmacia)",
@@ -384,6 +375,24 @@
         setupAuto('txtFiltroOS', 'listaFiltroOS', 'filtroOS', datosOS);
         setupAuto('txtN_OS', 'listN_OS', 'valN_OS', datosOS);
         setupAuto('txtV_OS', 'listV_OS', 'valV_OS', datosOS);
+
+        // --- NAVEGACIÓN MEJORADA (LOCAL) ---
+        // 1. Auto-Focus en Modales
+        document.getElementById('modalNuevo').addEventListener('shown.bs.modal', function () { document.getElementById('n_Comp').focus(); });
+        document.getElementById('modalVer').addEventListener('shown.bs.modal', function () { document.getElementById('txtV_OS').focus(); });
+        document.getElementById('modalEditDetalle').addEventListener('shown.bs.modal', function () { document.getElementById('ed_Imp').focus(); });
+
+        // 2. Evento Enter Global (Delegado)
+        document.addEventListener('keypress', function(e) {
+            if(e.key === 'Enter') {
+                const target = e.target;
+                if(target.dataset && target.dataset.enter) {
+                    e.preventDefault();
+                    const fnName = target.dataset.enter;
+                    if(typeof window[fnName] === 'function') window[fnName]();
+                }
+            }
+        });
 
         buscarCobros(); 
         
@@ -486,7 +495,7 @@
         buscarCobros(); 
     }
 
-    // --- IMPRESIÓN (ARREGLADA) ---
+    // --- IMPRESIÓN MEJORADA ---
     function imprimirListadoCobros() {
         const tabla = document.getElementById('tbodyResultados');
         let filas = "";
@@ -510,13 +519,12 @@
             }
         });
 
-        // Totales
-        filas += "<tr style='background:#eee; font-weight:bold;'><td colspan='4' style='text-align:right'>TOTALES:</td><td style='text-align:right'>$" + tImp.toLocaleString('es-AR',{minimumFractionDigits:2}) + "</td><td style='text-align:right'>$" + tNet.toLocaleString('es-AR',{minimumFractionDigits:2}) + "</td></tr>";
+        const totalRow = "<tr style='background:#eee; font-weight:bold;'><td colspan='4' style='text-align:right'>TOTALES:</td><td style='text-align:right'>$" + tImp.toLocaleString('es-AR',{minimumFractionDigits:2}) + "</td><td style='text-align:right'>$" + tNet.toLocaleString('es-AR',{minimumFractionDigits:2}) + "</td></tr>";
 
         const v = window.open('', '', 'height=800,width=1000');
         v.document.write('<html><head><title>Listado</title><style>');
         v.document.write('body { font-family: Courier New, monospace; padding: 20px; }');
-        v.document.write('.header { text-align:center; margin-bottom:20px; font-weight:bold; }');
+        v.document.write('.header { text-align:center; margin-bottom:20px; font-weight:bold; font-size:1.1em; }');
         v.document.write('table { width: 100%; border-collapse: collapse; margin-top: 20px; }');
         v.document.write('th { border-bottom: 2px solid #000; padding: 8px; background: #eee; }');
         v.document.write('td { border-bottom: 1px solid #ccc; padding: 8px; font-size: 12px; }');
@@ -528,12 +536,13 @@
         v.document.write(farmaciaInfo.iva);
         v.document.write('</div>');
 
-        v.document.write('<h1 style="text-align:center">LISTADO DE LOTES DE COBROS</h1>');
+        v.document.write('<h2 style="text-align:center">LISTADO DE LOTES DE COBROS</h2>');
         v.document.write('<table><thead><tr><th>FECHA</th><th>MANDATARIA</th><th>COMPROBANTE</th><th>ITEMS</th><th>TOTAL IMPORTE</th><th>TOTAL NETO</th></tr></thead><tbody>');
         v.document.write(filas);
+        v.document.write(totalRow);
         v.document.write('</tbody></table>');
         v.document.write('<div style="text-align:center; margin-top:30px; font-size:10px;">Generado el: ' + new Date().toLocaleString() + '</div>');
-        v.document.write('<' + '/body><' + '/html>');
+        v.document.write('<' + '/body><' + '/html>'); // Rompemos etiquetas para que no fallen
         
         v.document.close(); 
         v.focus(); 
@@ -636,6 +645,8 @@
         document.getElementById('valN_OS').value="0";
         document.getElementById('n_IdLiqDetalle').value = ""; 
         document.getElementById('lblDeudaSeleccionada').style.display = 'none';
+        
+        // FOCO AUTOMÁTICO AL BUSCADOR PARA SEGUIR CARGANDO
         document.getElementById('txtN_OS').focus();
     }
 
@@ -753,8 +764,11 @@
             await fetch('@Url.Action("GuardarCobro", "Home")', { method:'POST', body:fd });
             document.getElementById('v_Imp').value=""; document.getElementById('txtV_OS').value=""; document.getElementById('valV_OS').value="0";
             document.getElementById('v_IdLiqDetalle').value=""; document.getElementById('lblDeudaSeleccionadaVer').style.display='none';
+            
             buscarCobros(); 
             traerDetalles(loteContexto.idPadre);
+            // FOCO AL BUSCADOR
+            document.getElementById('txtV_OS').focus();
         } catch(e) { alert("Error de red."); }
     }
 
@@ -823,23 +837,30 @@
         fd.append("IdCobro", document.getElementById('ed_Id').value);
         const idOS = document.getElementById('valED_OS').value;
         fd.append("IdObraSocial", idOS); fd.append("IdObrasSociales", idOS);
-        fd.append("IdMandataria", loteContexto.mandatariaId); // Agregamos Mandataria aunque sea detalle
+        
+        // AGREGAMOS ESTO PARA QUE PASE LA VALIDACIÓN DEL CONTROLLER
+        fd.append("IdMandataria", loteContexto.mandatariaId); 
+        
         fd.append("FechaCobro", document.getElementById('ed_Fecha').value);
         fd.append("TipoPago", document.getElementById('ed_Tipo').value);
-        fd.append("NumeroComprobante", "---"); // Marca especial para el Controller sepa que es edición
+        
+        // MARCA ESPECIAL: "---" indica al Controller que es una edición
+        fd.append("NumeroComprobante", "---"); 
+        
         fd.append("ImporteCobrado", document.getElementById('ed_Imp').value.replace(',','.'));
         fd.append("MontoDebitos", document.getElementById('ed_Deb').value.replace(',','.'));
-        fd.append("MotivoDebito", "");
+        fd.append("MotivoDebito", ""); // Campo obligatorio aunque vaya vacío
 
         try {
             const r = await fetch('@Url.Action("GuardarCobro", "Home")', { method:'POST', body:fd });
             const res = await r.json();
+            
             if(res.success) {
                 mEditDetalle.hide(); 
                 buscarCobros(); 
                 traerDetalles(loteContexto.idPadre);
             } else {
-                alert("Error al guardar: " + res.message);
+                alert("Error: " + res.message);
             }
         } catch(e) { alert("Error de red"); }
     }
@@ -851,6 +872,4 @@
             r.style.display = texto.includes(t) ? '' : 'none';
         });
     }
-    
-    function enterAdd(e) { if(e.key==='Enter') aggTemp(); }
 </script>
