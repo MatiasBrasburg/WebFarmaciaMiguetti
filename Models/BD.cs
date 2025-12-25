@@ -803,32 +803,30 @@ public static void AgregarCobroDetalle(int idCobroPadre, int idObraSocial, DateT
 // -----------------------------------------------------------------------------------
 // 4. MODIFICAR DETALLE (Solo editamos el hijo, el padre raramente se toca desde aquí)
 // -----------------------------------------------------------------------------------
-public static void ModificarCobroDetalle(int idCobroDetalle, int idObraSocial, DateTime fechaDetalle, decimal importe, string tipoPago, decimal debitos, string motivoDebito)
+public static void ModificarCobroDetalle(int idCobroDetalle, int idObraSocial, DateTime fecha, decimal importe, string tipo, decimal debitos, string motivo)
 {
-    using (SqlConnection connection = new SqlConnection(_connectionString))
+    using (SqlConnection db = new SqlConnection(_connectionString))
     {
-        string query = @"
-            UPDATE CobrosDetalle 
-            SET IdObrasSociales = @pOS,
-                FechaCobroDetalle = @pFecha,
-                TipoPago = @pTipo,
-                ImporteCobrado = @pImp,
-                MontoDebito = @pDeb,
-                MotivoDebito = @pMot
-            WHERE IdCobrosDetalle = @pId";
-
-        connection.Execute(query, new {
-            pId = idCobroDetalle,
-            pOS = idObraSocial,
-            pFecha = fechaDetalle,
-            pTipo = tipoPago,
-            pImp = importe,
-            pDeb = debitos,
-            pMot = motivoDebito
+        string sql = @"UPDATE CobrosDetalle SET 
+                        IdObrasSociales = @idOS, 
+                        FechaCobroDetalle = @fecha, 
+                        ImporteCobrado = @imp, 
+                        TipoPago = @tipo, 
+                        MontoDebito = @deb, 
+                        MotivoDebito = @mot 
+                       WHERE IdCobrosDetalle = @id";
+                       
+        db.Execute(sql, new { 
+            id = idCobroDetalle, 
+            idOS = idObraSocial, 
+            fecha = fecha, 
+            imp = importe, 
+            tipo = tipo, 
+            deb = debitos, 
+            mot = motivo ?? "" 
         });
     }
 }
-
 // -----------------------------------------------------------------------------------
 // 5. ELIMINAR DETALLE (Y limpiar Padre si queda vacío)
 // -----------------------------------------------------------------------------------

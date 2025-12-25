@@ -11,7 +11,7 @@
 
     var jsonObrasSociales = JsonSerializer.Serialize(listaObrasSociales.Select(x => new { id = x.IdObrasSociales, nombre = x.Nombre, idMandataria = x.IdMandataria }));
 
-    // --- RECUPERAR DATOS DE LA FARMACIA (IGUAL QUE EN MODIFICACIONES) ---
+    // Recuperar datos de farmacia para impresión
     string nombreFarmacia = "FARMACIA";
     string direccionFarmacia = "Domicilio no configurado";
     string cuitFarmacia = "---";
@@ -33,36 +33,92 @@
 }
 
 <style>
-    /* Estilos base */
-    .form-control, .form-select { border: 1px solid #ced4da; }
-    .table-container { border: 1px solid #dee2e6; border-radius: 4px; overflow: hidden; background: white; margin-top:15px; }
-    .table thead th { background-color: #2c3e50; color: white; vertical-align: middle; text-align: center; }
-    .table tbody td { vertical-align: middle; }
+    /* =========================================
+       ESTILOS DE ALTO IMPACTO (UX 85 AÑOS)
+       ========================================= */
+    body { font-family: 'Verdana', sans-serif; background-color: #f4f6f9; color: #000; }
     
-    /* Buscadores y Listas */
-    .buscador-wrapper { position: relative; flex-grow: 1; }
-    .lista-sugerencias { position: absolute; top: 100%; left: 0; width: 100%; background: white; border: 1px solid #ccc; z-index: 10000; display: none; max-height: 300px; overflow-y: auto; box-shadow: 0px 5px 10px rgba(0,0,0,0.2); }
-    .item-sugerencia { padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; }
-    .item-sugerencia:hover { background-color: #f8f9fa; color: #000; }
+    h1 { font-size: 2.2rem; font-weight: 900; color: #146c43; text-transform: uppercase; border-bottom: 5px solid #146c43; display: inline-block; margin-bottom: 20px; }
+    
+    .form-label { font-weight: 900; font-size: 0.9rem; text-transform: uppercase; margin-bottom: 5px; display: block; }
 
-    /* Totales y Cabeceras */
-    .total-display { font-size: 1.5rem; font-weight: 800; color: #198754; text-align: right; padding: 10px; background: #e8f5e9; border-radius: 6px; }
-    .bg-header-add { background-color: #198754; color: white; }
-    .bg-header-view { background-color: #0d6efd; color: white; }
-    .bg-header-edit { background-color: #ffc107; color: #000; }
+    /* --- ALINEACIÓN PERFECTA DE LA FILA DE CARGA --- */
+    .row.align-items-end .form-control, 
+    .row.align-items-end .form-select, 
+    .row.align-items-end .btn {
+        height: 42px !important; 
+        font-size: 1.05rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center; 
+    }
+
+    .form-control, .form-select { 
+        border: 2px solid #6c757d; 
+        color: #000;
+        padding: 5px 10px;
+    }
     
-    .deuda-seleccionada { background-color: #d1e7dd !important; }
+    .form-control:focus, .form-select:focus { 
+        border-color: #198754; 
+        box-shadow: 0 0 0 0.25rem rgba(25,135,84, 0.25); 
+        background-color: #f0fff4; 
+    }
+
+    /* El grupo del buscador + botón deuda */
+    .input-group {
+        display: flex;
+        width: 100%;
+    }
+    .input-group .btn {
+        border: 2px solid #0d6efd;
+        z-index: 5;
+        padding-left: 15px;
+        padding-right: 15px;
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+    }
+    .input-group .buscador-wrapper .form-control {
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+        border-right: none;
+    }
+
+    /* BUSCADORES FLOTANTES */
+    .buscador-wrapper { position: relative; flex-grow: 1; }
+    .lista-sugerencias { 
+        position: absolute; top: 100%; left: 0; width: 100%; 
+        background: white; border: 3px solid #000; border-top: none; 
+        z-index: 10000; display: none; max-height: 250px; overflow-y: auto; 
+        box-shadow: 0px 10px 20px rgba(0,0,0,0.4);
+    }
+    .item-sugerencia { padding: 10px 15px; cursor: pointer; border-bottom: 1px solid #ccc; font-weight: 700; font-size: 1rem; color: #333; }
+    .item-sugerencia:hover { background-color: #198754; color: white; }
+
+    /* BOTONES GENERALES */
+    .btn-super { font-size: 1.1rem; font-weight: 800; padding: 10px 20px; border: 2px solid rgba(0,0,0,0.2); text-transform: uppercase; letter-spacing: 1px; }
+    
+    /* TOTALES Y TABLAS */
+    .total-display { font-size: 2rem; font-weight: 900; color: #198754; text-align: right; padding: 15px; background: #d1e7dd; border: 3px solid #198754; border-radius: 6px; }
+    .table-container { border: 3px solid #000; border-radius: 4px; overflow: hidden; background: white; margin-top:15px; }
+    .table thead th { background-color: #146c43; color: white; font-size: 1.1rem; vertical-align: middle; text-align: center; border-bottom: 3px solid #000; padding: 15px; }
+    .table tbody td { font-size: 1.05rem; vertical-align: middle; font-weight: 600; padding: 10px; }
+
+    /* COLORES DE CABECERA MODAL */
+    .bg-header-add { background-color: #198754; color: white; border-bottom: 5px solid #0f5132; }
+    .bg-header-view { background-color: #0d6efd; color: white; border-bottom: 5px solid #0a58ca; }
+    .bg-header-edit { background-color: #ffc107; color: #000; border-bottom: 5px solid #000; }
 </style>
 
 <div class="container-fluid mt-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2 class="fw-bold text-dark">💰 GESTIÓN DE COBROS</h2>
-        <button class="btn btn-success fw-bold shadow-sm" onclick="abrirModalNuevo()">➕ NUEVO LOTE</button>
+        <h1>💰 GESTIÓN DE COBROS</h1>
+        <button class="btn btn-success btn-lg btn-super shadow" onclick="abrirModalNuevo()">➕ NUEVO LOTE</button>
     </div>
 
-    <div class="card mb-4 shadow-sm">
+    <div class="card mb-4 shadow-sm" style="border: 3px solid #6c757d; background-color: #e2e3e5;">
         <div class="card-body">
-            <h5 class="mb-3 fw-bold text-secondary">🔍 BUSCAR LOTES</h5>
+            <h4 class="mb-3 fw-bold">🔍 BUSCAR LOTES</h4>
             <div class="row g-3 align-items-end">
                 <div class="col-md-2"><label class="form-label">Desde</label><input type="date" id="filtroDesde" class="form-control"></div>
                 <div class="col-md-2"><label class="form-label">Hasta</label><input type="date" id="filtroHasta" class="form-control"></div>
@@ -82,18 +138,18 @@
                     </div>
                 </div>
                 <div class="col-md-2 d-flex gap-2">
-                    <button class="btn btn-primary w-100 fw-bold" onclick="buscarCobros()">BUSCAR</button>
-                    <button class="btn btn-secondary fw-bold" onclick="limpiarFiltros()">🔄</button>
+                    <button class="btn btn-primary btn-super w-100" onclick="buscarCobros()">BUSCAR</button>
+                    <button class="btn btn-secondary btn-super" onclick="limpiarFiltros()">🔄</button>
                 </div>
             </div>
             
             <div class="mt-3 text-end">
-                <button class="btn btn-dark fw-bold btn-sm px-4" onclick="imprimirListadoCobros()">🖨️ IMPRIMIR LISTADO</button>
+                <button class="btn btn-dark fw-bold btn-super" onclick="imprimirListadoCobros()">🖨️ IMPRIMIR LISTADO</button>
             </div>
         </div>
     </div>
 
-    <div class="table-container shadow-sm">
+    <div class="table-container shadow">
         <table class="table table-striped table-hover mb-0">
             <thead>
                 <tr>
@@ -112,17 +168,17 @@
 </div>
 
 <div class="modal fade" id="modalNuevo" tabindex="-1" data-bs-backdrop="static" aria-hidden="true">
-    <div class="modal-dialog modal-xl"> 
-        <div class="modal-content">
-            <div class="modal-header bg-header-add">
-                <h5 class="modal-title fw-bold">🧾 NUEVO LOTE DE COBROS</h5>
+    <div class="modal-dialog modal-xl" style="max-width: 95%;"> 
+        <div class="modal-content border-0">
+            <div class="modal-header bg-header-add py-3">
+                <h3 class="modal-title fw-bold">🧾 NUEVO LOTE DE COBROS</h3>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body bg-light p-4">
-                <div class="row g-3 mb-4 p-3 bg-white border rounded shadow-sm">
+                <div class="row g-3 mb-4 p-3 border border-3 border-success rounded bg-white shadow-sm">
                     <div class="col-md-4">
-                        <label class="form-label text-success fw-bold">1. MANDATARIA</label>
-                        <select id="n_Mand" class="form-select border-success" onchange="alCambiarMandatariaNuevo()">
+                        <label class="form-label text-success">1. MANDATARIA</label>
+                        <select id="n_Mand" class="form-select fw-bold border-success" onchange="alCambiarMandatariaNuevo()">
                             <option value="0">-- SELECCIONE --</option>
                             @foreach (var m in listaMandatarias) { <option value="@m.IdMandatarias">@m.RazonSocial</option> }
                         </select>
@@ -137,23 +193,23 @@
                     </div>
                 </div>
 
-                <h6 class="fw-bold text-success mb-2">2. AGREGAR PAGOS</h6>
-                <div class="card mb-3 shadow-sm">
+                <h5 class="fw-bold text-success mb-2">2. AGREGAR PAGOS</h5>
+                <div class="card mb-3 border-2 border-secondary shadow-sm">
                     <div class="card-body bg-white py-3">
                         <div class="row g-2 align-items-end">
                             <div class="col-md-4">
                                 <label class="form-label small">OBRA SOCIAL</label>
                                 <div class="input-group">
-                                    <input type="text" id="txtN_OS" class="form-control" placeholder="Buscar..." autocomplete="off">
-                                    <button class="btn btn-outline-primary" type="button" onclick="abrirModalDeudas('Nuevo')">🔍</button>
-                                </div>
-                                <div class="position-relative">
-                                    <input type="hidden" id="valN_OS" value="0">
-                                    <div id="listN_OS" class="lista-sugerencias"></div>
+                                    <div class="buscador-wrapper flex-grow-1">
+                                        <input type="text" id="txtN_OS" class="form-control fw-bold" placeholder="Buscar..." autocomplete="off">
+                                        <input type="hidden" id="valN_OS" value="0">
+                                        <div id="listN_OS" class="lista-sugerencias"></div>
+                                    </div>
+                                    <button class="btn btn-outline-primary fw-bold" type="button" onclick="abrirModalDeudas('Nuevo')">🔍 DEUDAS</button>
                                 </div>
                             </div>
-                            <div class="col-md-2"><label class="form-label small">FECHA PAGO</label><input type="date" id="n_ItemFecha" class="form-control"></div>
-                            <div class="col-md-2"><label class="form-label small">TIPO</label><select id="n_ItemTipo" class="form-select">@foreach(var t in listaTiposPago){<option value="@t">@t</option>}</select></div>
+                            <div class="col-md-2"><label class="form-label small">FECHA PAGO</label><input type="date" id="n_ItemFecha" class="form-control fw-bold"></div>
+                            <div class="col-md-2"><label class="form-label small">TIPO</label><select id="n_ItemTipo" class="form-select fw-bold">@foreach(var t in listaTiposPago){<option value="@t">@t</option>}</select></div>
                             <div class="col-md-2"><label class="form-label small text-success">IMPORTE</label><input type="number" id="n_Imp" class="form-control text-success fw-bold" placeholder="$" onkeypress="enterAdd(event)"></div>
                             <div class="col-md-1"><label class="form-label small text-danger">DÉB.</label><input type="number" id="n_Deb" class="form-control text-danger fw-bold" value="0" onkeypress="enterAdd(event)"></div>
                             <div class="col-md-1"><button class="btn btn-success w-100 fw-bold" onclick="aggTemp()">⬇️</button></div>
@@ -162,7 +218,7 @@
                     </div>
                 </div>
 
-                <div class="table-responsive border bg-white" style="height:250px; overflow-y:auto;">
+                <div class="table-responsive border border-2 border-dark rounded bg-white" style="height:250px; overflow-y:auto;">
                     <table class="table table-bordered mb-0">
                         <thead class="table-light sticky-top">
                             <tr><th>OBRA SOCIAL</th><th>FECHA</th><th>TIPO</th><th class="text-end">IMPORTE</th><th class="text-end">DÉBITOS</th><th>LIQ.</th><th class="text-center">X</th></tr>
@@ -172,9 +228,9 @@
                 </div>
                 <div class="row mt-3 justify-content-end"><div class="col-md-6"><div class="total-display">TOTAL: <span id="lblTotalLote">$0.00</span></div></div></div>
             </div>
-            <div class="modal-footer bg-light">
-                <button class="btn btn-secondary me-auto" data-bs-dismiss="modal">CANCELAR</button>
-                <button class="btn btn-success px-5 fw-bold" onclick="guardarNuevoLote()">💾 GUARDAR LOTE</button>
+            <div class="modal-footer bg-light py-3">
+                <button class="btn btn-secondary btn-lg btn-super me-auto" data-bs-dismiss="modal">CANCELAR</button>
+                <button class="btn btn-success btn-lg btn-super px-5 shadow" onclick="guardarNuevoLote()">💾 GUARDAR LOTE</button>
             </div>
         </div>
     </div>
@@ -182,28 +238,28 @@
 
 <div class="modal fade" id="modalVer" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <div class="modal-header bg-header-view"><h5 class="modal-title fw-bold text-white">👁️ DETALLE DEL LOTE</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+        <div class="modal-content border-4 border-primary">
+            <div class="modal-header bg-header-view"><h4 class="modal-title fw-bold text-white">👁️ DETALLE DEL LOTE</h4><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
             <div class="modal-body bg-light p-4">
                 <div class="row mb-3 bg-white border p-3 rounded mx-1 shadow-sm">
-                    <div class="col-md-6"><span class="text-muted small d-block">MANDATARIA:</span><h5 class="fw-bold text-primary m-0" id="v_Titulo">---</h5></div>
-                    <div class="col-md-3"><span class="text-muted small d-block">COMPROBANTE:</span><h5 class="fw-bold m-0" id="v_Comp">---</h5></div>
-                    <div class="col-md-3"><span class="text-muted small d-block">FECHA LOTE:</span><h5 class="fw-bold m-0" id="v_Fecha">---</h5></div>
+                    <div class="col-md-6"><span class="text-muted small d-block">MANDATARIA:</span><h4 class="fw-bold text-primary m-0" id="v_Titulo">---</h4></div>
+                    <div class="col-md-3"><span class="text-muted small d-block">COMPROBANTE:</span><h4 class="fw-bold m-0" id="v_Comp">---</h4></div>
+                    <div class="col-md-3"><span class="text-muted small d-block">FECHA LOTE:</span><h4 class="fw-bold m-0" id="v_Fecha">---</h4></div>
                 </div>
                 
-                <div class="card mb-3 border-primary">
-                    <div class="card-header bg-primary text-white fw-bold py-1 small">➕ AGREGAR PAGO SUELTO</div>
+                <div class="card mb-3 border-2 border-primary">
+                    <div class="card-header bg-primary text-white fw-bold py-1">➕ AGREGAR PAGO SUELTO</div>
                     <div class="card-body py-2">
                         <div class="row g-1 align-items-end">
                             <div class="col-md-4">
                                 <label class="form-label small mb-1">OBRA SOCIAL</label>
                                 <div class="input-group input-group-sm">
-                                    <input type="text" id="txtV_OS" class="form-control form-control-sm" placeholder="Obra Social..." autocomplete="off">
-                                    <button class="btn btn-outline-primary" type="button" onclick="abrirModalDeudas('Ver')">🔍</button>
-                                </div>
-                                <div class="position-relative">
-                                    <input type="hidden" id="valV_OS" value="0">
-                                    <div id="listV_OS" class="lista-sugerencias"></div>
+                                    <div class="buscador-wrapper flex-grow-1">
+                                        <input type="text" id="txtV_OS" class="form-control form-control-sm fw-bold" placeholder="Obra Social..." autocomplete="off">
+                                        <input type="hidden" id="valV_OS" value="0">
+                                        <div id="listV_OS" class="lista-sugerencias"></div>
+                                    </div>
+                                    <button class="btn btn-outline-primary fw-bold" type="button" onclick="abrirModalDeudas('Ver')">🔍</button>
                                 </div>
                             </div>
                             <div class="col-md-2"><input type="date" id="v_FechaItem" class="form-control form-control-sm"></div>
@@ -217,13 +273,13 @@
                 </div>
 
                 <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h6 class="fw-bold text-primary m-0">DETALLES IMPUTADOS</h6>
-                    <input type="text" id="buscadorInterno" class="form-control form-control-sm w-50" placeholder="🔍 Filtrar en esta lista..." onkeyup="filtrarInterno()">
+                    <h5 class="fw-bold text-primary m-0">DETALLES IMPUTADOS</h5>
+                    <input type="text" id="buscadorInterno" class="form-control w-50" placeholder="🔍 Filtrar en esta lista..." onkeyup="filtrarInterno()">
                 </div>
 
-                <div class="table-responsive border bg-white" style="height: 300px; overflow-y: auto;">
+                <div class="table-responsive border border-2 border-dark rounded bg-white" style="height: 300px; overflow-y: auto;">
                     <table class="table table-bordered table-sm mb-0">
-                        <thead class="table-light sticky-top">
+                        <thead class="table-dark sticky-top">
                             <tr><th>OS</th><th>FECHA</th><th>TIPO</th><th class="text-end">IMPORTE</th><th class="text-end">NETO</th><th class="text-center">X</th></tr>
                         </thead>
                         <tbody id="tbodyVer"></tbody>
@@ -282,9 +338,13 @@
 <div class="modal fade" id="modalEditDetalle" tabindex="-1" style="z-index: 1060;">
     <div class="modal-dialog">
         <div class="modal-content border-warning">
-            <div class="modal-header bg-warning py-2"><h5 class="modal-title fw-bold">EDITAR PAGO</h5><button type="button" class="btn-close" onclick="mEditDetalle.hide()"></button></div>
+            <div class="modal-header bg-warning py-2">
+                <h5 class="modal-title fw-bold">EDITAR PAGO</h5>
+                <button type="button" class="btn-close" onclick="cerrarEditDetalle()"></button>
+            </div>
             <div class="modal-body p-3">
                 <input type="hidden" id="ed_Id">
+                <input type="hidden" id="valED_OS">
                 <div class="mb-2"><label>Obra Social</label><input type="text" id="txtED_OS" class="form-control fw-bold" readonly disabled></div>
                 <div class="row g-2">
                     <div class="col-6"><label>Fecha</label><input type="date" id="ed_Fecha" class="form-control"></div>
@@ -299,7 +359,7 @@
 </div>
 
 <script>
-    // DATOS DE FARMACIA PARA IMPRIMIR
+    // DATOS FARMACIA PARA IMPRESIÓN
     const farmaciaInfo = {
         nombre: "@Html.Raw(nombreFarmacia)",
         domicilio: "@Html.Raw(direccionFarmacia)",
@@ -426,63 +486,54 @@
         buscarCobros(); 
     }
 
-    // --- IMPRESIÓN MEJORADA (ESTILO MODIFICACIONES + TOTALES) ---
+    // --- IMPRESIÓN (ARREGLADA) ---
     function imprimirListadoCobros() {
         const tabla = document.getElementById('tbodyResultados');
         let filas = "";
-        let totalImporte = 0;
-        let totalNeto = 0;
+        let tImp = 0; let tNet = 0;
         
         tabla.querySelectorAll('tr').forEach(tr => {
             const cols = tr.querySelectorAll('td');
             if(cols.length > 5) {
-                // Sumamos
-                totalImporte += parseFloat(cols[4].textContent.replace('$','').replace('.','').replace(',','.')) || 0;
-                totalNeto += parseFloat(cols[5].textContent.replace('$','').replace('.','').replace(',','.')) || 0;
+                const imp = parseFloat(cols[4].textContent.replace('$','').replace('.','').replace(',','.')) || 0;
+                const net = parseFloat(cols[5].textContent.replace('$','').replace('.','').replace(',','.')) || 0;
+                tImp += imp; tNet += net;
 
-                filas += `<tr>
-                    <td style="text-align:center;">${cols[0].textContent}</td>
-                    <td>${cols[1].textContent}</td>
-                    <td style="text-align:center;">${cols[2].textContent}</td>
-                    <td style="text-align:center;">${cols[3].textContent}</td>
-                    <td style="text-align:right;">${cols[4].textContent}</td>
-                    <td style="text-align:right; font-weight:bold;">${cols[5].textContent}</td>
-                </tr>`;
+                filas += "<tr>" +
+                    "<td style='text-align:center;'>" + cols[0].textContent + "</td>" +
+                    "<td>" + cols[1].textContent + "</td>" +
+                    "<td style='text-align:center;'>" + cols[2].textContent + "</td>" +
+                    "<td style='text-align:center;'>" + cols[3].textContent + "</td>" +
+                    "<td style='text-align:right;'>" + cols[4].textContent + "</td>" +
+                    "<td style='text-align:right; font-weight:bold;'>" + cols[5].textContent + "</td>" +
+                "</tr>";
             }
         });
 
-        // Fila de Totales
-        filas += `<tr style="background-color:#eee; font-weight:bold;">
-            <td colspan="4" style="text-align:right; padding:5px;">TOTALES:</td>
-            <td style="text-align:right;">$${totalImporte.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
-            <td style="text-align:right;">$${totalNeto.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
-        </tr>`;
+        // Totales
+        filas += "<tr style='background:#eee; font-weight:bold;'><td colspan='4' style='text-align:right'>TOTALES:</td><td style='text-align:right'>$" + tImp.toLocaleString('es-AR',{minimumFractionDigits:2}) + "</td><td style='text-align:right'>$" + tNet.toLocaleString('es-AR',{minimumFractionDigits:2}) + "</td></tr>";
 
         const v = window.open('', '', 'height=800,width=1000');
-        
-        // Escribimos el HTML con cuidado de no romper el script
         v.document.write('<html><head><title>Listado</title><style>');
         v.document.write('body { font-family: Courier New, monospace; padding: 20px; }');
-        v.document.write('.header { text-align:center; margin-bottom:20px; font-weight:bold; font-size:1.1em; }');
-        v.document.write('h1 { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; }');
+        v.document.write('.header { text-align:center; margin-bottom:20px; font-weight:bold; }');
         v.document.write('table { width: 100%; border-collapse: collapse; margin-top: 20px; }');
         v.document.write('th { border-bottom: 2px solid #000; padding: 8px; background: #eee; }');
         v.document.write('td { border-bottom: 1px solid #ccc; padding: 8px; font-size: 12px; }');
         v.document.write('</style></head><body>');
         
-        // Datos de Farmacia
         v.document.write('<div class="header">');
         v.document.write(farmaciaInfo.nombre + '<br>');
         v.document.write(farmaciaInfo.domicilio + ' - CUIT: ' + farmaciaInfo.cuit + '<br>');
         v.document.write(farmaciaInfo.iva);
         v.document.write('</div>');
 
-        v.document.write('<h1>LISTADO DE LOTES DE COBROS</h1>');
+        v.document.write('<h1 style="text-align:center">LISTADO DE LOTES DE COBROS</h1>');
         v.document.write('<table><thead><tr><th>FECHA</th><th>MANDATARIA</th><th>COMPROBANTE</th><th>ITEMS</th><th>TOTAL IMPORTE</th><th>TOTAL NETO</th></tr></thead><tbody>');
         v.document.write(filas);
         v.document.write('</tbody></table>');
         v.document.write('<div style="text-align:center; margin-top:30px; font-size:10px;">Generado el: ' + new Date().toLocaleString() + '</div>');
-        v.document.write('<' + '/body><' + '/html>'); // Rompemos las etiquetas
+        v.document.write('<' + '/body><' + '/html>');
         
         v.document.close(); 
         v.focus(); 
@@ -772,16 +823,25 @@
         fd.append("IdCobro", document.getElementById('ed_Id').value);
         const idOS = document.getElementById('valED_OS').value;
         fd.append("IdObraSocial", idOS); fd.append("IdObrasSociales", idOS);
+        fd.append("IdMandataria", loteContexto.mandatariaId); // Agregamos Mandataria aunque sea detalle
         fd.append("FechaCobro", document.getElementById('ed_Fecha').value);
         fd.append("TipoPago", document.getElementById('ed_Tipo').value);
-        fd.append("NumeroComprobante", "---"); 
+        fd.append("NumeroComprobante", "---"); // Marca especial para el Controller sepa que es edición
         fd.append("ImporteCobrado", document.getElementById('ed_Imp').value.replace(',','.'));
         fd.append("MontoDebitos", document.getElementById('ed_Deb').value.replace(',','.'));
+        fd.append("MotivoDebito", "");
 
         try {
-            await fetch('@Url.Action("GuardarCobro", "Home")', { method:'POST', body:fd });
-            mEditDetalle.hide(); buscarCobros(); traerDetalles(loteContexto.idPadre);
-        } catch(e) { alert("Error red"); }
+            const r = await fetch('@Url.Action("GuardarCobro", "Home")', { method:'POST', body:fd });
+            const res = await r.json();
+            if(res.success) {
+                mEditDetalle.hide(); 
+                buscarCobros(); 
+                traerDetalles(loteContexto.idPadre);
+            } else {
+                alert("Error al guardar: " + res.message);
+            }
+        } catch(e) { alert("Error de red"); }
     }
     
     function filtrarInterno() {
