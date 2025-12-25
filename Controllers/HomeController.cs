@@ -853,7 +853,19 @@ public IActionResult TraerDeudasPendientes(int idObraSocial)
     }
 }
 
-
+[HttpGet]
+public IActionResult ObtenerCobrosPorLiquidacionDetalle(int idDetalle)
+{
+    try
+    {
+        var data = BD.ObtenerCobrosPorLiquidacionDetalle(idDetalle);
+        return Json(new { success = true, data = data });
+    }
+    catch (Exception ex)
+    {
+        return Json(new { success = false, message = ex.Message });
+    }
+}
 
 
 

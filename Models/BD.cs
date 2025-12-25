@@ -914,8 +914,66 @@ public static int? BuscarIdPadre(string comprobante, int idMandataria)
 }
 
 
+// TRAER LOS COBROS ASOCIADOS A UN ÍTEM DE LIQUIDACIÓN
+public static List<dynamic> ObtenerCobrosPorLiquidacionDetalle(int idLiquidacionDetalle)
+{
+    using (SqlConnection connection = new SqlConnection(_connectionString))
+    {
+        string query = @"
+            SELECT 
+                C.FechaCobro,
+                C.NumeroComprobante,
+                CD.ImporteCobrado,
+                CD.MontoDebito,
+                CD.MotivoDebito
+            FROM CobrosDetalle CD
+            INNER JOIN Cobros C ON CD.IdCobros = C.IdCobros
+            WHERE CD.IdLiquidacionDetalle = @pId
+            ORDER BY C.FechaCobro DESC";
+
+        return connection.Query<dynamic>(query, new { pId = idLiquidacionDetalle }).ToList();
+    }
+}
 
 
+// Modifica o inserta un cobro detalle dependiendo si viene con ID
+public static void GuardarCobroDetalle(int idCobroDetalle, int idCobroPadre, int idOS, DateTime fecha, string tipo, decimal importe, decimal debito, string motivo, int? idLiqDetalle)
+{
+    using (SqlConnection connection = new SqlConnection(_connectionString))
+    {
+        string query;
+        if (idCobroDetalle > 0)
+        {
+            // UPDATE (Editar existente)
+            query = @"UPDATE CobrosDetalle SET 
+                        IdObrasSociales = @pOS,
+                        FechaCobroDetalle = @pFecha,
+                        TipoPago = @pTipo,
+                        ImporteCobrado = @pImp,
+                        MontoDebito = @pDeb,
+                        MotivoDebito = @pMot
+                      WHERE IdCobrosDetalle = @pId";
+        }
+        else
+        {
+            // INSERT (Nuevo)
+            query = @"INSERT INTO CobrosDetalle (IdCobros, IdObrasSociales, FechaCobroDetalle, TipoPago, ImporteCobrado, MontoDebito, MotivoDebito, IdLiquidacionDetalle)
+                      VALUES (@pPadre, @pOS, @pFecha, @pTipo, @pImp, @pDeb, @pMot, @pLiq)";
+        }
+
+        connection.Execute(query, new { 
+            pId = idCobroDetalle, 
+            pPadre = idCobroPadre, 
+            pOS = idOS, 
+            pFecha = fecha, 
+            pTipo = tipo, 
+            pImp = importe, 
+            pDeb = debito, 
+            pMot = motivo ?? "",
+            pLiq = idLiqDetalle
+        });
+    }
+}
 
 
 
