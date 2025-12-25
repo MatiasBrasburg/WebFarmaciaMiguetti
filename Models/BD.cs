@@ -705,25 +705,34 @@ public static void EliminarLoteCompleto(int idCobroPadre)
         {
             try
             {
-                // Primero borramos los hijos
-                string sqlHijos = "DELETE FROM CobrosDetalle WHERE IdCobros = @pId";
-                connection.Execute(sqlHijos, new { pId = idCobroPadre }, transaction);
+                // 1. Antes de borrar, restauramos la deuda de TODOS los hijos que tengan imputación
+                // Usamos una query masiva para no ir uno por uno
+                string sqlRestaurarMasivo = @"
+                    UPDATE L
+                    SET L.SaldoPendiente = L.SaldoPendiente + C.ImporteCobrado,
+                        L.Pagado = 0
+                    FROM LiquidacionDetalle L
+                    INNER JOIN CobrosDetalle C ON L.IdLiquidacionDetalle = C.IdLiquidacionDetalle
+                    WHERE C.IdCobros = @pIdPadre";
 
-                // Luego borramos el padre
-                string sqlPadre = "DELETE FROM Cobros WHERE IdCobros = @pId";
-                connection.Execute(sqlPadre, new { pId = idCobroPadre }, transaction);
+                connection.Execute(sqlRestaurarMasivo, new { pIdPadre = idCobroPadre }, transaction);
+
+                // 2. Ahora sí, borramos todos los detalles
+                connection.Execute("DELETE FROM CobrosDetalle WHERE IdCobros = @pId", new { pId = idCobroPadre }, transaction);
+
+                // 3. Y finalmente el padre
+                connection.Execute("DELETE FROM Cobros WHERE IdCobros = @pId", new { pId = idCobroPadre }, transaction);
 
                 transaction.Commit();
             }
             catch
             {
                 transaction.Rollback();
-                throw; // Re-lanzar para que el Controller lo capture
+                throw;
             }
         }
     }
 }
-
 
 public static void ModificarCobroCabecera(int idCobro, int idMandataria, DateTime fecha, string comprobante)
 {
@@ -839,34 +848,38 @@ public static void EliminarCobroDetalle(int idCobroDetalle)
         {
             try
             {
-                // 1. Obtenemos datos del cobro antes de borrarlo para saber si imputaba algo
-                var cobro = connection.QueryFirstOrDefault<dynamic>(
-                    "SELECT ImporteCobrado, IdLiquidacionDetalle FROM CobrosDetalle WHERE IdCobrosDetalle = @pId", 
-                    new { pId = idCobroDetalle }, 
+                // 1. Obtenemos datos del cobro para saber si imputaba deuda
+                var info = connection.QueryFirstOrDefault<dynamic>(
+                    "SELECT ImporteCobrado, IdLiquidacionDetalle FROM CobrosDetalle WHERE IdCobrosDetalle = @id", 
+                    new { id = idCobroDetalle }, 
                     transaction
                 );
 
-                if (cobro != null && cobro.IdLiquidacionDetalle != null)
+                if (info != null && info.IdLiquidacionDetalle != null)
                 {
-                    // 2. Devolvemos el saldo a la liquidación (Deshacemos el pago)
-                    string sqlRestore = @"
-                        UPDATE LiquidacionDetalle 
-                        SET SaldoPendiente = SaldoPendiente + @pImporte,
-                            Pagado = 0 -- Volvemos a abrir la deuda
-                        WHERE IdLiquidacionDetalle = @pIdLiqDet";
+                    // 2. RESTAURAMOS LA DEUDA EN LA LIQUIDACIÓN
+                    // Sumamos el importe borrado al SaldoPendiente y ponemos Pagado = 0
+                    string sqlRestaurar = @"UPDATE LiquidacionDetalle 
+                                            SET SaldoPendiente = SaldoPendiente + @imp, 
+                                                Pagado = 0 
+                                            WHERE IdLiquidacionDetalle = @idLiq";
                     
-                    connection.Execute(sqlRestore, new { 
-                        pImporte = cobro.ImporteCobrado, 
-                        pIdLiqDet = cobro.IdLiquidacionDetalle 
-                    }, transaction);
+                    connection.Execute(sqlRestaurar, new { imp = info.ImporteCobrado, idLiq = info.IdLiquidacionDetalle }, transaction);
                 }
 
                 // 3. Borramos el cobro físico
-                connection.Execute("DELETE FROM CobrosDetalle WHERE IdCobrosDetalle = @pId", new { pId = idCobroDetalle }, transaction);
+                connection.Execute("DELETE FROM CobrosDetalle WHERE IdCobrosDetalle = @id", new { id = idCobroDetalle }, transaction);
+
+                // 4. (Opcional) Si el Lote Padre queda vacío, podrías borrarlo también, 
+                // pero por seguridad mejor dejarlo o manejarlo aparte.
 
                 transaction.Commit();
             }
-            catch { transaction.Rollback(); throw; }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
         }
     }
 }

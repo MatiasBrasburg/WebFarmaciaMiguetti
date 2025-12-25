@@ -13,8 +13,9 @@
         try { listaObrasSociales = listaObrasSociales.OrderBy(x => x.Nombre).ToList(); } catch { }
     }
     
-    // Serializamos datos de forma SEGURA para evitar errores de script
+    // --- CORRECCIÓN CLAVE: Definimos AMBAS variables JSON ---
     var jsonObrasSociales = JsonSerializer.Serialize(listaObrasSociales.Select(x => new { id = x.IdObrasSociales, nombre = x.Nombre, idMandataria = x.IdMandataria }));
+    // Esta variable faltaba y rompía la página:
     var jsonMandatarias = JsonSerializer.Serialize(listaMandatarias.Select(x => new { id = x.IdMandatarias, nombre = x.RazonSocial }));
 
     // --- RECUPERAR DATOS DE LA FARMACIA DESDE SESIÓN ---
@@ -39,11 +40,10 @@
 }
 
 <style>
-    /* ESTILOS DE ALTO IMPACTO (Estilo Unificado) */
+    /* ESTILOS DE ALTO IMPACTO (UX 85 AÑOS) */
     body { font-family: 'Verdana', sans-serif; background-color: #f4f6f9; color: #000; }
     h1 { font-size: 2.2rem; font-weight: 900; color: #000; margin-bottom: 20px; text-transform: uppercase; border-bottom: 5px solid #000; display: inline-block; }
     
-    /* INPUTS GRANDES Y CLAROS */
     .form-control, .form-select {
         border: 2px solid #6c757d; font-size: 1.1rem; padding: 8px 12px; color: #000; font-weight: 700; height: 45px;
     }
@@ -51,25 +51,18 @@
         border-color: #ffc107; box-shadow: 0 0 0 0.25rem rgba(255, 193, 7, 0.5); background-color: #fff3cd;
     }
     .form-label { font-weight: 900; font-size: 0.9rem; text-transform: uppercase; margin-bottom: 5px; display: block; }
-    
-    /* BOTONES */
     .btn-super { font-size: 1.1rem; font-weight: 800; padding: 10px 20px; border: 2px solid rgba(0,0,0,0.2); text-transform: uppercase; letter-spacing: 1px; }
     
-    /* TABLAS */
     .table-bordered { border: 2px solid #000; }
     .table thead th { background-color: #343a40; color: white; font-size: 1.1rem; vertical-align: middle; padding: 15px; text-align: center; }
     .table tbody td { font-size: 1.05rem; vertical-align: middle; font-weight: 600; padding: 10px; }
 
     .total-display { font-size: 1.8rem; font-weight: 900; color: #198754; text-align: right; padding: 15px; background: #d1e7dd; border: 4px solid #198754; border-radius: 8px; }
 
-    /* ESTILO VISOR */
     .visor-header { background-color: #0dcaf0; color: #000; padding: 15px; border-bottom: 4px solid #000; font-size: 1.3rem; font-weight: bold; }
-    
-    /* ESTILO MINI-MODALES */
     .modal-warning-header { background-color: #ffc107; color: #000; border-bottom: 3px solid #000; }
     .modal-edit-header { background-color: #6610f2; color: #fff; border-bottom: 3px solid #000; }
 
-    /* TOGGLE Y BUSCADOR */
     .view-toggle { display: flex; border: 3px solid #000; border-radius: 8px; overflow: hidden; margin-bottom: 20px; background: white; }
     .view-toggle .btn-toggle { flex: 1; padding: 15px; font-weight: 900; font-size: 1.1rem; text-transform: uppercase; border: none; background: #e9ecef; color: #6c757d; transition: all 0.2s; }
     .view-toggle .btn-toggle.active { background: #0d6efd; color: white; box-shadow: inset 0 0 10px rgba(0,0,0,0.3); }
@@ -379,11 +372,13 @@
     const modalCobros = new bootstrap.Modal(document.getElementById('modalVerCobrosLiq'));
 
     var datosOS = @Html.Raw(jsonObrasSociales);
-    var datosMand = @Html.Raw(jsonMandatarias);
+    // ESTA VARIABLE AHORA SÍ ESTÁ DEFINIDA ARRIBA
+    var datosMand = @Html.Raw(jsonMandatarias ?? "[]"); 
+    
     var modoActual = 'Mandataria'; 
     var currentFocus = -1;
 
-    // Mapa seguro usando array serializado
+    // Mapa de mandatarias para mostrar nombres en grilla
     const mapaMandatarias = {};
     if(datosMand) datosMand.forEach(m => mapaMandatarias[m.id] = m.nombre);
 
@@ -391,16 +386,13 @@
         setupAuto('txtFiltroOS', 'listaFiltroOS', 'filtroOS', datosOS);
         
         // --- NAVEGACIÓN MEJORADA (ENTER Y FLECHAS) ---
-        // 1. Auto-Focus en Modales
         document.getElementById('modalABM').addEventListener('shown.bs.modal', function () { document.getElementById('liqFecha').focus(); });
         document.getElementById('modalVerDetalle').addEventListener('shown.bs.modal', function () { document.getElementById('buscadorDetalles').focus(); });
 
-        // 2. Navegación con Enter entre campos
         setupEnterNavigation('inputRecetas', 'inputTotal');
         setupEnterNavigation('inputTotal', 'inputCargoOS');
         setupEnterNavigation('inputCargoOS', 'inputNeto');
         
-        // Agregar fila con Enter
         document.getElementById('inputNeto').addEventListener('keypress', function(e) {
             if(e.key === 'Enter') { e.preventDefault(); document.getElementById('btnAgregarFila').click(); }
         });
@@ -565,7 +557,7 @@
             currentFocus = -1;
             if (t.length < 1) { list.style.display = 'none'; hid.value="0"; return; }
             
-            const f = fuenteDatos.filter(x => x.nombre.toLowerCase().includes(t)).slice(0, 50); // LIMITAMOS A 50 RESULTADOS PARA NO CONGELAR
+            const f = fuenteDatos.filter(x => x.nombre.toLowerCase().includes(t)).slice(0, 50); // LIMITAMOS
             if (f.length === 0) { list.innerHTML = '<div class="item-sugerencia text-muted">🚫 NO EXISTE</div>'; list.style.display = 'block'; return; }
             
             f.forEach(x => {
@@ -894,7 +886,7 @@
         const mandataria = document.getElementById('verMandataria').textContent;
         
         let filasHTML = "";
-        let tRec = 0, tBruto = 0, tCargo = 0, tBonif = 0, tNeto = 0;
+        let tRec = 0, tBruto = 0, tCargo = 0, tBonif = 0, tNet = 0;
 
         document.querySelectorAll('#tbodyVerDetalle tr').forEach(tr => {
             const celdas = tr.querySelectorAll('td');
@@ -905,7 +897,7 @@
                 const bonif = parseFloat(celdas[5].textContent.replace('$','').replace('.','').replace(',','.')) || 0; 
                 const neto  = parseFloat(celdas[6].textContent.replace('$','').replace('.','').replace(',','.')) || 0;
 
-                tRec += rec; tBruto += bruto; tCargo += cargo; tBonif += bonif; tNeto += neto;
+                tRec += rec; tBruto += bruto; tCargo += cargo; tBonif += bonif; tNet += neto;
 
                 filasHTML += `<tr>
                     <td style="text-align:left; padding:5px;">${celdas[0].textContent}</td>
