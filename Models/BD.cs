@@ -361,8 +361,17 @@ public static List<LiquidacionDetalle> TraerDetallesPorIdLiquidacion(int idLiqui
 {
     using (SqlConnection connection = new SqlConnection(_connectionString))
     {
-        // Traemos todos los detalles que pertenezcan a esa Liquidacion (FK)
-        string query = "SELECT * FROM LiquidacionDetalle WHERE IdLiquidaciones = @pIdLiq";
+        // Traemos todo de la tabla (*) y sumamos el nombre del plan
+        // Usamos LEFT JOIN por si algún registro viejo no tiene plan asignado
+        string query = @"
+            SELECT 
+                LD.*, 
+                PB.NombrePlan 
+            FROM LiquidacionDetalle LD
+            LEFT JOIN PlanBonificacion PB ON LD.IdPlanBonificacion = PB.IdPlanBonificacion
+            WHERE LD.IdLiquidaciones = @pIdLiq";
+            
+        // Dapper mapea todo directamente a la clase LiquidacionDetalle
         return connection.Query<LiquidacionDetalle>(query, new { pIdLiq = idLiquidacion }).ToList();
     }
 }

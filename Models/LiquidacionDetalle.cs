@@ -19,6 +19,9 @@ namespace WebFarmaciaMiguetti.Models
         public int IdObrasSociales { get; set; }
             [JsonProperty]
         public int IdPlanBonificacion { get; set; } 
+        [NotMapped] // Indica que no es una columna de la tabla
+        [JsonProperty]
+        public string? NombrePlan { get; set; }
     [JsonProperty]
         public int CantidadRecetas { get; set; }
     [JsonProperty]
