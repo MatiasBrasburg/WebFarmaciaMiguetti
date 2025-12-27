@@ -57,16 +57,66 @@ private static string _connectionString = @"Server=.\SQLEXPRESS01;DataBase=Farma
     
     }
 
-      public static void EliminarMandataria  (int IdMandatarias)
+     // EN: Models/BD.cs
+
+public static void EliminarMandataria(int IdMandatarias)
+{
+    using (SqlConnection connection = new SqlConnection(_connectionString))
     {
-     Mandatarias ObjMandataria = null;
-        using (SqlConnection connection = new SqlConnection(_connectionString))
-                {
-                    string query = "DELETE FROM Mandatarias WHERE IdMandatarias = @pIdMandatarias"; 
-            connection.Execute(query, new {pIdMandatarias = IdMandatarias});
-         }
-    
+        connection.Open();
+        // Iniciamos una transacción para asegurar que se borre TODO o NADA
+        using (var transaction = connection.BeginTransaction())
+        {
+            try
+            {
+                // 1. Borrar NIETOS (Detalles de Liquidaciones)
+                // Borramos los detalles de las liquidaciones que pertenecen a esta mandataria
+                string sqlLiqDetalles = @"
+                    DELETE FROM LiquidacionDetalle 
+                    WHERE IdLiquidaciones IN (SELECT IdLiquidaciones FROM Liquidaciones WHERE IdMandatarias = @pId)";
+                connection.Execute(sqlLiqDetalles, new { pId = IdMandatarias }, transaction);
+
+                // 2. Borrar HIJOS (Liquidaciones - Cabeceras)
+                string sqlLiqCabeceras = "DELETE FROM Liquidaciones WHERE IdMandatarias = @pId";
+                connection.Execute(sqlLiqCabeceras, new { pId = IdMandatarias }, transaction);
+
+                // 3. Borrar NIETOS (Detalles de Cobros)
+                // Borramos los detalles de cobros asociados a cobros de esta mandataria
+                string sqlCobrosDetalles = @"
+                    DELETE FROM CobrosDetalle 
+                    WHERE IdCobros IN (SELECT IdCobros FROM Cobros WHERE IdMandatarias = @pId)";
+                connection.Execute(sqlCobrosDetalles, new { pId = IdMandatarias }, transaction);
+
+                // 4. Borrar HIJOS (Cobros - Cabeceras)
+                string sqlCobrosCabeceras = "DELETE FROM Cobros WHERE IdMandatarias = @pId";
+                connection.Execute(sqlCobrosCabeceras, new { pId = IdMandatarias }, transaction);
+
+                // 5. Borrar NIETOS (Planes de Bonificación de las Obras Sociales asociadas)
+                string sqlPlanes = @"
+                    DELETE FROM PlanBonificacion 
+                    WHERE IdObrasSociales IN (SELECT IdObrasSociales FROM ObrasSociales WHERE IdMandatarias = @pId)";
+                connection.Execute(sqlPlanes, new { pId = IdMandatarias }, transaction);
+
+                // 6. Borrar HIJOS (Obras Sociales)
+                string sqlOOSS = "DELETE FROM ObrasSociales WHERE IdMandatarias = @pId";
+                connection.Execute(sqlOOSS, new { pId = IdMandatarias }, transaction);
+
+                // 7. FINALMENTE: Borrar al PADRE (La Mandataria)
+                string sqlMandataria = "DELETE FROM Mandatarias WHERE IdMandatarias = @pId";
+                connection.Execute(sqlMandataria, new { pId = IdMandatarias }, transaction);
+
+                // Si llegamos hasta acá sin errores, confirmamos los cambios
+                transaction.Commit();
+            }
+            catch (Exception)
+            {
+                // Si algo falló, deshacemos todo como si nada hubiera pasado
+                transaction.Rollback();
+                throw; // Re-lanzamos el error para que lo vea el controlador
+            }
+        }
     }
+}
      public static List<Mandatarias> TraerListaMandatarias()
     {
         List<Mandatarias> ListMandatarias = new List<Mandatarias>();
@@ -139,16 +189,68 @@ private static string _connectionString = @"Server=.\SQLEXPRESS01;DataBase=Farma
     }
 
 
-         public static void EliminarOS (int IdOS)
+        public static void EliminarOS(int IdOS)
+{
+    using (SqlConnection connection = new SqlConnection(_connectionString))
     {
-     ObrasSociales ObjOS = null;
-        using (SqlConnection connection = new SqlConnection(_connectionString))
-                {
-                    string query = "DELETE FROM ObrasSociales WHERE IdObrasSociales = @pIdOS"; 
-            connection.Execute(query, new {pIdOS = IdOS});
-         }
-    
+        connection.Open();
+        // Usamos transacción para que si falla algo, no borre nada a medias.
+        using (var transaction = connection.BeginTransaction())
+        {
+            try
+            {
+                // 1. Borrar PLANES DE BONIFICACIÓN (Hijos directos)
+                string sqlPlanes = "DELETE FROM PlanBonificacion WHERE IdObrasSociales = @pId";
+                connection.Execute(sqlPlanes, new { pId = IdOS }, transaction);
+
+                // 2. Borrar DETALLES DE LIQUIDACIONES (Historial de presentaciones)
+                // Borramos los ítems donde aparece esta Obra Social en liquidaciones
+                string sqlLiqDet = "DELETE FROM LiquidacionDetalle WHERE IdObrasSociales = @pId";
+                connection.Execute(sqlLiqDet, new { pId = IdOS }, transaction);
+
+                // 3. Borrar FACTURACIÓN (Ventas)
+                // Primero borramos el DETALLE de las facturas de esta Obra Social
+                string sqlFacturaDet = @"
+                    DELETE FROM FacturaDetalle 
+                    WHERE IdFacturaCabecera IN (SELECT IdFacturaCabecera FROM FacturaCabecera WHERE IdObrasSociales = @pId)";
+                connection.Execute(sqlFacturaDet, new { pId = IdOS }, transaction);
+
+                // Luego borramos la CABECERA de las facturas
+                string sqlFacturaCab = "DELETE FROM FacturaCabecera WHERE IdObrasSociales = @pId";
+                connection.Execute(sqlFacturaCab, new { pId = IdOS }, transaction);
+
+                // 4. Borrar COBROS (Pagos)
+                // A) Primero: Detalles de cobros que imputan específicamente a esta OS
+                string sqlCobroDet1 = "DELETE FROM CobrosDetalle WHERE IdObrasSociales = @pId";
+                connection.Execute(sqlCobroDet1, new { pId = IdOS }, transaction);
+
+                // B) Segundo: Detalles de cobros donde la CABECERA del cobro pertenece a esta OS
+                // (Por si quedaron huérfanos de la consulta anterior)
+                string sqlCobroDet2 = @"
+                    DELETE FROM CobrosDetalle 
+                    WHERE IdCobros IN (SELECT IdCobros FROM Cobros WHERE IdObrasSociales = @pId)";
+                connection.Execute(sqlCobroDet2, new { pId = IdOS }, transaction);
+
+                // C) Tercero: La Cabecera del Cobro
+                string sqlCobros = "DELETE FROM Cobros WHERE IdObrasSociales = @pId";
+                connection.Execute(sqlCobros, new { pId = IdOS }, transaction);
+
+                // 5. FINALMENTE: Borrar la OBRA SOCIAL PADRE
+                string sqlOS = "DELETE FROM ObrasSociales WHERE IdObrasSociales = @pId";
+                connection.Execute(sqlOS, new { pId = IdOS }, transaction);
+
+                // Si llegamos hasta acá, confirmamos la muerte de los datos
+                transaction.Commit();
+            }
+            catch (Exception)
+            {
+                // Si algo explota, deshacemos todo
+                transaction.Rollback();
+                throw; // Re-lanzamos el error para que lo vea el Controller
+            }
+        }
     }
+}
 
  // Models/BD.cs
 

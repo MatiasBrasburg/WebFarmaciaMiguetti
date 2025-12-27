@@ -5,14 +5,14 @@
 @{
     ViewData["Title"] = "Gestión de Obras Sociales";
 
-    // 1. RECUPERACIÓN DE DATOS (Protección contra nulos)
+    // 1. RECUPERACIÓN DE DATOS
     var listaOS = (ViewBag.ListaObrasSociales as IEnumerable<dynamic>)?.ToList() ?? new List<dynamic>();
     var listaMandatarias = (ViewBag.ListaMandatarias as IEnumerable<dynamic>)?.ToList() ?? new List<dynamic>();
 
-    // 2. ORDENAMIENTO ALFABÉTICO
+    // 2. ORDENAMIENTO
     if (listaOS.Any()) { try { listaOS = listaOS.OrderBy(x => x.Nombre).ToList(); } catch { } }
 
-    // 3. SERIALIZACIÓN PARA BUSCADORES (JSON)
+    // 3. SERIALIZACIÓN JSON
     var datosBuscadorPrincipal = listaOS.Select(os => {
         string nombreMand = string.IsNullOrEmpty(os.NombreMandataria) ? "Sin Asignar" : os.NombreMandataria;
         return new {
@@ -57,6 +57,12 @@
     .lista-sugerencias-modal { right: auto; left: 0; }
     .item-sugerencia { padding: 15px; font-size: 1.2rem; border-bottom: 1px solid #ddd; cursor: pointer; color: #000; font-weight: 500; }
     .item-sugerencia:hover { background-color: #0d6efd; color: white; }
+    
+    /* ESTILO PARA NAVEGACIÓN CON FLECHAS (IMPORTANTE) */
+    .active-sugerencia {
+        background-color: #0d6efd; 
+        color: white;
+    }
 
     /* TABLA */
     .table-responsive { border: 3px solid #000; background-color: white; }
@@ -162,7 +168,7 @@
 <div class="modal fade" id="modalOS" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-3 border-dark">
-            <form method="post" asp-controller="Home" asp-action="ABM_OS">
+            <form method="post" asp-controller="Home" asp-action="ABM_OS" id="formOS">
                 <div class="modal-header bg-dark text-white">
                     <h5 class="modal-title fw-bold" id="modalTitulo">GESTIÓN</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
@@ -203,9 +209,24 @@
                         ⚠️ ¿ELIMINAR <span id="spanNombreEliminar"></span>?
                         <br><small>Esta acción es irreversible.</small>
                     </div>
+
+                    <div id="divAdvertenciaFinal" class="text-center p-3" style="display:none; background-color: #ffcccc; border: 4px solid #dc3545; color: #a00;">
+                        <h2 class="fw-bold">🛑 ¡ALTO! ¡PELIGRO! 🛑</h2>
+                        <p class="fs-4 fw-bold text-dark mt-3">
+                            Si borra esta Obra Social, se eliminarán AUTOMÁTICAMENTE:
+                        </p>
+                        <ul class="text-start d-inline-block fs-4 fw-bold text-dark">
+                            <li>❌ Todos sus PLANES y BONIFICACIONES</li>
+                            <li>❌ Todas sus liquidaciones y cobros asociados</li>
+                        </ul>
+                        <p class="fs-3 fw-bold mt-3 text-black bg-warning p-2 border border-dark">
+                            ESTA ACCIÓN ES IRREVERSIBLE.
+                        </p>
+                    </div>
+
                 </div>
                 <div class="modal-footer bg-light">
-                    <button type="button" class="btn btn-secondary btn-giant" data-bs-dismiss="modal">❌ NO</button>
+                    <button type="button" class="btn btn-secondary btn-giant" data-bs-dismiss="modal">❌ CANCELAR</button>
                     <button type="submit" class="btn btn-success btn-giant" id="btnConfirmarModal">✅ SÍ, CONFIRMAR</button>
                 </div>
             </form>
@@ -221,7 +242,6 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4 bg-light">
-                
                 <div id="alertaPlanes" class="alert fw-bold fs-5 text-center" style="display:none;"></div>
 
                 <div class="card p-3 mb-4 shadow-sm" style="border: 2px solid #0dcaf0;">
@@ -267,7 +287,6 @@
                     <div class="spinner-border text-primary" role="status"></div>
                     <span class="fs-4 ms-2">Cargando planes...</span>
                 </div>
-
             </div>
             <div class="modal-footer bg-light">
                 <button type="button" class="btn btn-secondary btn-giant" data-bs-dismiss="modal">❌ CERRAR</button>
@@ -279,36 +298,25 @@
 @section Scripts {
 <script>
     // ============================================================
-    // 1. LÓGICA BUSCADORES (OS y Mandatarias)
+    // 1. CONFIGURACIÓN DE NAVEGACIÓN (NUEVO MOTOR)
     // ============================================================
     var datosBuscadorMain = @Html.Raw(jsonOS);
     var datosBuscadorModal = @Html.Raw(jsonMandatarias);
-    var inputMain = document.getElementById('inputBuscadorMain');
-    var listaMain = document.getElementById('listaSugerenciasMain');
+
+    // Activamos las flechitas en los dos buscadores
+    setupAuto('inputBuscadorMain', 'listaSugerenciasMain', null, datosBuscadorMain);
+    setupAuto('inputMandatariaModal', 'listaSugerenciasModal', 'inputIdMandatariaHidden', datosBuscadorModal);
+
+    // Activamos el ENTER para saltar campos en el Modal (UX Rápida)
+    setupEnterNavigation('inputNombreOS', 'inputMandatariaModal');
+    setupEnterNavigation('inputMandatariaModal', 'btnConfirmarModal');
+
+    // Referencias DOM
     var tbody = document.getElementById('tbodyOS');
+    var formOS = document.getElementById('formOS'); 
+    var divAdvertenciaFinal = document.getElementById('divAdvertenciaFinal');
 
-    inputMain.addEventListener('input', function() {
-        var texto = this.value.toLowerCase().trim();
-        listaMain.innerHTML = ''; 
-        if (texto.length === 0) { listaMain.style.display = 'none'; return; }
-        var coincidencias = datosBuscadorMain.filter(function(item) {
-            return (item.texto && item.texto.toLowerCase().includes(texto));
-        });
-        if (coincidencias.length === 0) { listaMain.style.display = 'none'; return; }
-        coincidencias.forEach(function(item) {
-            var div = document.createElement('div');
-            div.className = 'item-sugerencia';
-            div.innerHTML = item.texto; 
-            div.addEventListener('click', function() {
-                inputMain.value = item.nombre;
-                listaMain.style.display = 'none';
-                moverFilaAlPrincipio(item.id); 
-            });
-            listaMain.appendChild(div);
-        });
-        listaMain.style.display = 'block'; 
-    });
-
+    // Función específica de esta vista para mover filas
     function moverFilaAlPrincipio(id) {
         var fila = document.querySelector('.fila-os[data-id="' + id + '"]');
         if (fila) {
@@ -319,51 +327,16 @@
         }
     }
 
-    // --- BUSCADOR MANDATARIAS (DENTRO DEL MODAL) ---
-    var inputMandModal = document.getElementById('inputMandatariaModal');
-    var inputIdMandHidden = document.getElementById('inputIdMandatariaHidden');
-    var listaModal = document.getElementById('listaSugerenciasModal');
-
-    inputMandModal.addEventListener('input', function() {
-        var texto = this.value.toLowerCase().trim();
-        listaModal.innerHTML = '';
-        
-        // AQUÍ ESTABA EL "PROBLEMA": Al escribir, limpiamos el ID.
-        // Si el usuario no hace click después, el ID queda en 0.
-        inputIdMandHidden.value = "0"; 
-
-        if (texto.length === 0) { listaModal.style.display = 'none'; return; }
-        var coincidencias = datosBuscadorModal.filter(function(item) {
-            return (item.texto && item.texto.toLowerCase().includes(texto));
-        });
-        if (coincidencias.length === 0) { listaModal.style.display = 'none'; return; }
-        coincidencias.forEach(function(item) {
-            var div = document.createElement('div');
-            div.className = 'item-sugerencia';
-            div.innerHTML = item.texto; 
-            div.addEventListener('click', function() {
-                inputMandModal.value = item.nombre; 
-                inputIdMandHidden.value = item.id; // AQUÍ SE ASIGNA EL ID NUEVO
-                listaModal.style.display = 'none';
-            });
-            listaModal.appendChild(div);
-        });
-        listaModal.style.display = 'block'; 
-    });
-
-    document.addEventListener('click', function(e) {
-        if (e.target !== inputMain && e.target !== listaMain) { listaMain.style.display = 'none'; }
-        if (e.target !== inputMandModal && e.target !== listaModal) { listaModal.style.display = 'none'; }
-    });
-
     // ============================================================
-    // 2. LÓGICA APERTURA MODALES (OS)
+    // 2. LÓGICA APERTURA MODALES (OS) - GESTIÓN DE ESTADOS
     // ============================================================
     var modalOS = new bootstrap.Modal(document.getElementById('modalOS'));
     var modalTitulo = document.getElementById('modalTitulo');
     var inputIdOS = document.getElementById('inputIdOS');
     var inputQueToco = document.getElementById('inputQueToco');
     var inputNombreOS = document.getElementById('inputNombreOS');
+    var inputMandModal = document.getElementById('inputMandatariaModal');
+    var inputIdMandHidden = document.getElementById('inputIdMandatariaHidden');
     var chkEsPrepaga = document.getElementById('chkEsPrepaga');
     var chkActiva = document.getElementById('chkActiva');
     var divFormulario = document.getElementById('divFormulario');
@@ -371,10 +344,26 @@
     var spanNombreEliminar = document.getElementById('spanNombreEliminar');
     var btnConfirmarModal = document.getElementById('btnConfirmarModal');
 
-    function abrirModalAgregar() {
-        modalTitulo.textContent = '➕ AGREGAR OBRA SOCIAL';
+    function resetearModal() {
+        // Restaurar estado visual
+        divFormulario.style.display = 'block';
+        divMensajeEliminar.style.display = 'none';
+        divAdvertenciaFinal.style.display = 'none';
+        
+        // Restaurar botón a "Guardar"
         btnConfirmarModal.className = 'btn btn-success btn-giant';
+        btnConfirmarModal.type = "submit";
+        btnConfirmarModal.onclick = null; // Quitar eventos de borrado
+        
+        inputNombreOS.required = true;
+        inputMandModal.required = true;
+    }
+
+    function abrirModalAgregar() {
+        resetearModal();
+        modalTitulo.textContent = '➕ AGREGAR OBRA SOCIAL';
         btnConfirmarModal.textContent = '💾 GUARDAR';
+        
         inputQueToco.value = 'Agregar';
         inputIdOS.value = '0';
         inputNombreOS.value = '';
@@ -382,74 +371,87 @@
         inputIdMandHidden.value = '0'; 
         chkEsPrepaga.checked = false;
         chkActiva.checked = true;
-        inputNombreOS.required = true;
-        inputMandModal.required = true;
-        divFormulario.style.display = 'block';
-        divMensajeEliminar.style.display = 'none';
+
         modalOS.show();
         setTimeout(() => inputNombreOS.focus(), 500);
     }
 
     function abrirModalModificar(id, nombre, idMand, nombreMand, esPrepaga, activa) {
+        resetearModal();
         modalTitulo.textContent = '✏️ MODIFICAR OBRA SOCIAL';
         btnConfirmarModal.className = 'btn btn-warning btn-giant';
         btnConfirmarModal.textContent = '💾 GUARDAR CAMBIOS';
+        
         inputQueToco.value = 'Modificar';
         inputIdOS.value = id;      
-        inputNombreOS.value = nombre; 
-        
-        // Asignamos el ID y el Nombre actuales
-        inputIdMandHidden.value = idMand; 
+        inputNombreOS.value = nombre;
+        inputIdMandHidden.value = idMand;
         inputMandModal.value = nombreMand; 
-        
         chkEsPrepaga.checked = esPrepaga;
         chkActiva.checked = activa;
-        inputNombreOS.required = true;
-        inputMandModal.required = true;
-        divFormulario.style.display = 'block';
-        divMensajeEliminar.style.display = 'none';
+
         modalOS.show();
     }
 
     function abrirModalEliminar(id, nombre) {
         modalTitulo.textContent = '🗑️ ELIMINAR OBRA SOCIAL';
-        btnConfirmarModal.className = 'btn btn-danger btn-giant';
-        btnConfirmarModal.textContent = '🗑️ CONFIRMAR ELIMINACIÓN';
+        
+        // FASE 1: AVISO AMARILLO
+        divFormulario.style.display = 'none';
+        divMensajeEliminar.style.display = 'block';
+        divAdvertenciaFinal.style.display = 'none';
+
         inputQueToco.value = 'Eliminar';
         inputIdOS.value = id;
         spanNombreEliminar.textContent = nombre;
+        
+        // Quitar validaciones
         inputNombreOS.required = false;
         inputMandModal.required = false;
-        divFormulario.style.display = 'none';
-        divMensajeEliminar.style.display = 'block';
+
+        // BOTÓN FASE 1 (NO ENVÍA)
+        btnConfirmarModal.className = 'btn btn-warning btn-giant text-dark';
+        btnConfirmarModal.textContent = '⚠️ CONTINUAR...';
+        btnConfirmarModal.type = "button"; 
+        btnConfirmarModal.onclick = mostrarAdvertenciaFinal;
+
         modalOS.show();
     }
 
+    function mostrarAdvertenciaFinal() {
+        // FASE 2: ALERTA ROJA (FINAL)
+        divMensajeEliminar.style.display = 'none';
+        divAdvertenciaFinal.style.display = 'block';
+
+        // BOTÓN FASE 2 (SÍ ENVÍA)
+        btnConfirmarModal.className = 'btn btn-danger btn-giant py-3 px-5 fw-bold';
+        btnConfirmarModal.innerHTML = '🔥 SÍ, BORRAR TODO';
+        
+        // Asignamos el envío del form manual
+        btnConfirmarModal.onclick = function() {
+            formOS.submit();
+        };
+    }
+
     // ============================================================
-    // !!! CANDADO DE SEGURIDAD (FIX MANDATARIA NO GUARDADA) !!!
+    // CANDADO DE SEGURIDAD (FIX MANDATARIA NO GUARDADA)
     // ============================================================
-    // Si el usuario escribe una mandataria pero no hace click en la lista, el ID queda en 0.
-    // Esto impide enviar el formulario en ese estado.
-    
-    var formOS = document.querySelector('#modalOS form');
     formOS.addEventListener('submit', function(e) {
         var textoMandataria = inputMandModal.value.trim();
         var idMandataria = inputIdMandHidden.value;
         var operacion = inputQueToco.value;
 
-        // Si estamos agregando o modificando...
         if (operacion === 'Agregar' || operacion === 'Modificar') {
-            // Si hay texto escrito, PERO el ID es 0 o vacío...
             if (textoMandataria.length > 0 && (idMandataria === "0" || idMandataria === "")) {
-                e.preventDefault(); // ¡ALTO! No envíes nada.
-                alert("⚠️ ATENCIÓN: \n\nEscribiste una Mandataria pero no la seleccionaste de la lista.\n\nPor favor, selecciona la opción que aparece en la lista desplegable.");
+                e.preventDefault(); 
+                alert("⚠️ ATENCIÓN: Seleccione una Mandataria de la lista desplegable.");
                 inputMandModal.focus();
             }
         }
     });
 
     // ============================================================
-    // 3. LÓGICA PLANES AJAX (Igual que antes)
+    // 3. LÓGICA PLANES AJAX (Sin cambios, solo funciona igual)
     // ============================================================
     var modalPlanes = new bootstrap.Modal(document.getElementById('modalPlanes'));
     var spanNombreOSPlan = document.getElementById('spanNombreOSPlan');
@@ -496,8 +498,7 @@
                 } else {
                     data.data.forEach(p => {
                         const bonifVisual = parseFloat(p.bonificacion).toFixed(2); 
-                        const row = `
-                            <tr>
+                        const row = `<tr>
                                 <td>${p.nombrePlan}</td>
                                 <td>${p.numeroBonificacion || '-'}</td>
                                 <td class="fw-bold text-success">${bonifVisual}%</td>
@@ -505,20 +506,13 @@
                                     <button class="btn btn-sm btn-warning me-2" onclick='editarPlanAjax(${JSON.stringify(p)})'>✏️</button>
                                     <button class="btn btn-sm btn-danger" onclick="eliminarPlanAjax(${p.idPlanBonificacion})">🗑️</button>
                                 </td>
-                            </tr>
-                        `;
+                            </tr>`;
                         tbodyPlanesAjax.innerHTML += row;
                     });
                 }
-            } else {
-                mostrarAlertaPlan('error', 'Error al cargar planes.');
-            }
-        } catch (err) {
-            console.error(err);
-            mostrarAlertaPlan('error', 'Error de conexión.');
-        } finally {
-            loadingPlanes.style.display = 'none';
-        }
+            } else { mostrarAlertaPlan('error', 'Error al cargar planes.'); }
+        } catch (err) { console.error(err); mostrarAlertaPlan('error', 'Error de conexión.');
+        } finally { loadingPlanes.style.display = 'none'; }
     }
 
     function editarPlanAjax(plan) {
@@ -560,12 +554,8 @@
                 mostrarAlertaPlan('success', result.message);
                 limpiarFormPlanes(); 
                 cargarPlanesAjax(planData.IdObraSocial); 
-            } else {
-                mostrarAlertaPlan('error', result.message);
-            }
-        } catch (err) {
-            console.error(err);
-            mostrarAlertaPlan('error', 'Error de conexión al guardar.');
+            } else { mostrarAlertaPlan('error', result.message); }
+        } catch (err) { console.error(err); mostrarAlertaPlan('error', 'Error de conexión al guardar.');
         } finally {
             btnGuardarPlanAjax.disabled = false;
             btnGuardarPlanAjax.textContent = textoOriginal;
@@ -591,12 +581,8 @@
             if(result.success) {
                 mostrarAlertaPlan('success', 'Plan eliminado.');
                 cargarPlanesAjax(planIdOSHidden.value);
-            } else {
-                mostrarAlertaPlan('error', result.message);
-            }
-        } catch(err) {
-            mostrarAlertaPlan('error', 'Error al eliminar.');
-        }
+            } else { mostrarAlertaPlan('error', result.message); }
+        } catch(err) { mostrarAlertaPlan('error', 'Error al eliminar.'); }
     }
 
     function mostrarAlertaPlan(tipo, msj) {
@@ -604,6 +590,108 @@
         alertaPlanes.textContent = msj;
         alertaPlanes.style.display = 'block';
         setTimeout(() => alertaPlanes.style.display = 'none', 4000);
+    }
+
+    // ============================================================
+    // 🚀 MOTOR DE NAVEGACIÓN (FLECHAS + ENTER)
+    // ============================================================
+    var currentFocus = -1; 
+
+    function setupAuto(inpId, listId, hidId, fuenteDatos) {
+        const inp = document.getElementById(inpId);
+        const list = document.getElementById(listId);
+        const hid = document.getElementById(hidId);
+        
+        if (!inp) return; 
+
+        inp.addEventListener("input", function() {
+            const t = this.value.toLowerCase();
+            list.innerHTML = '';
+            currentFocus = -1;
+            
+            if (t.length < 1) { 
+                list.style.display = 'none'; 
+                if(hid) hid.value = "0"; 
+                return; 
+            }
+            
+            const f = fuenteDatos.filter(x => x.texto.toLowerCase().includes(t)).slice(0, 50);
+            
+            if (f.length === 0) { 
+                list.innerHTML = '<div class="item-sugerencia text-muted">🚫 NO EXISTE</div>'; 
+                list.style.display = 'block'; 
+                return; 
+            }
+            
+            f.forEach(x => {
+                const item = document.createElement('div');
+                item.className = 'item-sugerencia'; 
+                item.innerHTML = x.texto; 
+                item.dataset.id = x.id; 
+                item.dataset.nombre = x.nombre;
+                
+                item.addEventListener("click", function() {
+                    inp.value = this.dataset.nombre;
+                    if(hid) {
+                        hid.value = this.dataset.id;
+                        hid.dispatchEvent(new Event('change'));
+                    }
+                    list.style.display = 'none';
+                    if(typeof moverFilaAlPrincipio === 'function' && !hidId) { // Solo si es buscador principal
+                        moverFilaAlPrincipio(this.dataset.id);
+                    }
+                });
+                list.appendChild(item);
+            });
+            list.style.display = 'block';
+        });
+
+        inp.addEventListener("keydown", function(e) {
+            let x = list.getElementsByTagName("div");
+            if (e.key === "ArrowDown") {
+                currentFocus++;
+                addActive(x);
+            } else if (e.key === "ArrowUp") {
+                currentFocus--;
+                addActive(x);
+            } else if (e.key === "Enter") {
+                e.preventDefault(); 
+                if (currentFocus > -1) {
+                    if (x) x[currentFocus].click();
+                } else if (list.style.display === "block" && x.length > 0) {
+                     x[0].click();
+                }
+            }
+        });
+
+        inp.addEventListener("blur", function() { 
+            setTimeout(() => { list.style.display = 'none'; }, 200); 
+        });
+    }
+
+    function addActive(x) {
+        if (!x) return false;
+        removeActive(x);
+        if (currentFocus >= x.length) currentFocus = 0;
+        if (currentFocus < 0) currentFocus = (x.length - 1);
+        x[currentFocus].classList.add("active-sugerencia");
+        x[currentFocus].scrollIntoView({ block: "nearest" });
+    }
+    function removeActive(x) {
+        for (let i = 0; i < x.length; i++) x[i].classList.remove("active-sugerencia");
+    }
+
+    function setupEnterNavigation(curr, next) {
+        const el = document.getElementById(curr);
+        if(el) {
+            el.addEventListener('keypress', function(e) {
+                if(e.key === 'Enter') {
+                    e.preventDefault();
+                    const n = document.getElementById(next);
+                    if(n) { n.focus(); if(n.select) n.select(); }
+                }
+            });
+        }
     }
 </script>
 }

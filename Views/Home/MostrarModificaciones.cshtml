@@ -454,7 +454,11 @@ document.getElementById('liqMandataria').addEventListener('change', function() {
         const hasta = document.getElementById('filtroFechaHasta').value;
         const mand = document.getElementById('filtroMandataria').value;
         const idOS = document.getElementById('filtroOS').value; 
-
+if (idOS !== "0" && idOS !== "" && modoActual === 'Mandataria') {
+            cambiarModo('OS'); 
+            return; // Detenemos la función aquí. cambiarModo() se encargará de buscar de nuevo.
+        }
+        
         const tbody = document.getElementById('tbodyResultados');
         const cols = modoActual === 'Mandataria' ? 6 : 7;
         tbody.innerHTML = `<tr><td colspan="${cols}" class="text-center p-4"><div class="spinner-border text-primary"></div></td></tr>`;
