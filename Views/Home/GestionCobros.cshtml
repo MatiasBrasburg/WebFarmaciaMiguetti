@@ -10,6 +10,7 @@
     var listaTiposPago = (ViewBag.TiposPago as List<string>) ?? new List<string> { "Transferencia", "Cheque", "Efectivo", "Depósito" };
 
     var jsonObrasSociales = JsonSerializer.Serialize(listaObrasSociales.Select(x => new { id = x.IdObrasSociales, nombre = x.Nombre, idMandataria = x.IdMandataria }));
+var jsonMandatarias = JsonSerializer.Serialize(listaMandatarias.Select(x => new { id = x.IdMandatarias, nombre = x.RazonSocial })); 
 
     // --- RECUPERAR DATOS DE LA FARMACIA DESDE SESIÓN ---
     string nombreFarmacia = "FARMACIA";
@@ -102,6 +103,11 @@
     .bg-header-add { background-color: #198754; color: white; border-bottom: 5px solid #0f5132; }
     .bg-header-view { background-color: #0d6efd; color: white; border-bottom: 5px solid #0a58ca; }
     .bg-header-edit { background-color: #ffc107; color: #000; border-bottom: 5px solid #000; }
+
+    .active-sugerencia {
+    background-color: #198754 !important;
+    color: white !important;
+}
 </style>
 
 <div class="container-fluid mt-4">
@@ -117,12 +123,13 @@
                 <div class="col-md-2"><label class="form-label">Desde</label><input type="date" id="filtroDesde" class="form-control" data-enter="buscarCobros"></div>
                 <div class="col-md-2"><label class="form-label">Hasta</label><input type="date" id="filtroHasta" class="form-control" data-enter="buscarCobros"></div>
                 <div class="col-md-3">
-                    <label class="form-label">Mandataria</label>
-                    <select id="filtroMandataria" class="form-select">
-                        <option value="0">-- TODAS --</option>
-                        @foreach (var m in listaMandatarias) { <option value="@m.IdMandatarias">@m.RazonSocial</option> }
-                    </select>
+                <label class="form-label">Mandataria</label>
+                <div class="buscador-wrapper">
+                    <input type="text" id="txtFiltroMandataria" class="form-control" placeholder="Escriba para buscar..." autocomplete="off">
+                    <input type="hidden" id="filtroMandataria" value="0">
+                    <div id="listaFiltroMandataria" class="lista-sugerencias"></div>
                 </div>
+            </div>
                 <div class="col-md-3">
                     <label class="form-label">Obra Social</label>
                     <div class="buscador-wrapper">
@@ -171,11 +178,14 @@
             <div class="modal-body bg-light p-4">
                 <div class="row g-3 mb-4 p-3 border border-3 border-success rounded bg-white shadow-sm">
                     <div class="col-md-4">
-                        <label class="form-label text-success">1. MANDATARIA</label>
-                        <select id="n_Mand" class="form-select fw-bold border-success" onchange="alCambiarMandatariaNuevo()">
-                            <option value="0">-- SELECCIONE --</option>
-                            @foreach (var m in listaMandatarias) { <option value="@m.IdMandatarias">@m.RazonSocial</option> }
-                        </select>
+                    <label class="form-label text-success">1. MANDATARIA</label>
+                    <div class="buscador-wrapper">
+                        <input type="text" id="txtN_Mand" class="form-control fw-bold border-success" placeholder="Escriba Mandataria..." autocomplete="off">
+                        
+                        <input type="hidden" id="n_Mand" value="0" onchange="alCambiarMandatariaNuevo()">
+                        
+                        <div id="listaN_Mand" class="lista-sugerencias"></div>
+                    </div>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">N° COMPROBANTE</label>
@@ -256,9 +266,11 @@
                                     <button class="btn btn-outline-primary fw-bold" type="button" onclick="abrirModalDeudas('Ver')">🔍</button>
                                 </div>
                             </div>
-                            <div class="col-md-2"><input type="date" id="v_FechaItem" class="form-control form-control-sm"></div>
-                            <div class="col-md-2"><select id="v_TipoItem" class="form-select form-select-sm">@foreach(var t in listaTiposPago){<option value="@t">@t</option>}</select></div>
-                            <div class="col-md-2"><input type="number" id="v_Imp" class="form-control form-control-sm text-success fw-bold" placeholder="$" data-enter="agregarAlLote"></div>
+                            <div class="col-md-2"><label class="form-label small">FECHA PAGO</label><input type="date" id="v_FechaItem" class="form-control form-control-sm"></div>
+                            <div class="col-md-2"><label class="form-label small">TIPO</label><select id="v_TipoItem" class="form-select form-select-sm">@foreach(var t in listaTiposPago){<option value="@t">@t</option>}</select></div>
+                            <div class="col-md-2"><label class="form-label small text-success">IMPORTE</label><input type="number" id="v_Imp" class="form-control form-control-sm text-success fw-bold" placeholder="0.00" data-enter="agregarAlLote"></div>
+                            <div class="col-md-2"><label class="form-label small text-danger">DEBITO</label><input type="number" id="v_Imp" class="form-control form-control-sm text-success fw-bold" placeholder="0.00" data-enter="agregarAlLote"></div>
+
                             <div class="col-md-2"><button class="btn btn-primary fw-bold w-100 btn-sm" onclick="agregarAlLote()">AGREGAR</button></div>
                         </div>
                         <input type="hidden" id="v_IdLiqDetalle" value="">
@@ -359,6 +371,8 @@
     };
 
     var datosOS = @Html.Raw(jsonObrasSociales);
+    var datosMand = @Html.Raw(jsonMandatarias ?? "[]");
+    var datosOS_FiltradosNuevo = [];
     var itemsTemp = []; 
     var datosAgrupados = {}; 
     var loteContexto = {}; 
@@ -373,7 +387,9 @@
         mDeudas = new bootstrap.Modal(document.getElementById('modalDeudas'));
 
         setupAuto('txtFiltroOS', 'listaFiltroOS', 'filtroOS', datosOS);
-        setupAuto('txtN_OS', 'listN_OS', 'valN_OS', datosOS);
+        setupAuto('txtFiltroMandataria', 'listaFiltroMandataria', 'filtroMandataria', datosMand);
+        setupAuto('txtN_Mand', 'listaN_Mand', 'n_Mand', datosMand);
+        setupAuto('txtN_OS', 'listN_OS', 'valN_OS', datosOS_FiltradosNuevo);
         setupAuto('txtV_OS', 'listV_OS', 'valV_OS', datosOS);
 
         // --- NAVEGACIÓN MEJORADA (LOCAL) ---
@@ -401,38 +417,147 @@
         if(document.getElementById('n_ItemFecha')) document.getElementById('n_ItemFecha').value = hoy;
     });
 
+   // --- FUNCIÓN SETUP AUTO MEJORADA (CON FLECHAS Y TAB) ---
     function setupAuto(inpId, listId, hidId, fuenteDatos) {
         const inp = document.getElementById(inpId);
         const list = document.getElementById(listId);
         const hid = document.getElementById(hidId);
-        inp.oninput = function() {
+        let currentFocus = -1; // Índice para navegar con flechas
+
+        inp.addEventListener("input", function() {
             const t = this.value.toLowerCase();
             list.innerHTML = '';
-            if (inpId === 'txtN_OS') { document.getElementById('n_IdLiqDetalle').value = ""; document.getElementById('lblDeudaSeleccionada').style.display = 'none'; }
-            if (inpId === 'txtV_OS') { document.getElementById('v_IdLiqDetalle').value = ""; document.getElementById('lblDeudaSeleccionadaVer').style.display = 'none'; }
-            if (t.length < 1) { list.style.display = 'none'; hid.value="0"; return; }
-            const f = fuenteDatos.filter(x => x.nombre.toLowerCase().includes(t));
-            if (f.length === 0) { list.innerHTML = '<div class="item-sugerencia text-muted">🚫 NO EXISTE</div>'; list.style.display = 'block'; return; }
+            currentFocus = -1;
+            
+            // Lógica específica de limpieza (Mantenemos tu lógica original)
+            if (inpId === 'txtN_OS') { 
+                document.getElementById('n_IdLiqDetalle').value = ""; 
+                document.getElementById('lblDeudaSeleccionada').style.display = 'none';
+            }
+            if (inpId === 'txtV_OS') { 
+                document.getElementById('v_IdLiqDetalle').value = "";
+                document.getElementById('lblDeudaSeleccionadaVer').style.display = 'none'; 
+            }
+
+            if (t.length < 1) { 
+                list.style.display = 'none';
+                hid.value="0"; 
+                return; 
+            }
+
+            // Filtramos y mostramos máximo 50 resultados para rendimiento
+            const f = fuenteDatos.filter(x => x.nombre.toLowerCase().includes(t)).slice(0, 50);
+            
+            if (f.length === 0) { 
+                list.innerHTML = '<div class="item-sugerencia text-muted">🚫 NO EXISTE</div>'; 
+                list.style.display = 'block'; 
+                return;
+            }
+
             f.forEach(x => {
                 const item = document.createElement('div');
-                item.className = 'item-sugerencia'; item.textContent = x.nombre;
-                item.onclick = function() {
-                    inp.value = x.nombre; hid.value = x.id; list.style.display = 'none';
-                    if (inpId === 'txtN_OS') document.getElementById('n_Imp').focus();
-                    if (inpId === 'txtV_OS') document.getElementById('v_Imp').focus();
-                };
+                item.className = 'item-sugerencia'; 
+                item.textContent = x.nombre;
+                // Guardamos datos en el elemento para usarlos al hacer click/enter
+                item.dataset.nombre = x.nombre;
+                item.dataset.id = x.id;
+
+                item.addEventListener("click", function() {
+                    seleccionarItem(this);
+                });
                 list.appendChild(item);
             });
             list.style.display = 'block';
-        };
-        inp.onblur = function() { setTimeout(() => { list.style.display = 'none'; }, 300); };
-    }
+        });
 
+        // --- NAVEGACIÓN POR TECLADO ---
+        inp.addEventListener("keydown", function(e) {
+            let x = list.getElementsByTagName("div");
+            if (e.key === "ArrowDown") {
+                currentFocus++;
+                addActive(x);
+            } else if (e.key === "ArrowUp") {
+                currentFocus--;
+                addActive(x);
+            } else if (e.key === "Enter") {
+                e.preventDefault();
+                if (currentFocus > -1) {
+                    if (x) x[currentFocus].click();
+                } else if (list.style.display === "block" && x.length > 0) {
+                    // Si aprieta Enter sin seleccionar, elegimos el primero
+                    x[0].click();
+                }
+            } else if (e.key === "Tab") {
+                // Si aprieta Tab y hay lista, seleccionamos el primero o el activo
+                if (list.style.display === "block" && x.length > 0) {
+                    e.preventDefault(); // Evitamos que se vaya el foco antes de seleccionar
+                    if (currentFocus > -1) x[currentFocus].click();
+                    else x[0].click();
+                    // Opcional: mover el foco manualmente al siguiente campo si es necesario
+                }
+            }
+        });
+
+        // Ocultar al perder foco (con delay para permitir el click)
+        inp.addEventListener("blur", function() { 
+            setTimeout(() => { list.style.display = 'none'; }, 200); 
+        });
+
+        // --- FUNCIONES AUXILIARES INTERNAS ---
+       function seleccionarItem(elemento) {
+    inp.value = elemento.dataset.nombre;
+    hid.value = elemento.dataset.id;
+    list.style.display = 'none';
+    
+    // --- ESTA ES LA LÍNEA QUE FALTABA ---
+    // Le avisa al input oculto que cambió, para que se dispare 'alCambiarMandatariaNuevo'
+    hid.dispatchEvent(new Event('change')); 
+    // ------------------------------------
+
+    // Foco inteligente según qué buscador sea
+    if (inpId === 'txtN_OS') document.getElementById('n_Imp').focus();
+    if (inpId === 'txtV_OS') document.getElementById('v_Imp').focus();
+    if (inpId === 'txtFiltroMandataria') document.getElementById('txtFiltroOS').focus();
+    // Nuevo: Al elegir mandataria, saltamos al buscador de OS
+    if (inpId === 'txtN_Mand') document.getElementById('txtN_OS').focus();
+}
+
+        function addActive(x) {
+            if (!x) return false;
+            removeActive(x);
+            if (currentFocus >= x.length) currentFocus = 0;
+            if (currentFocus < 0) currentFocus = (x.length - 1);
+            x[currentFocus].classList.add("active-sugerencia");
+            x[currentFocus].scrollIntoView({ block: "nearest" });
+        }
+
+        function removeActive(x) {
+            for (let i = 0; i < x.length; i++) {
+                x[i].classList.remove("active-sugerencia");
+            }
+        }
+    }
     function alCambiarMandatariaNuevo() {
         const idMand = parseInt(document.getElementById('n_Mand').value) || 0;
-        let df = idMand > 0 ? datosOS.filter(x => x.idMandataria == idMand) : datosOS;
-        document.getElementById('txtN_OS').value = ''; document.getElementById('valN_OS').value = '0';
-        setupAuto('txtN_OS', 'listN_OS', 'valN_OS', df);
+        
+        // 1. Limpiamos los inputs de Obra Social
+        document.getElementById('txtN_OS').value = ''; 
+        document.getElementById('valN_OS').value = '0';
+        document.getElementById('n_IdLiqDetalle').value = ""; 
+        document.getElementById('lblDeudaSeleccionada').style.display = 'none';
+
+        // 2. MAGIA: Vaciamos la lista puente (sin romper la referencia)
+        datosOS_FiltradosNuevo.length = 0;
+
+        // 3. Filtramos los datos originales
+        const filtradas = idMand > 0 
+            ? datosOS.filter(x => x.idMandataria == idMand) 
+            : datosOS;
+
+        // 4. Llenamos la lista puente con los nuevos datos
+        datosOS_FiltradosNuevo.push(...filtradas);
+        
+       
     }
     
     function actualizarFechaDefault() {
@@ -611,7 +736,8 @@
         document.getElementById('n_Comp').value=""; 
         document.getElementById('lblTotalLote').textContent="$0.00";
         document.getElementById('n_FechaRef').value = new Date().toISOString().substring(0, 10);
-        document.getElementById('n_Mand').value = "0";
+        document.getElementById('n_Mand').value = "0";      
+    document.getElementById('txtN_Mand').value = "";
         
         document.getElementById('txtN_OS').value = "";
         document.getElementById('valN_OS').value = "0";

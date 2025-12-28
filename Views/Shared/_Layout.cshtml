@@ -56,12 +56,7 @@
                     <div class="collapse navbar-collapse" id="mainNav">
                         <ul class="navbar-nav ms-auto gap-3 align-items-center">
                             
-                            <li class="nav-item">
-                                <a class="nav-link @(controlador == "Facturas" ? "active" : "")" asp-controller="Facturas" asp-action="Create">
-                                    <i class="bi bi-cart4"></i> VENTA
-                                </a>
-                            </li>
-             
+        
                             <a class="nav-link" href='@Url.Action("IrAAltasModificacionesMandatarias", "Home")'>Altas M</a>
                             <a class="nav-link" href='@Url.Action("IrAAltasModificacionesOS", "Home")'>Altas O.S</a>
                             <a class="nav-link" href='@Url.Action("IrAMostrarModificaciones", "Home")'>Modificaciones</a>
@@ -75,12 +70,7 @@
                                     <i class="bi bi-grid-fill"></i> MENÚ
                                 </a>
                             </li>
-
-                            <li class="nav-item">
-                                <a class="nav-link text-danger fw-bold" asp-controller="Account" asp-action="Logout" onclick="return confirmarSalida(event)" title="Salir">
-                                    <i class="bi bi-power fs-4"></i>
-                                </a>
-                            </li>
+                         
                         </ul>
                     </div>
                 </div>
