@@ -1,138 +1,301 @@
-﻿@{
-    ViewData["Title"] = "Index";
-    Layout = "~/Views/Shared/_Layout.cshtml";
+﻿@using Microsoft.AspNetCore.Http
+@using System.Text.Json
+@using WebFarmaciaMiguetti.Models
+@inject IHttpContextAccessor HttpContextAccessor
+
+@{
+    ViewData["Title"] = "Panel de Control";
+    
+    // --- LÓGICA PARA RECUPERAR NOMBRE DE LA FARMACIA ---
+    string nombreFarmacia = "FARMACIA";
+    string usuarioNombre = "Cito";
+    
+    var usuarioJson = HttpContextAccessor.HttpContext.Session.GetString("Usuario");
+    if (!string.IsNullOrEmpty(usuarioJson))
+    {
+        try {
+            var u = JsonSerializer.Deserialize<Usuario>(usuarioJson);
+            if(u != null) {
+                nombreFarmacia = u.RazonSocial ?? "FARMACIA MIGUETTI";
+                
+            }
+        } catch {}
+    }
 }
 
 <style>
-    /* ESTILO PAMI / ACCESIBILIDAD +85 AÑOS */
+    /* --- ESTILOS PREMIUM DASHBOARD --- */
+    body { background-color: #f4f7f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+    /* Banner de Bienvenida */
+    .welcome-banner {
+        background: linear-gradient(135deg, #198754 0%, #0f5132 100%);
+        color: white;
+        padding: 40px;
+        border-radius: 15px;
+        box-shadow: 0 10px 25px rgba(25, 135, 84, 0.3);
+        margin-bottom: 35px;
+        position: relative;
+        overflow: hidden;
+    }
+    .welcome-text h1 { font-weight: 800; letter-spacing: 1px; margin: 0; font-size: 2.2rem; text-transform: uppercase; }
+    .welcome-text p { font-size: 1.1rem; opacity: 0.9; margin-top: 5px; font-weight: 500; }
+    .welcome-icon { position: absolute; right: 20px; top: -20px; font-size: 120px; opacity: 0.15; transform: rotate(10deg); color: #fff; }
+
+    /* Tarjetas KPI (Indicadores) */
+    .kpi-card {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.04);
+        border-left: 6px solid #ccc;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        height: 100%;
+        position: relative;
+    }
+    .kpi-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
     
-    .menu-container {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding-top: 20px;
-    }
+    .kpi-icon { position: absolute; top: 20px; right: 20px; font-size: 2rem; opacity: 0.2; }
+    .kpi-title { font-size: 0.85rem; font-weight: 700; text-transform: uppercase; color: #6c757d; letter-spacing: 0.5px; margin-bottom: 5px; }
+    .kpi-value { font-size: 2rem; font-weight: 900; margin: 5px 0; color: #212529; }
+    .kpi-sub { font-size: 0.8rem; color: #999; font-weight: 600; }
 
-    .titulo-principal {
-        font-size: 2.5rem;
-        font-weight: 800;
-        text-transform: uppercase;
-        color: #000;
-        text-align: center;
-        margin-bottom: 30px;
-        border-bottom: 4px solid #0d6efd;
-        padding-bottom: 10px;
-    }
+    /* Colores Específicos KPI */
+    .border-cobros { border-color: #198754; } .border-cobros .kpi-value { color: #198754; }
+    .border-deuda { border-color: #dc3545; }  .border-deuda .kpi-value { color: #dc3545; }
+    .border-liq { border-color: #0d6efd; }    .border-liq .kpi-value { color: #0d6efd; }
 
-    /* GRILLA 3x3 */
-    .grid-botones {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr); /* 3 Columnas fijas */
-        gap: 25px; /* Espacio entre botones */
-    }
-
-    /* TARJETA / BOTÓN */
-    .btn-menu {
+    /* Accesos Directos */
+    .shortcut-btn {
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        height: 220px; /* Altura fija gigante */
-        background-color: #fff;
-        border: 3px solid #6c757d; /* Borde gris grueso por defecto */
-        border-radius: 12px;
+        background: white;
+        border: 2px solid white;
+        border-radius: 15px;
+        padding: 30px 15px;
         text-decoration: none;
-        color: #000;
-        transition: all 0.2s ease-in-out;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        color: #495057;
+        transition: all 0.3s ease;
+        height: 160px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.03);
     }
-
-    /* ICONOS */
-    .btn-menu i {
-        font-size: 4rem; /* Icono gigante */
-        margin-bottom: 15px;
-        color: #0d6efd; /* Azul PAMI */
-    }
-
-    /* TEXTO */
-    .btn-menu span {
-        font-size: 1.5rem;
-        font-weight: 800;
-        text-transform: uppercase;
-        text-align: center;
-    }
-
-    /* EFECTO HOVER (CUANDO PASA EL MOUSE) */
-    .btn-menu:hover {
-        background-color: #e9ecef;
+    .shortcut-btn:hover {
+        background-color: #fff;
+        border-color: #198754;
+        box-shadow: 0 10px 25px rgba(25, 135, 84, 0.15);
         transform: translateY(-5px);
-        border-color: #0d6efd;
-        box-shadow: 0 8px 15px rgba(13, 110, 253, 0.2);
+        color: #198754;
     }
+    .shortcut-icon { font-size: 3rem; margin-bottom: 15px; }
+    .shortcut-label { font-size: 1.1rem; font-weight: 800; text-transform: uppercase; text-align: center; }
 
-    /* EFECTO FOCO (ACCESIBILIDAD TECLADO) */
-    .btn-menu:focus {
-        background-color: #fff3cd; /* Amarillo patito */
-        border-color: #000;
-        outline: none;
-        box-shadow: 0 0 0 0.4rem rgba(255, 193, 7, 0.5);
-    }
-
-    /* BOTÓN DE SALIR (ROJO) */
-    .btn-salir {
-        border-color: #dc3545;
-    }
-    .btn-salir i { color: #dc3545; }
-    .btn-salir:hover {
-        background-color: #fee2e2;
-        border-color: #b02a37;
-    }
-
+    /* Tabla de Actividad */
+    .recent-card { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-top: 20px; }
+    .recent-header { background: #212529; color: white; padding: 15px 25px; font-weight: 700; display: flex; justify-content: space-between; align-items: center; }
+    .table thead th { font-size: 0.8rem; text-transform: uppercase; color: #6c757d; font-weight: 800; background: #f8f9fa; border-bottom: 2px solid #dee2e6; padding: 12px 20px; }
+    .table tbody td { padding: 15px 20px; vertical-align: middle; font-weight: 600; color: #495057; }
+    .badge-status { font-size: 0.75rem; padding: 6px 12px; border-radius: 30px; font-weight: 800; letter-spacing: 0.5px; }
 </style>
 
-<div class="menu-container">
-    <h1 class="titulo-principal">Sistema de Farmacia</h1>
+<div class="container-fluid py-4" style="max-width: 1400px;">
+    
+    <div class="welcome-banner">
+        <i class="fas fa-notes-medical welcome-icon">💊</i>
+        <div class="welcome-text">
+            <h1>@nombreFarmacia</h1>
+            <p>👋 Hola, @usuarioNombre. Aquí tienes el resumen financiero de hoy.</p>
+        </div>
+    </div>
 
-    <div class="grid-botones">
+    <div class="row g-4 mb-5">
+        <div class="col-md-4">
+            <div class="kpi-card border-cobros">
+                <i class="kpi-icon">💰</i>
+                <div class="kpi-title">Ingresos del Mes</div>
+                <div class="kpi-value" id="kpiCobrado"><div class="spinner-border spinner-border-sm text-success"></div></div>
+                <div class="kpi-sub">Total cobrado en efectivo/transf.</div>
+            </div>
+        </div>
         
-        <a href="@Url.Action("Create", "Facturas")" class="btn-menu">
-            <i class="bi bi-cart4"></i>
-            <span>Provedores</span>
-        </a>
+        <div class="col-md-4">
+            <div class="kpi-card border-deuda">
+                <i class="kpi-icon">⚠️</i>
+                <div class="kpi-title">Deuda Pendiente Global</div>
+                <div class="kpi-value" id="kpiDeuda"><div class="spinner-border spinner-border-sm text-danger"></div></div>
+                <div class="kpi-sub">Suma de saldos por cobrar</div>
+            </div>
+        </div>
 
-        <a href="@Url.Action("Index", "Socios")" class="btn-menu">
-            <i class="bi bi-people-fill"></i>
-            <span>Alta Comp</span>
-        </a>
+        <div class="col-md-4">
+            <div class="kpi-card border-liq">
+                <i class="kpi-icon">📈</i>
+                <div class="kpi-title">Liquidado este Mes</div>
+                <div class="kpi-value" id="kpiLiquidado"><div class="spinner-border spinner-border-sm text-primary"></div></div>
+                <div class="kpi-sub">Total presentado a Obras Sociales</div>
+            </div>
+        </div>
+    </div>
 
-        <a href="@Url.Action("Index", "Medicamentos")" class="btn-menu">
-            <i class="bi bi-capsule"></i>
-            <span>Resumen</span>
-        </a>
+    <h5 class="fw-bold mb-4 text-muted ms-1">🚀 ACCESOS RÁPIDOS</h5>
+    <div class="row g-4 mb-5">
+        <div class="col-6 col-md-3">
+            <a href="@Url.Action("IrAMostrarModificaciones", "Home")" class="shortcut-btn">
+                <span class="shortcut-icon">📋</span>
+                <span class="shortcut-label">Presentaciones</span>
+            </a>
+        </div>
+        <div class="col-6 col-md-3">
+            <a href="@Url.Action("IrAGestionCobros", "Home")" class="shortcut-btn">
+                <span class="shortcut-icon">💸</span>
+                <span class="shortcut-label">Gestión Cobros</span>
+            </a>
+        </div>
+        <div class="col-6 col-md-3">
+            <a href="@Url.Action("IrAAltasModificacionesOS", "Home")" class="shortcut-btn">
+                <span class="shortcut-icon">🏥</span>
+                <span class="shortcut-label">Obras Sociales</span>
+            </a>
+        </div>
+        <div class="col-6 col-md-3">
+            <a href="@Url.Action("IrAAltasModificacionesMandatarias", "Home")" class="shortcut-btn">
+                <span class="shortcut-icon">🏢</span>
+                <span class="shortcut-label">Mandatarias</span>
+            </a>
+        </div>
+    </div>
 
-        <a href="@Url.Action("Index", "ObrasSociales")" class="btn-menu">
-            <i class="bi bi-hospital"></i>
-            <span>Reportes Z</span>
-        </a>
-
-        <a href="@Url.Action("Index", "ObrasSociales")" class="btn-menu"> <i class="bi bi-building"></i>
-            <span>Alta Presentacion</span>
-        </a>
-
-        <a href="@Url.Action("Index", "ObrasSociales")" class="btn-menu"> <i class="bi bi-currency-dollar"></i>
-            <span>Conf Pres</span>
-        </a>
-
-        <a href="@Url.Action("Index", "ObrasSociales")" class="btn-menu">
-            <i class="bi bi-question-square"></i>
-            <span>Alta Pagos</span> </a>
-
-        <a href="@Url.Action("Index", "ObrasSociales")" class="btn-menu">
-            <i class="bi bi-gear-fill"></i>
-            <span>Pre/Mand</span> </a>
-  <a href="@Url.Action("Index", "ObrasSociales")" class="btn-menu">
-            <i class="bi bi-gear-fill"></i>
-            <span>Pes/O.S</span> </a>
-       
-
+    <div class="row">
+        <div class="col-12">
+            <div class="recent-card">
+                <div class="recent-header">
+                    <span>🕒 ÚLTIMAS 5 LIQUIDACIONES PRESENTADAS</span>
+                    <a href="@Url.Action("IrAMostrarModificaciones", "Home")" class="btn btn-sm btn-light fw-bold text-dark px-3">VER TODAS</a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead>
+                            <tr>
+                             <th>N*</th>
+                                <th>FECHA</th>
+                                <th>MANDATARIA</th>
+                                <th class="text-end">TOTAL</th>
+                                <th class="text-end">SALDO PEND.</th>
+                                <th class="text-center">ESTADO</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaUltimos">
+                            <tr><td colspan="6" class="text-center p-4 text-muted">Cargando datos...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        cargarDashboard();
+    });
+
+    async function cargarDashboard() {
+        // Fechas para filtrar "Mes Actual"
+        const fechaHoy = new Date();
+        const y = fechaHoy.getFullYear();
+        const m = fechaHoy.getMonth();
+        const primerDiaMes = new Date(y, m, 1).toISOString().split('T')[0];
+        const diaHoy = fechaHoy.toISOString().split('T')[0];
+
+        // --- 1. DATOS DE LIQUIDACIONES ---
+        try {
+            const rLiq = await fetch('@Url.Action("BuscarLiquidacionesAjax", "Home")');
+            const dLiq = await rLiq.json();
+
+            if (dLiq.success && dLiq.data) {
+                const data = dLiq.data;
+
+                // A) DEUDA TOTAL (Suma estricta)
+                const deudaTotal = data.reduce((sum, item) => sum + (parseFloat(item.SaldoPendiente || item.saldoPendiente) || 0), 0);
+                mostrarNumero('kpiDeuda', deudaTotal);
+
+                // B) LIQUIDADO ESTE MES
+                const liqMes = data
+                    .filter(item => (item.FechaPresentacion || item.fechaPresentacion) >= primerDiaMes)
+                    .reduce((sum, item) => sum + (parseFloat(item.TotalReal || item.totalReal) || 0), 0);
+                mostrarNumero('kpiLiquidado', liqMes);
+
+                // C) TABLA RECIENTE
+                dibujarTablaUltimos(data.slice(0, 5));
+            }
+        } catch (e) { console.error(e); }
+
+        // --- 2. DATOS DE COBROS ---
+        try {
+            const urlCobros = `@Url.Action("BuscarCobrosAjax", "Home")?desde=${primerDiaMes}&hasta=${diaHoy}`;
+            const rCob = await fetch(urlCobros);
+            const dCob = await rCob.json();
+
+            if (dCob.success && dCob.data) {
+                const cobradoMes = dCob.data.reduce((sum, item) => sum + (parseFloat(item.TotalImporte || 0) || 0), 0);
+                mostrarNumero('kpiCobrado', cobradoMes);
+            }
+        } catch (e) { console.error(e); }
+    }
+
+    function dibujarTablaUltimos(lista) {
+        const tbody = document.getElementById('tablaUltimos');
+        tbody.innerHTML = '';
+        
+        if (lista.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center p-4">No hay movimientos recientes.</td></tr>';
+            return;
+        }
+
+        lista.forEach(l => {
+            // 1. Capturamos el ID (Número de comprobante/Liquidación)
+            const idLiq = l.IdLiquidaciones || l.idLiquidaciones || "---";
+            
+            const fechaRaw = l.FechaPresentacion || l.fechaPresentacion;
+            const fecha = new Date(fechaRaw).toLocaleDateString('es-AR');
+            const total = parseFloat(l.TotalReal || l.totalReal || 0);
+            const saldo = parseFloat(l.SaldoPendiente || l.saldoPendiente || 0);
+            const mand = l.NombreMandataria || "---";
+            
+            // Lógica de Estado (Estricta)
+            let estadoHtml = '';
+            if(saldo <= 0.10) {
+                estadoHtml = '<span class="badge bg-success badge-status">PAGADO</span>';
+            } 
+            else if(saldo < (total - 1)) { 
+                estadoHtml = '<span class="badge bg-warning text-dark badge-status">PARCIAL</span>';
+            } 
+            else {
+                estadoHtml = '<span class="badge bg-danger badge-status">PENDIENTE</span>';
+            }
+
+            // 2. Dibujamos la fila alineada con tus 6 encabezados
+            tbody.innerHTML += `
+                <tr>
+                    <td class="fw-bold text-secondary">${idLiq}</td>
+                    
+                    <td class="fw-bold">${fecha}</td>
+                    
+                    <td class="text-primary fw-bold">${mand}</td>
+                    
+                    <td class="text-end fw-bold text-dark">$${total.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+                    
+                    <td class="text-end fw-bold text-danger">$${saldo.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+                    
+                    <td class="text-center">${estadoHtml}</td>
+                </tr>
+            `;
+        });
+    }
+
+    function mostrarNumero(id, valor) {
+        const el = document.getElementById(id);
+        if(el) el.textContent = "$" + valor.toLocaleString('es-AR', {minimumFractionDigits: 2});
+    }
+</script>

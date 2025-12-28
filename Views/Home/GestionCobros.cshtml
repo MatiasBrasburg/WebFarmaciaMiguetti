@@ -112,13 +112,13 @@ var jsonMandatarias = JsonSerializer.Serialize(listaMandatarias.Select(x => new 
 
 <div class="container-fluid mt-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1>💰 GESTIÓN DE COBROS</h1>
-        <button class="btn btn-success btn-lg btn-super shadow" onclick="abrirModalNuevo()">➕ NUEVO LOTE</button>
+        <h1> GESTIÓN DE COBROS</h1>
+        <button class="btn btn-success btn-lg btn-super shadow" onclick="abrirModalNuevo()">➕ NUEVO COBRO</button>
     </div>
 
     <div class="card mb-4 shadow-sm" style="border: 3px solid #6c757d; background-color: #e2e3e5;">
         <div class="card-body">
-            <h4 class="mb-3 fw-bold">🔍 BUSCAR LOTES</h4>
+            <h4 class="mb-3 fw-bold">🔍 BUSCAR COBRO</h4>
             <div class="row g-3 align-items-end">
                 <div class="col-md-2"><label class="form-label">Desde</label><input type="date" id="filtroDesde" class="form-control" data-enter="buscarCobros"></div>
                 <div class="col-md-2"><label class="form-label">Hasta</label><input type="date" id="filtroHasta" class="form-control" data-enter="buscarCobros"></div>
@@ -154,7 +154,7 @@ var jsonMandatarias = JsonSerializer.Serialize(listaMandatarias.Select(x => new 
         <table class="table table-striped table-hover mb-0">
             <thead>
                 <tr>
-                    <th>FECHA LOTE</th>
+                    <th>FECHA COBRO</th>
                     <th>MANDATARIA</th>
                     <th>COMPROBANTE</th>
                     <th class="text-center">ITEMS</th>
@@ -172,7 +172,7 @@ var jsonMandatarias = JsonSerializer.Serialize(listaMandatarias.Select(x => new 
     <div class="modal-dialog modal-xl" style="max-width: 95%;"> 
         <div class="modal-content border-0">
             <div class="modal-header bg-header-add py-3">
-                <h3 class="modal-title fw-bold">🧾 NUEVO LOTE DE COBROS</h3>
+                <h3 class="modal-title fw-bold">🧾 NUEVO LOTE COBROS</h3>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body bg-light p-4">
@@ -189,7 +189,7 @@ var jsonMandatarias = JsonSerializer.Serialize(listaMandatarias.Select(x => new 
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">N° COMPROBANTE</label>
-                        <input type="text" id="n_Comp" class="form-control" placeholder="Ej: REC-001">
+                        <input type="text" id="n_Comp" class="form-control" placeholder="Ej: 123">
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">FECHA REFERENCIA</label>
@@ -243,12 +243,12 @@ var jsonMandatarias = JsonSerializer.Serialize(listaMandatarias.Select(x => new 
 <div class="modal fade" id="modalVer" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl">
         <div class="modal-content border-4 border-primary">
-            <div class="modal-header bg-header-view"><h4 class="modal-title fw-bold text-white">👁️ DETALLE DEL LOTE</h4><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+            <div class="modal-header bg-header-view"><h4 class="modal-title fw-bold text-white">👁️ DETALLE DEL COBRO</h4><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
             <div class="modal-body bg-light p-4">
                 <div class="row mb-3 bg-white border p-3 rounded mx-1 shadow-sm">
                     <div class="col-md-6"><span class="text-muted small d-block">MANDATARIA:</span><h4 class="fw-bold text-primary m-0" id="v_Titulo">---</h4></div>
                     <div class="col-md-3"><span class="text-muted small d-block">COMPROBANTE:</span><h4 class="fw-bold m-0" id="v_Comp">---</h4></div>
-                    <div class="col-md-3"><span class="text-muted small d-block">FECHA LOTE:</span><h4 class="fw-bold m-0" id="v_Fecha">---</h4></div>
+                    <div class="col-md-3"><span class="text-muted small d-block">FECHA COBRO:</span><h4 class="fw-bold m-0" id="v_Fecha">---</h4></div>
                 </div>
                 
                 <div class="card mb-3 border-2 border-primary">
@@ -332,7 +332,7 @@ var jsonMandatarias = JsonSerializer.Serialize(listaMandatarias.Select(x => new 
                 <input type="hidden" id="e_IdCobroRef">
                 <div class="row g-3">
                     <div class="col-md-12"><label class="form-label">Mandataria</label><select id="e_Mandataria" class="form-select">@foreach (var m in listaMandatarias) { <option value="@m.IdMandatarias">@m.RazonSocial</option> }</select></div>
-                    <div class="col-md-6"><label class="form-label">Fecha Lote</label><input type="date" id="e_Fecha" class="form-control"></div>
+                    <div class="col-md-6"><label class="form-label">Fecha Cobro</label><input type="date" id="e_Fecha" class="form-control"></div>
                     <div class="col-md-6"><label class="form-label">Comprobante</label><input type="text" id="e_Comp" class="form-control"></div>
                 </div>
             </div>
