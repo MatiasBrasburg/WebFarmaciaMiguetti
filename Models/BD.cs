@@ -524,19 +524,30 @@ public static LiquidacionDetalle TraerDetallePorId(int idDetalle)
 }
 
 // 2. Agregar ítem suelto (y actualizar total del padre)
+// EN: Models/BD.cs -> Método AgregarItemIndividual
+
 public static void AgregarItemIndividual(LiquidacionDetalle item)
 {
     using (SqlConnection connection = new SqlConnection(_connectionString))
     {
         connection.Open();
         
-        // A. Insertar el ítem
+        // A. Insertar el ítem (AGREGAMOS SaldoPendiente y Pagado)
         string query = @"
-            INSERT INTO LiquidacionDetalle (IdLiquidaciones, IdObrasSociales, IdPlanBonificacion, CantidadRecetas, TotalBruto, MontoCargoOS, MontoBonificacion)
-            VALUES (@IdLiquidaciones, @IdObrasSociales, @IdPlanBonificacion, @CantidadRecetas, @TotalBruto, @MontoCargoOS, @MontoBonificacion)";
+            INSERT INTO LiquidacionDetalle (
+                IdLiquidaciones, IdObrasSociales, IdPlanBonificacion, 
+                CantidadRecetas, TotalBruto, MontoCargoOS, MontoBonificacion,
+                SaldoPendiente, Pagado  -- <--- COLUMNAS NUEVAS
+            )
+            VALUES (
+                @IdLiquidaciones, @IdObrasSociales, @IdPlanBonificacion, 
+                @CantidadRecetas, @TotalBruto, @MontoCargoOS, @MontoBonificacion,
+                @SaldoPendiente, 0      -- <--- VALORES NUEVOS (0 es false para Pagado)
+            )";
+            
         connection.Execute(query, item);
 
-        // B. Actualizar el Total de la Liquidación Padre (Magia automática)
+        // B. Actualizar el Total de la Liquidación Padre
         ActualizarTotalCabecera(item.IdLiquidaciones, connection);
     }
 }

@@ -180,11 +180,11 @@
                                     <option value="0">- Primero elija OS -</option>
                                 </select>
                             </div>
-                            <div class="col-md-2"><label class="form-label">Recetas</label><input type="number" id="inputRecetas" class="form-control" value="0"></div>
+                            <div class="col-md-2"><label class="form-label">Recetas</label><input type="number" id="inputRecetas" class="form-control" placeholder = "0"></div>
                         </div>
                         <div class="row g-3 mt-1 align-items-end">
-                            <div class="col-md-3"><label class="form-label">Total ($)</label><input type="number" id="inputTotal" class="form-control" step="0.01" value="0.00" oninput="recalcularNeto('inputTotal', 'inputPlan', 'inputNeto', 'lblPorcentajeAplicado')"></div>
-                            <div class="col-md-3"><label class="form-label">Cargo O.S.</label><input type="number" id="inputCargoOS" class="form-control" step="0.01" value="0.00"></div>
+                            <div class="col-md-3"><label class="form-label">Total ($)</label><input type="number" id="inputTotal" class="form-control" step="1"   placeholder="0.00" oninput="recalcularNeto('inputTotal', 'inputPlan', 'inputNeto', 'lblPorcentajeAplicado')"></div>
+                            <div class="col-md-3"><label class="form-label">Cargo O.S.</label><input type="number" id="inputCargoOS" class="form-control" step="1" placeholder="0.00"></div>
                             <div class="col-md-3">
                                
                                 <label class="form-label text-success">
@@ -315,9 +315,9 @@
                             <option value="0">- Primero OS -</option>
                         </select>
                     </div>
-                    <div class="col-md-3"><label class="form-label">Recetas</label><input type="number" id="item_Recetas" class="form-control" value="0"></div>
-                    <div class="col-md-3"><label class="form-label">Total ($)</label><input type="number" id="item_Total" class="form-control" step="0.01" value="0.00" oninput="recalcularNeto('item_Total', 'item_IdPlan', 'item_Neto', 'item_lblPorc')"></div>
-                    <div class="col-md-3"><label class="form-label">Cargo O.S.</label><input type="number" id="item_CargoOS" class="form-control" step="0.01" value="0.00"></div>
+                    <div class="col-md-3"><label class="form-label">Recetas</label><input type="number" id="item_Recetas" class="form-control" placeholder="0.00"></div>
+                    <div class="col-md-3"><label class="form-label">Total ($)</label><input type="number" id="item_Total" class="form-control" step="1" placeholder="0.00" oninput="recalcularNeto('item_Total', 'item_IdPlan', 'item_Neto', 'item_lblPorc')"></div>
+                    <div class="col-md-3"><label class="form-label">Cargo O.S.</label><input type="number" id="item_CargoOS" class="form-control" step="1" placeholder="0.00"></div>
                     <div class="col-md-3"><label class="form-label text-success">Bonif ($) <small id="item_lblPorc">0%</label></small><input type="number" id="item_Neto" class="form-control fw-bold bg-white" readonly value="0.00"></div>
                 </div>
             </div>
@@ -918,10 +918,10 @@ async function abrirItemABM(idItem, idPadre = 0, idMandatariaExterna = 0) {
 
     // Reset de campos visuales
     document.getElementById('item_IdOS').value = "0"; 
-    document.getElementById('item_Recetas').value="0"; 
-    document.getElementById('item_Total').value="0.00";
-    document.getElementById('item_CargoOS').value="0.00"; 
-    document.getElementById('item_Neto').value="0.00";
+    document.getElementById('item_Recetas').ariaPlaceholder = "0.00"; 
+    document.getElementById('item_Total').ariaPlaceholder = "0.00";
+    document.getElementById('item_CargoOS').ariaPlaceholder = "0.00"; 
+    document.getElementById('item_Neto').ariaPlaceholder = "0.00";
 
     // Si es edición, cargamos los datos
     if (idItem > 0) {

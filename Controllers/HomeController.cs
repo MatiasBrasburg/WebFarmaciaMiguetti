@@ -430,7 +430,9 @@ public class HomeController : Controller
                 CantidadRecetas = Recetas,
                 TotalBruto = Total,
                 MontoCargoOS = CargoOS,
-                MontoBonificacion = Bonificacion
+                MontoBonificacion = Bonificacion,
+                SaldoPendiente = CargoOS - Bonificacion, // Calculamos la deuda inicial
+                Pagado = false
             };
 
             if (IdItem == 0)
