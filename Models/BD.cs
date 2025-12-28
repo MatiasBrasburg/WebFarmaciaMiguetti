@@ -424,7 +424,8 @@ public static List<dynamic> BuscarLiquidaciones(int? id, DateTime? desde, DateTi
 {
     using (SqlConnection connection = new SqlConnection(_connectionString))
     {
-        // CAMBIO CLAVE: Sumamos (Cargo - Bonif) para el TotalReal
+        // ARQUITECTURA: Calculamos el Saldo Pendiente sumando el de cada hijo (Detalle).
+        // Como el detalle se actualiza con los pagos, esto refleja la deuda real en tiempo real.
         string query = @"
             SELECT 
                 L.IdLiquidaciones,
@@ -433,7 +434,11 @@ public static List<dynamic> BuscarLiquidaciones(int? id, DateTime? desde, DateTi
                 L.Observaciones,
                 L.IdMandatarias,
                 M.RazonSocial as NombreMandataria,
-                ISNULL(SUM(LD.MontoCargoOS - LD.MontoBonificacion), 0) as TotalReal -- <--- AQUÍ ESTÁ EL CAMBIO
+                ISNULL(SUM(LD.MontoCargoOS - LD.MontoBonificacion), 0) as TotalReal,
+                
+                -- NUEVA LÍNEA: Suma de saldos pendientes de los hijos
+                ISNULL(SUM(LD.SaldoPendiente), 0) as SaldoPendiente 
+
             FROM Liquidaciones L
             INNER JOIN Mandatarias M ON L.IdMandatarias = M.IdMandatarias
             LEFT JOIN LiquidacionDetalle LD ON L.IdLiquidaciones = LD.IdLiquidaciones
@@ -451,7 +456,6 @@ public static List<dynamic> BuscarLiquidaciones(int? id, DateTime? desde, DateTi
         return connection.Query<dynamic>(query, new { pId = id, pDesde = desde, pHasta = hasta, pMand = mandataria }).ToList();
     }
 }
-
 
       // EN Models/BD.cs
 

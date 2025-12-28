@@ -186,9 +186,13 @@
                             <div class="col-md-3"><label class="form-label">Total ($)</label><input type="number" id="inputTotal" class="form-control" step="0.01" value="0.00" oninput="recalcularNeto('inputTotal', 'inputPlan', 'inputNeto', 'lblPorcentajeAplicado')"></div>
                             <div class="col-md-3"><label class="form-label">Cargo O.S.</label><input type="number" id="inputCargoOS" class="form-control" step="0.01" value="0.00"></div>
                             <div class="col-md-3">
-                                <label class="form-label text-success">Bonif ($)</label>
+                               
+                                <label class="form-label text-success">
+                                    Bonif ($) 
+                                    <small class="text-muted" id="lblPorcentajeAplicado" style="margin-left: 10px;">Plan: 0%</small>
+                                </label>
                                 <input type="number" id="inputNeto" class="form-control fw-bold text-success border-success bg-light" readonly value="0.00">
-                                <small class="text-muted" id="lblPorcentajeAplicado">Plan: 0%</small>
+                                
                             </div>
                             <div class="col-md-3"><button type="button" class="btn btn-success btn-super w-100" id="btnAgregarFila">⬇️ AGREGAR</button></div>
                         </div>
@@ -241,7 +245,7 @@
                         <thead class="bg-dark text-white">
                             <tr>
                                 <th>OBRA SOCIAL</th><th>PLAN</th><th>RECETAS</th><th>TOTAL BRUTO</th><th>CARGO O.S.</th><th>BONIFICACIÓN</th>
-                                <th class="text-end">A PAGAR (REAL)</th> <th>ACCIONES</th>
+                                <th class="text-end">A PAGAR (REAL)</th> <th class="text-end text-danger fw-bold">SALDO PEND</th> <th>ACCIONES</th>
                             </tr>
                         </thead>
                         <tbody id="tbodyVerDetalle"></tbody>
@@ -314,7 +318,7 @@
                     <div class="col-md-3"><label class="form-label">Recetas</label><input type="number" id="item_Recetas" class="form-control" value="0"></div>
                     <div class="col-md-3"><label class="form-label">Total ($)</label><input type="number" id="item_Total" class="form-control" step="0.01" value="0.00" oninput="recalcularNeto('item_Total', 'item_IdPlan', 'item_Neto', 'item_lblPorc')"></div>
                     <div class="col-md-3"><label class="form-label">Cargo O.S.</label><input type="number" id="item_CargoOS" class="form-control" step="0.01" value="0.00"></div>
-                    <div class="col-md-3"><label class="form-label text-success">Bonif ($)</label><input type="number" id="item_Neto" class="form-control fw-bold bg-white" readonly value="0.00"><small id="item_lblPorc">0%</small></div>
+                    <div class="col-md-3"><label class="form-label text-success">Bonif ($) <small id="item_lblPorc">0%</label></small><input type="number" id="item_Neto" class="form-control fw-bold bg-white" readonly value="0.00"></div>
                 </div>
             </div>
             <div class="modal-footer bg-light">
@@ -442,7 +446,7 @@ document.getElementById('liqMandataria').addEventListener('change', function() {
         }
         const thead = document.getElementById('theadResultados');
         if(modo === 'Mandataria') {
-            thead.innerHTML = `<tr><th>N°</th><th>FECHA</th><th>MANDATARIA</th><th>OBSERVACIONES</th><th class="text-end">TOTAL</th><th class="text-center">ACCIONES</th></tr>`;
+            thead.innerHTML = `<tr><th>N°</th><th>FECHA</th><th>MANDATARIA</th><th>OBSERVACIONES</th><th class="text-end">TOTAL</th><th class="text-end text-danger">SALDO PEND</th><th class="text-center">ACCIONES</th></tr>`;
         } else {
             thead.innerHTML = `<tr><th>FECHA</th><th>MANDATARIA</th><th>OBRA SOCIAL</th><th class="text-center">RECETAS</th><th class="text-end">A COBRAR</th><th class="text-end">SALDO PEND.</th><th class="text-center">ACCIONES</th></tr>`;
         }
@@ -460,7 +464,7 @@ if (idOS !== "0" && idOS !== "" && modoActual === 'Mandataria') {
         }
         
         const tbody = document.getElementById('tbodyResultados');
-        const cols = modoActual === 'Mandataria' ? 6 : 7;
+        const cols = modoActual === 'Mandataria' ? 7 : 7;
         tbody.innerHTML = `<tr><td colspan="${cols}" class="text-center p-4"><div class="spinner-border text-primary"></div></td></tr>`;
 
         let url = "";
@@ -479,23 +483,31 @@ if (idOS !== "0" && idOS !== "" && modoActual === 'Mandataria') {
                 
                 if (modoActual === 'Mandataria') {
                     res.data.forEach(l => {
-                        const f = new Date(l.FechaPresentacion || l.fechaPresentacion).toLocaleDateString('es-AR');
-                        const nm = l.NombreMandataria || mapaMandatarias[l.IdMandatarias || l.idMandatarias] || "---";
-                        const idLiq = l.IdLiquidaciones || l.idLiquidaciones;
-                        const total = parseFloat(l.TotalReal || l.totalReal || 0);
-                        
-                        tbody.innerHTML += `<tr>
-                            <td class="fw-bold fs-5">${idLiq}</td>
-                            <td>${f}</td>
-                            <td class="fw-bold text-primary">${nm}</td>
-                            <td>${l.Observaciones || l.observaciones || '-'}</td>
-                            <td class="text-end fw-bold">$${total.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
-                            <td class="text-center">
-                                <button class="btn btn-warning btn-sm fw-bold me-1" onclick="editarCabecera(${idLiq})">✏️</button>
-                               <button class="btn btn-info btn-sm text-white fw-bold me-1" onclick="verLiquidacion(${idLiq}, '${f}', '${nm}', ${l.IdMandatarias || l.idMandatarias})">👁️ VER</button>
-                                <button class="btn btn-danger btn-sm fw-bold" onclick="eliminarLiquidacion(${idLiq})">🗑️</button>
-                            </td></tr>`;
-                    });
+    const f = new Date(l.FechaPresentacion || l.fechaPresentacion).toLocaleDateString('es-AR');
+    const nm = l.NombreMandataria || mapaMandatarias[l.IdMandatarias || l.idMandatarias] || "---";
+    const idLiq = l.IdLiquidaciones || l.idLiquidaciones;
+    
+    const total = parseFloat(l.TotalReal || l.totalReal || 0);
+    // --- NUEVO CÁLCULO DE SALDO ---
+    const saldo = parseFloat(l.SaldoPendiente || l.saldoPendiente || 0);
+
+    tbody.innerHTML += `<tr>
+        <td class="fw-bold fs-5">${idLiq}</td>
+        <td>${f}</td>
+        <td class="fw-bold text-primary">${nm}</td>
+        <td>${l.Observaciones || l.observaciones || '-'}</td>
+        <td class="text-end fw-bold">$${total.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+        
+        <td class="text-end fw-black text-danger" style="font-size: 1.1em;">
+            $${saldo.toLocaleString('es-AR', {minimumFractionDigits:2})}
+        </td>
+
+        <td class="text-center">
+            <button class="btn btn-warning btn-sm fw-bold me-1" onclick="editarCabecera(${idLiq})">✏️</button>
+            <button class="btn btn-info btn-sm text-white fw-bold me-1" onclick="verLiquidacion(${idLiq}, '${f}', '${nm}', ${l.IdMandatarias || l.idMandatarias})">👁️ VER</button>
+            <button class="btn btn-danger btn-sm fw-bold" onclick="eliminarLiquidacion(${idLiq})">🗑️</button>
+        </td></tr>`;
+});
                 } else {
                     let contadorVisibles = 0;
                     res.data.forEach(x => {
@@ -757,36 +769,62 @@ async function verLiquidacion(id, f, nm, idMand) {
     recargarTablaVisor();
 }
 
-    async function recargarTablaVisor() {
-        const tbody = document.getElementById('tbodyVerDetalle');
-        try {
-            const r = await fetch(`@Url.Action("ObtenerDetallesDeLiquidacion", "Home")?idLiquidacion=${idLiquidacionActualVisor}`);
-            const d = await r.json();
-            if (d.success) {
-                tbody.innerHTML = '';
-                if(d.data.length === 0) { tbody.innerHTML = '<tr><td colspan="8" class="text-center p-3">Sin detalles.</td></tr>'; return; }
+   // REEMPLAZA TU FUNCIÓN recargarTablaVisor POR ESTA COMPLETA
+async function recargarTablaVisor(idLiq = null) {
+    const id = idLiq || document.getElementById('verId').textContent;
+    const tbody = document.getElementById('tbodyVerDetalle');
+    
+    // Ajustamos el colspan a 9 para el mensaje de carga
+    tbody.innerHTML = '<tr><td colspan="9" class="text-center p-3">Cargando...</td></tr>';
+    
+    try {
+        const r = await fetch(`@Url.Action("ObtenerDetallesDeLiquidacion", "Home")?idLiquidacion=${id}`);
+        const d = await r.json();
+        
+        if (d.success) {
+            tbody.innerHTML = '';
+            
+            if(d.data.length === 0) { 
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center p-3">Sin detalles.</td></tr>'; 
+                return; 
+            }
+            
+            d.data.forEach(x => {
+                const aPagarReal = x.montoCargoOS - x.montoBonificacion;
+                const saldo = parseFloat(x.saldoPendiente || 0);
                 
-                d.data.forEach(x => {
-                    const objOS = datosOS.find(o => o.id == x.idObrasSociales);
-const nomOS = objOS ? objOS.nombre : `ID ${x.idObrasSociales}`;
-                    const aPagarReal = x.montoCargoOS - x.montoBonificacion;
-                    
-                    // --- BOTÓN OJITO EN MODAL VISOR ---
-                    tbody.innerHTML += `<tr>
-<td class="nombre-os">${nomOS}</td><td class="text-center">${x.nombrePlan || '---'}</td><td class="text-center">${x.cantidadRecetas}</td>
-                        <td class="text-end">$${x.totalBruto.toFixed(2)}</td><td class="text-end">$${x.montoCargoOS.toFixed(2)}</td>
-                        <td class="text-end">$${x.montoBonificacion.toFixed(2)}</td>
-                        <td class="text-end fw-bold border border-secondary">$${aPagarReal.toFixed(2)}</td>
-                        <td class="text-center">
-                            <button class="btn btn-sm btn-info text-white me-1" onclick="verCobrosDeLiquidacion(${x.idLiquidacionDetalle})" title="Ver Pagos">👁️</button>
-                            <button class="btn btn-warning btn-sm" onclick="abrirItemABM(${x.idLiquidacionDetalle}, ${idLiquidacionActualVisor})">✏️</button>
-                            <button class="btn btn-danger btn-sm" onclick="eliminarItemIndividual(${x.idLiquidacionDetalle})">🗑️</button>
-                        </td></tr>`;
-                });
-            } else { tbody.innerHTML = `<tr><td colspan="8" class="text-danger">${d.message}</td></tr>`; }
-        } catch(e) { tbody.innerHTML = '<tr><td colspan="8" class="text-danger">Error.</td></tr>'; }
-    }
+                // Buscamos el nombre de la OS en memoria
+                const objOS = datosOS.find(o => o.id == x.idObrasSociales);
+                const nomOS = objOS ? objOS.nombre : `ID ${x.idObrasSociales}`;
 
+                tbody.innerHTML += `<tr>
+                    <td class="nombre-os fw-bold">${nomOS}</td>
+                    <td class="text-center">${x.nombrePlan || '---'}</td>
+                    <td class="text-center">${x.cantidadRecetas}</td>
+                    <td class="text-end">$${x.totalBruto.toFixed(2)}</td>
+                    <td class="text-end">$${x.montoCargoOS.toFixed(2)}</td>
+                    <td class="text-end">$${x.montoBonificacion.toFixed(2)}</td>
+                    <td class="text-end fw-bold text-primary">$${aPagarReal.toFixed(2)}</td>
+                    
+                    <td class="text-end fw-black text-danger" style="font-size:1.1em; border-left: 2px solid #ccc;">
+                        $${saldo.toFixed(2)}
+                    </td>
+
+                    <td class="text-center">
+                        <button class="btn btn-sm btn-info text-white me-1" onclick="verCobrosDeLiquidacion(${x.idLiquidacionDetalle})" title="Ver Pagos">👁️</button>
+                        <button class="btn btn-warning btn-sm" onclick="abrirItemABM(${x.idLiquidacionDetalle}, ${id})">✏️</button>
+                        <button class="btn btn-danger btn-sm" onclick="eliminarItemIndividual(${x.idLiquidacionDetalle})">🗑️</button>
+                    </td>
+                </tr>`;
+            });
+        } else { 
+            tbody.innerHTML = `<tr><td colspan="9" class="text-danger">${d.message}</td></tr>`; 
+        }
+    } catch(e) { 
+        console.error(e);
+        tbody.innerHTML = '<tr><td colspan="9" class="text-danger">Error al cargar items.</td></tr>'; 
+    }
+}
     async function verCobrosDeLiquidacion(idDet) {
         const tbody = document.getElementById('tbodyVerCobrosLiq');
         tbody.innerHTML = '<tr><td colspan="6" class="text-center p-3">Cargando...</td></tr>';
@@ -949,44 +987,65 @@ async function abrirItemABM(idItem, idPadre = 0, idMandatariaExterna = 0) {
     
 
         // IMPRESIÓN (AHORA CON TOTALES)
+   // IMPRESIÓN (AHORA CON TOTALES Y DEUDA)
     function imprimirReporteGlobal() {
         const idLiq = document.getElementById('verId').textContent;
         const fecha = document.getElementById('verFecha').textContent;
         const mandataria = document.getElementById('verMandataria').textContent;
         
         let filasHTML = "";
-        let tRec = 0, tBruto = 0, tCargo = 0, tBonif = 0, tNeto = 0;
+        // Corrección de sintaxis: se declaran todas las variables juntas
+        let tRec = 0, tBruto = 0, tCargo = 0, tBonif = 0, tNeto = 0, tDeuda = 0;
+
+        // Función auxiliar para limpiar moneda de forma segura
+        const limpiar = (txt) => {
+            if (!txt) return 0;
+            return parseFloat(txt.replace(/[$. ]/g, '').replace(',', '.')) || 0;
+        };
 
         document.querySelectorAll('#tbodyVerDetalle tr').forEach(tr => {
             const celdas = tr.querySelectorAll('td');
-            if(celdas.length > 1) { 
+            // Validamos que sea una fila de datos (tiene más de 6 celdas)
+            if(celdas.length > 6) { 
                 const rec = parseInt(celdas[2].textContent) || 0;
-                const bruto = parseFloat(celdas[3].textContent.replace('$','').replace('.','').replace(',','.')) || 0; 
-                const cargo = parseFloat(celdas[4].textContent.replace('$','').replace('.','').replace(',','.')) || 0; 
-                const bonif = parseFloat(celdas[5].textContent.replace('$','').replace('.','').replace(',','.')) || 0; 
-                const neto  = parseFloat(celdas[6].textContent.replace('$','').replace('.','').replace(',','.')) || 0;
+                
+                // Usamos la función limpiar para mayor seguridad
+                const bruto = limpiar(celdas[3].textContent);
+                const cargo = limpiar(celdas[4].textContent);
+                const bonif = limpiar(celdas[5].textContent);
+                const neto  = limpiar(celdas[6].textContent);
+                // La deuda está en la columna 7 (índice 7)
+                const deuda = limpiar(celdas[7].textContent);
 
-                tRec += rec; tBruto += bruto; tCargo += cargo; tBonif += bonif; tNeto += neto;
+                tRec += rec; 
+                tBruto += bruto; 
+                tCargo += cargo; 
+                tBonif += bonif; 
+                tNeto += neto; 
+                tDeuda += deuda;
 
                 filasHTML += `<tr>
                     <td style="text-align:left; padding:5px;">${celdas[0].textContent}</td>
                     <td style="text-align:center;">${celdas[1].textContent}</td>
                     <td style="text-align:center;">${rec}</td>
-                    <td style="text-align:right;">$${bruto.toFixed(2)}</td>
-                    <td style="text-align:right;">$${cargo.toFixed(2)}</td>
-                    <td style="text-align:right;">$${bonif.toFixed(2)}</td>
-                    <td style="text-align:right; font-weight:bold;">$${neto.toFixed(2)}</td>
+                    <td style="text-align:right;">$${bruto.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+                    <td style="text-align:right;">$${cargo.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+                    <td style="text-align:right;">$${bonif.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+                    <td style="text-align:right; font-weight:bold;">$${neto.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+                    <td style="text-align:right; color:red; font-weight:bold;">$${deuda.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
                 </tr>`;
             }
         });
 
-        filasHTML += `<tr style="background-color:#e9ecef; font-weight:bold;">
-            <td colspan="2" style="text-align:right; padding:8px;">TOTALES:</td>
-            <td style="text-align:center;">${tRec}</td>
-            <td style="text-align:right;">$${tBruto.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
-            <td style="text-align:right;">$${tCargo.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
-            <td style="text-align:right;">$${tBonif.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
-            <td style="text-align:right;">$${tNeto.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+        // Fila de Totales con la columna de Deuda
+        filasHTML += `<tr style="background-color:#000; color:#fff; font-weight:bold;">
+            <td colspan="2" style="text-align:right; padding:8px; color:#000;">TOTALES GENERALES:</td>
+            <td style="text-align:center;color:#000;">${tRec}</td>
+            <td style="text-align:right;color:#000;">$${tBruto.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+            <td style="text-align:right;color:#000;">$${tCargo.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+            <td style="text-align:right;color:#000;">$${tBonif.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+            <td style="text-align:right; font-size:1.1em; color:#000;">$${tNeto.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+            <td style="text-align:right; font-size:1.1em; color:#ff4d4d;">$${tDeuda.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
         </tr>`;
 
         abrirVentanaImpresion(idLiq, mandataria, fecha, filasHTML);
@@ -1006,15 +1065,18 @@ async function abrirItemABM(idItem, idPadre = 0, idMandatariaExterna = 0) {
         abrirVentanaImpresion(datos.periodo, "IMPRESIÓN INDIVIDUAL", new Date().toLocaleDateString('es-AR'), filasHTML, datos.deuda);
     }
 
+    // REEMPLAZAR TU FUNCIÓN "abrirVentanaImpresion" POR ESTA:
     function abrirVentanaImpresion(ref, mand, fecha, filas, saldoPendiente = null) {
         const v = window.open('', '', 'height=800,width=1000');
+        
         const htmlDeuda = (saldoPendiente !== null && saldoPendiente !== undefined) 
             ? `<div style="margin-top:20px; border: 3px solid #dc3545; background-color: #f8d7da; color: #842029; padding: 10px; font-weight:bold; font-size:18px; text-align:center; border-radius:8px;">
                  ⚠️ DEUDA PENDIENTE ACTUAL: $${parseFloat(saldoPendiente).toLocaleString('es-AR', {minimumFractionDigits: 2})}
                </div>` 
             : '';
 
-        v.document.write(`<html><head><title>Impresión Liquidación</title><style>
+        // Construimos el HTML de forma segura
+        let contenido = `<html><head><title>Impresión Liquidación</title><style>
             body { font-family: 'Courier New', monospace; font-size: 14px; padding: 20px; }
             h1 { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 30px; }
             .header-farmacia { text-align: center; margin-bottom: 30px; font-weight: bold; font-size: 1.2em; line-height: 1.5; }
@@ -1034,7 +1096,7 @@ async function abrirItemABM(idItem, idPadre = 0, idMandatariaExterna = 0) {
             </div>
             <h1>DETALLE DE LIQUIDACIÓN</h1>
             <div class="info-box">
-              <div class="info-line"><span class="info-label">LIQUIDACIÓN N°:</span> ${ref}</div>
+                <div class="info-line"><span class="info-label">LIQUIDACIÓN N°:</span> ${ref}</div>
                 <div class="info-line"><span class="info-label">MANDATARIA / GRUPO:</span> ${mand}</div>
                 <div class="info-line"><span class="info-label">FECHA IMPRESIÓN:</span> ${fecha}</div>
                 ${htmlDeuda}
@@ -1042,17 +1104,26 @@ async function abrirItemABM(idItem, idPadre = 0, idMandatariaExterna = 0) {
             <table>
                 <thead>
                     <tr>
-                        <th style="text-align:left;">OBRA SOCIAL</th><th>PLAN</th><th>RECETAS</th>
-                        <th style="text-align:right;">BRUTO ORIG.</th><th style="text-align:right;">CARGO O.S.</th>
-                        <th style="text-align:right;">BONIFICACIÓN</th><th style="text-align:right;">NETO A PAGAR</th>
+                        <th style="text-align:left;">OBRA SOCIAL</th>
+                        <th>PLAN</th>
+                        <th>RECETAS</th>
+                        <th style="text-align:right;">BRUTO ORIG.</th>
+                        <th style="text-align:right;">CARGO O.S.</th>
+                        <th style="text-align:right;">BONIFICACIÓN</th>
+                        <th style="text-align:right;">NETO A PAGAR</th>
+                        <th style="text-align:right; color:red;">SALDO PEND.</th>
                     </tr>
                 </thead>
                 <tbody>${filas}</tbody>
             </table>
             <div class="firma">_______________________________<br>Firma Responsable</div>
             <div class="footer">Documento generado el: ${new Date().toLocaleString()}</div>
-      < + /body>< + /html>`);
-        v.document.close(); v.focus(); setTimeout(() => { v.print(); v.close(); }, 500);
+        <\/body><\/html>`; // <--- AQUÍ ESTÁ EL ARREGLO DEL CÓDIGO ZOMBIE
+
+        v.document.write(contenido);
+        v.document.close(); 
+        v.focus(); 
+        setTimeout(() => { v.print(); v.close(); }, 500);
     }
 function filtrarOSPorMandataria(idMandataria) {
     const selectOS = document.getElementById('inputOS');
