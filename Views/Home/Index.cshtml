@@ -7,7 +7,7 @@
     ViewData["Title"] = "Panel de Control";
     
     // --- LÓGICA PARA RECUPERAR NOMBRE DE LA FARMACIA ---
-    string nombreFarmacia = "FARMACIA";
+    string nombreFarmacia = "FARMACIA MIGHETTI";
     string usuarioNombre = "Cito";
     
     var usuarioJson = HttpContextAccessor.HttpContext.Session.GetString("Usuario");
@@ -16,7 +16,7 @@
         try {
             var u = JsonSerializer.Deserialize<Usuario>(usuarioJson);
             if(u != null) {
-                nombreFarmacia = u.RazonSocial ?? "FARMACIA MIGUETTI";
+                nombreFarmacia = u.RazonSocial ?? "FARMACIA MIGHETTI";
                 
             }
         } catch {}

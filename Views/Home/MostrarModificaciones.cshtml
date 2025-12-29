@@ -4,7 +4,7 @@
 @inject IHttpContextAccessor HttpContextAccessor
 
 @{
-    ViewData["Title"] = "Gestión de Liquidaciones";
+    ViewData["Title"] = "Gestión de Presentaciones";
     var listaMandatarias = (ViewBag.Mandatarias as IEnumerable<dynamic>)?.ToList() ?? new List<dynamic>();
     var listaObrasSociales = (ViewBag.ObrasSociales as IEnumerable<dynamic>)?.ToList() ?? new List<dynamic>();
 
@@ -1060,6 +1060,7 @@ async function abrirItemABM(idItem, idPadre = 0, idMandatariaExterna = 0) {
             <td style="text-align:right;">$${datos.cargo.toFixed(2)}</td>
             <td style="text-align:right;">$${datos.bonif.toFixed(2)}</td>
             <td style="text-align:right; font-weight:bold;">$${datos.neto.toFixed(2)}</td>
+            <td style="text-align:right; color:red; font-weight:bold;">$${datos.deuda.toFixed(2)}</td>
         </tr>`;
         
         abrirVentanaImpresion(datos.periodo, "IMPRESIÓN INDIVIDUAL", new Date().toLocaleDateString('es-AR'), filasHTML, datos.deuda);

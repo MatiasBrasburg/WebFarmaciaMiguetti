@@ -64,55 +64,92 @@ public static void EliminarMandataria(int IdMandatarias)
     using (SqlConnection connection = new SqlConnection(_connectionString))
     {
         connection.Open();
-        // Iniciamos una transacción para asegurar que se borre TODO o NADA
         using (var transaction = connection.BeginTransaction())
         {
             try
             {
-                // 1. Borrar NIETOS (Detalles de Liquidaciones)
-                // Borramos los detalles de las liquidaciones que pertenecen a esta mandataria
+                // ==============================================================================
+                // RAMA 1: LIQUIDACIONES (Relación Directa)
+                // ==============================================================================
+
+                // 1.1 Borrar Detalles de Liquidaciones
                 string sqlLiqDetalles = @"
                     DELETE FROM LiquidacionDetalle 
                     WHERE IdLiquidaciones IN (SELECT IdLiquidaciones FROM Liquidaciones WHERE IdMandatarias = @pId)";
                 connection.Execute(sqlLiqDetalles, new { pId = IdMandatarias }, transaction);
 
-                // 2. Borrar HIJOS (Liquidaciones - Cabeceras)
+                // 1.2 Borrar Cabeceras de Liquidaciones
                 string sqlLiqCabeceras = "DELETE FROM Liquidaciones WHERE IdMandatarias = @pId";
                 connection.Execute(sqlLiqCabeceras, new { pId = IdMandatarias }, transaction);
 
-                // 3. Borrar NIETOS (Detalles de Cobros)
-                // Borramos los detalles de cobros asociados a cobros de esta mandataria
+                // ==============================================================================
+                // RAMA 2: OBRAS SOCIALES Y SUS DEPENDENCIAS (Aquí estaba el error)
+                // ==============================================================================
+
+                // 2.1 Borrar COBROS DETALLE (Nietos de Obras Sociales)
+                // Borramos los detalles de cobros cuyos padres (Cobros) pertenecen a Obras Sociales de esta Mandataria
                 string sqlCobrosDetalles = @"
                     DELETE FROM CobrosDetalle 
-                    WHERE IdCobros IN (SELECT IdCobros FROM Cobros WHERE IdMandatarias = @pId)";
+                    WHERE IdCobros IN (
+                        SELECT IdCobros 
+                        FROM Cobros 
+                        WHERE IdObrasSociales IN (SELECT IdObrasSociales FROM ObrasSociales WHERE IdMandatarias = @pId)
+                    )";
                 connection.Execute(sqlCobrosDetalles, new { pId = IdMandatarias }, transaction);
 
-                // 4. Borrar HIJOS (Cobros - Cabeceras)
-                string sqlCobrosCabeceras = "DELETE FROM Cobros WHERE IdMandatarias = @pId";
+                // 2.2 Borrar COBROS (Hijos de Obras Sociales)
+                // CORRECCIÓN CRÍTICA: Borramos por IdObrasSociales, no por IdMandatarias directo.
+                // Esto asegura que si el Cobro tiene IdMandataria NULL pero apunta a la OS, se borre igual.
+                string sqlCobrosCabeceras = @"
+                    DELETE FROM Cobros 
+                    WHERE IdObrasSociales IN (SELECT IdObrasSociales FROM ObrasSociales WHERE IdMandatarias = @pId)";
                 connection.Execute(sqlCobrosCabeceras, new { pId = IdMandatarias }, transaction);
 
-                // 5. Borrar NIETOS (Planes de Bonificación de las Obras Sociales asociadas)
+                // 2.3 Borrar Planes de Bonificación (Hijos de Obras Sociales)
                 string sqlPlanes = @"
                     DELETE FROM PlanBonificacion 
                     WHERE IdObrasSociales IN (SELECT IdObrasSociales FROM ObrasSociales WHERE IdMandatarias = @pId)";
                 connection.Execute(sqlPlanes, new { pId = IdMandatarias }, transaction);
 
-                // 6. Borrar HIJOS (Obras Sociales)
+                // 2.4 Borrar Facturas Cabecera y Detalle (SI APLICARA)
+                // OJO: Revisando tu esquema, FacturaCabecera también depende de ObraSocial. 
+                // Si hay facturas, esto también fallará. Agrego la limpieza de facturas por seguridad.
+                
+                // Borrar Detalles de Facturas de las OOSS de esta Mandataria
+                string sqlFacturaDetalle = @"
+                    DELETE FROM FacturaDetalle 
+                    WHERE IdFacturaCabecera IN (
+                        SELECT IdFacturaCabecera 
+                        FROM FacturaCabecera 
+                        WHERE IdObrasSociales IN (SELECT IdObrasSociales FROM ObrasSociales WHERE IdMandatarias = @pId)
+                    )";
+                connection.Execute(sqlFacturaDetalle, new { pId = IdMandatarias }, transaction);
+
+                // Borrar Cabeceras de Facturas
+                string sqlFacturaCabecera = @"
+                    DELETE FROM FacturaCabecera 
+                    WHERE IdObrasSociales IN (SELECT IdObrasSociales FROM ObrasSociales WHERE IdMandatarias = @pId)";
+                connection.Execute(sqlFacturaCabecera, new { pId = IdMandatarias }, transaction);
+
+                // 2.5 AHORA SÍ: Borrar Obras Sociales (Hijos Directos)
                 string sqlOOSS = "DELETE FROM ObrasSociales WHERE IdMandatarias = @pId";
                 connection.Execute(sqlOOSS, new { pId = IdMandatarias }, transaction);
 
-                // 7. FINALMENTE: Borrar al PADRE (La Mandataria)
+                // ==============================================================================
+                // RAMA 3: EL PADRE
+                // ==============================================================================
+
+                // 3.1 Finalmente borrar la Mandataria
                 string sqlMandataria = "DELETE FROM Mandatarias WHERE IdMandatarias = @pId";
                 connection.Execute(sqlMandataria, new { pId = IdMandatarias }, transaction);
 
-                // Si llegamos hasta acá sin errores, confirmamos los cambios
                 transaction.Commit();
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // Si algo falló, deshacemos todo como si nada hubiera pasado
                 transaction.Rollback();
-                throw; // Re-lanzamos el error para que lo vea el controlador
+                // Tip de Arquitecto: Loguea 'ex' aquí si tienes un logger configurado antes de lanzar.
+                throw; 
             }
         }
     }
