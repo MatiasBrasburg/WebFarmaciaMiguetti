@@ -43,6 +43,8 @@ namespace WebFarmaciaMiguetti.Models
         public decimal SaldoPendiente { get; set; }
         [JsonProperty]
         public bool Pagado { get; set; }
+   
+        public DateTime? FechaCancelacion { get; set; }
         public LiquidacionDetalle() { }
     }
 }

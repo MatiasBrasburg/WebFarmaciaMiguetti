@@ -503,21 +503,30 @@ public static List<dynamic> BuscarLiquidaciones(int? id, DateTime? desde, DateTi
 // EN Models/BD.cs
 
 // A. PARA EL BOTÓN VER (Trae la lista entera)
+// EN: Models/BD.cs
+
+// CAMBIO: Devolvemos List<dynamic> para poder traer la columna extra 'FechaCancelacion'
+// Vuelve a ser List<LiquidacionDetalle> (Tipado Fuerte)
 public static List<LiquidacionDetalle> TraerDetallesPorIdLiquidacion(int idLiquidacion)
 {
     using (SqlConnection connection = new SqlConnection(_connectionString))
     {
-        // Traemos todo de la tabla (*) y sumamos el nombre del plan
-        // Usamos LEFT JOIN por si algún registro viejo no tiene plan asignado
+        // La query sigue trayendo la fecha calculada al vuelo
         string query = @"
             SELECT 
                 LD.*, 
-                PB.NombrePlan 
+                PB.NombrePlan,
+                -- Subconsulta para traer la fecha (Dapper la guardará en la propiedad nueva)
+                (SELECT MAX(FechaCobroDetalle) 
+                 FROM CobrosDetalle 
+                 WHERE IdLiquidacionDetalle = LD.IdLiquidacionDetalle
+                ) as FechaCancelacion
+
             FROM LiquidacionDetalle LD
             LEFT JOIN PlanBonificacion PB ON LD.IdPlanBonificacion = PB.IdPlanBonificacion
             WHERE LD.IdLiquidaciones = @pIdLiq";
             
-        // Dapper mapea todo directamente a la clase LiquidacionDetalle
+        // Ahora sí: mapeamos directo a la clase, nada de dynamic
         return connection.Query<LiquidacionDetalle>(query, new { pIdLiq = idLiquidacion }).ToList();
     }
 }

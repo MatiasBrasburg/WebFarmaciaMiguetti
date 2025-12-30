@@ -801,59 +801,93 @@ async function verLiquidacion(id, f, nm, idMand) {
 }
 
    // REEMPLAZA TU FUNCIÓN recargarTablaVisor POR ESTA COMPLETA
+// EN: Views/Home/MostrarModificaciones.cshtml
+
 async function recargarTablaVisor(idLiq = null) {
+    // 1. Obtenemos el ID (ya sea por parámetro o del título del modal)
     const id = idLiq || document.getElementById('verId').textContent;
     const tbody = document.getElementById('tbodyVerDetalle');
     
-    // Ajustamos el colspan a 9 para el mensaje de carga
-    tbody.innerHTML = '<tr><td colspan="9" class="text-center p-3">Cargando...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="text-center p-3">Cargando datos...</td></tr>';
     
     try {
+        // Llamamos al Controller (que a su vez llama a tu nueva función de BD)
         const r = await fetch(`@Url.Action("ObtenerDetallesDeLiquidacion", "Home")?idLiquidacion=${id}`);
         const d = await r.json();
-        
+
         if (d.success) {
             tbody.innerHTML = '';
             
             if(d.data.length === 0) { 
-                tbody.innerHTML = '<tr><td colspan="9" class="text-center p-3">Sin detalles.</td></tr>'; 
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center p-3">Esta liquidación no tiene ítems.</td></tr>';
                 return; 
             }
             
+            // 2. Iteramos los detalles
             d.data.forEach(x => {
-                const aPagarReal = x.montoCargoOS - x.montoBonificacion;
-                const saldo = parseFloat(x.saldoPendiente || 0);
+                // Manejo de mayúsculas/minúsculas por si JSON serializa distinto
+                const totalBruto = x.TotalBruto ?? x.totalBruto ?? 0;
+                const cargoOS = x.MontoCargoOS ?? x.montoCargoOS ?? 0;
+                const bonif = x.MontoBonificacion ?? x.montoBonificacion ?? 0;
                 
-                // Buscamos el nombre de la OS en memoria
-                const objOS = datosOS.find(o => o.id == x.idObrasSociales);
-                const nomOS = objOS ? objOS.nombre : `ID ${x.idObrasSociales}`;
+                // Calculamos el Neto real
+                const aPagarReal = cargoOS - bonif;
+                
+                // Leemos el Saldo Pendiente
+                const saldo = parseFloat(x.SaldoPendiente ?? x.saldoPendiente ?? 0);
+                
+                // LEEMOS LA NUEVA FECHA (La magia que agregamos en el Backend)
+                const fechaRaw = x.FechaCancelacion ?? x.fechaCancelacion;
 
+                // --- LOGICA VISUAL (UX) ---
+                let htmlSaldo = "";
+                
+                // Usamos tolerancia de $1 por redondeos
+                if (saldo <= 1.00) {
+                    // SI ESTÁ PAGADO -> BADGE VERDE CON FECHA
+                    let textoFecha = "SI";
+                    if (fechaRaw) {
+                        // Convertimos la fecha fea "2023-10-25T00:00:00" a "25/10/2023"
+                        textoFecha = new Date(fechaRaw).toLocaleDateString('es-AR');
+                    }
+                    htmlSaldo = `<span class="badge bg-success text-white" style="font-size: 0.9rem;">✅ ${textoFecha}</span>`;
+                } else {
+                    // SI DEBE PLATA -> TEXTO ROJO
+                    htmlSaldo = `<span class="text-danger fw-bold">$${saldo.toLocaleString('es-AR', {minimumFractionDigits:2})}</span>`;
+                }
+
+                // Datos de la OS (Nombre plan, nombre OS)
+                // Nota: Asegúrate de que 'NombreObraSocial' venga en tu query, o úsalo desde 'datosOS' si lo tienes mapeado
+                const nomOS = x.NombreObraSocial ?? x.nombreObraSocial ?? "---";
+                const nomPlan = x.NombrePlan ?? x.nombrePlan ?? "---";
+
+                // 3. Dibujamos la fila
                 tbody.innerHTML += `<tr>
-                    <td class="nombre-os fw-bold">${nomOS}</td>
-                    <td class="text-center">${x.nombrePlan || '---'}</td>
-                    <td class="text-center">${x.cantidadRecetas}</td>
-                    <td class="text-end">$${x.totalBruto.toFixed(2)}</td>
-                    <td class="text-end">$${x.montoCargoOS.toFixed(2)}</td>
-                    <td class="text-end">$${x.montoBonificacion.toFixed(2)}</td>
-                    <td class="text-end fw-bold text-primary">$${aPagarReal.toFixed(2)}</td>
+                    <td class="fw-bold text-primary">${nomOS}</td>
+                    <td class="text-center small">${nomPlan}</td>
+                    <td class="text-center">${x.CantidadRecetas ?? x.cantidadRecetas}</td>
+                    <td class="text-end text-muted">$${totalBruto.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+                    <td class="text-end">$${cargoOS.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+                    <td class="text-end">$${bonif.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+                    <td class="text-end fw-bold text-dark">$${aPagarReal.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
                     
-                    <td class="text-end fw-black text-danger" style="font-size:1.1em; border-left: 2px solid #ccc;">
-                        $${saldo.toFixed(2)}
+                    <td class="text-end" style="border-left: 2px solid #eee;">
+                        ${htmlSaldo}
                     </td>
 
                     <td class="text-center">
-                        <button class="btn btn-sm btn-info text-white me-1" onclick="verCobrosDeLiquidacion(${x.idLiquidacionDetalle})" title="Ver Pagos">👁️</button>
-                        <button class="btn btn-warning btn-sm" onclick="abrirItemABM(${x.idLiquidacionDetalle}, ${id})">✏️</button>
-                        <button class="btn btn-danger btn-sm" onclick="eliminarItemIndividual(${x.idLiquidacionDetalle})">🗑️</button>
+                        <button class="btn btn-sm btn-info text-white me-1" onclick="verCobrosDeLiquidacion(${x.IdLiquidacionDetalle ?? x.idLiquidacionDetalle})" title="Ver Pagos">👁️</button>
+                        <button class="btn btn-warning btn-sm" onclick="abrirItemABM(${x.IdLiquidacionDetalle ?? x.idLiquidacionDetalle}, ${id})">✏️</button>
+                        <button class="btn btn-danger btn-sm" onclick="eliminarItemIndividual(${x.IdLiquidacionDetalle ?? x.idLiquidacionDetalle})">🗑️</button>
                     </td>
                 </tr>`;
             });
         } else { 
-            tbody.innerHTML = `<tr><td colspan="9" class="text-danger">${d.message}</td></tr>`; 
+            tbody.innerHTML = `<tr><td colspan="9" class="text-danger fw-bold text-center">${d.message}</td></tr>`; 
         }
     } catch(e) { 
         console.error(e);
-        tbody.innerHTML = '<tr><td colspan="9" class="text-danger">Error al cargar items.</td></tr>'; 
+        tbody.innerHTML = '<tr><td colspan="9" class="text-danger text-center">Error al conectar con el servidor.</td></tr>'; 
     }
 }
     async function verCobrosDeLiquidacion(idDet) {
