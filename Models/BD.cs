@@ -511,26 +511,33 @@ public static List<LiquidacionDetalle> TraerDetallesPorIdLiquidacion(int idLiqui
 {
     using (SqlConnection connection = new SqlConnection(_connectionString))
     {
-        // La query sigue trayendo la fecha calculada al vuelo
         string query = @"
             SELECT 
                 LD.*, 
+                
+                -- Traemos el nombre del Plan (Dapper lo guarda en LD.NombrePlan)
                 PB.NombrePlan,
-                -- Subconsulta para traer la fecha (Dapper la guardará en la propiedad nueva)
+
+                -- Traemos el nombre de la OS y le decimos 'Guárdalo en NombreObraSocial'
+                OS.Nombre AS NombreObraSocial,
+
+                -- Subconsulta para saber cuándo se pagó (si aplica)
                 (SELECT MAX(FechaCobroDetalle) 
                  FROM CobrosDetalle 
                  WHERE IdLiquidacionDetalle = LD.IdLiquidacionDetalle
                 ) as FechaCancelacion
 
             FROM LiquidacionDetalle LD
+            -- LEFT JOIN: Si no tiene Plan o no encuentra la OS, trae los datos igual (no explota)
             LEFT JOIN PlanBonificacion PB ON LD.IdPlanBonificacion = PB.IdPlanBonificacion
+            LEFT JOIN ObrasSociales OS ON LD.IdObrasSociales = OS.IdObrasSociales
+            
             WHERE LD.IdLiquidaciones = @pIdLiq";
             
-        // Ahora sí: mapeamos directo a la clase, nada de dynamic
+        // Mapeo directo y limpio
         return connection.Query<LiquidacionDetalle>(query, new { pIdLiq = idLiquidacion }).ToList();
     }
 }
-
 // B. PARA EL BOTÓN ELIMINAR (Borra todo en orden)
 public static void EliminarLiquidacion(int idLiquidacion)
 {

@@ -850,7 +850,7 @@ async function recargarTablaVisor(idLiq = null) {
                         // Convertimos la fecha fea "2023-10-25T00:00:00" a "25/10/2023"
                         textoFecha = new Date(fechaRaw).toLocaleDateString('es-AR');
                     }
-                    htmlSaldo = `<span class="badge bg-success text-white" style="font-size: 0.9rem;">✅ ${textoFecha}</span>`;
+                    htmlSaldo = `<span class="badge bg-success text-white" style="font-size: 0.9rem;">✅ PAGADO: ${textoFecha}</span>`;
                 } else {
                     // SI DEBE PLATA -> TEXTO ROJO
                     htmlSaldo = `<span class="text-danger fw-bold">$${saldo.toLocaleString('es-AR', {minimumFractionDigits:2})}</span>`;

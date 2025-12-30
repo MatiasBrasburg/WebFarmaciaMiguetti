@@ -8,43 +8,56 @@ namespace WebFarmaciaMiguetti.Models
     public class LiquidacionDetalle
     {
         [Key]
-            [JsonProperty]
+        [JsonProperty]
         public int IdLiquidacionDetalle { get; set; }
 
-            [JsonProperty]
+        [JsonProperty]
         public int IdLiquidaciones { get; set; } 
 
-        
-            [JsonProperty]
+        [JsonProperty]
         public int IdObrasSociales { get; set; }
-            [JsonProperty]
+
+        [JsonProperty]
         public int IdPlanBonificacion { get; set; } 
-        [NotMapped] // Indica que no es una columna de la tabla
+
+        [NotMapped] 
         [JsonProperty]
         public string? NombrePlan { get; set; }
-    [JsonProperty]
-        public int CantidadRecetas { get; set; }
-    [JsonProperty]
+
+      
+        [NotMapped] 
+        [JsonProperty]
+        public string? NombreObraSocial { get; set; }
        
+
+        [JsonProperty]
+        public int CantidadRecetas { get; set; }
+
+        [JsonProperty]
         [Column(TypeName = "decimal(18, 2)")]
         [DataType(DataType.Currency)] 
         public decimal TotalBruto { get; set; } 
-    [JsonProperty]
+
+        [JsonProperty]
         [Column(TypeName = "decimal(18, 2)")]
         [DataType(DataType.Currency)] 
         public decimal MontoCargoOS { get; set; }
-    [JsonProperty]
+
+        [JsonProperty]
         [Column(TypeName = "decimal(18, 2)")]
         [DataType(DataType.Currency)] 
         public decimal MontoBonificacion { get; set; } 
-[JsonProperty]
+
+        [JsonProperty]
         [Column(TypeName = "decimal(18, 2)")]
         [DataType(DataType.Currency)] 
         public decimal SaldoPendiente { get; set; }
+        
         [JsonProperty]
         public bool Pagado { get; set; }
    
         public DateTime? FechaCancelacion { get; set; }
+
         public LiquidacionDetalle() { }
     }
 }
