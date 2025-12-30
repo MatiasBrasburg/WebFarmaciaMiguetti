@@ -525,18 +525,61 @@ public static void EliminarLiquidacion(int idLiquidacion)
     using (SqlConnection connection = new SqlConnection(_connectionString))
     {
         connection.Open();
-        // Usamos transacción para asegurar que no quede basura si algo falla
         using (var transaction = connection.BeginTransaction())
         {
             try
             {
-                // 1. Borrar Hijos (Detalles)
-                string queryDetalles = "DELETE FROM LiquidacionDetalle WHERE IdLiquidaciones = @pId";
-                connection.Execute(queryDetalles, new { pId = idLiquidacion }, transaction);
+                var pId = new { Id = idLiquidacion };
 
-                // 2. Borrar Padre (Cabecera)
-                string queryCabecera = "DELETE FROM Liquidaciones WHERE IdLiquidaciones = @pId";
-                connection.Execute(queryCabecera, new { pId = idLiquidacion }, transaction);
+                // ---------------------------------------------------------
+                // PASO 1: Identificar qué Cobros se verán afectados
+                // ---------------------------------------------------------
+                // Necesitamos saber los IDs de los cobros ANTES de borrar el detalle
+                // para poder recalcularlos después.
+                string queryGetCobros = @"
+                    SELECT DISTINCT IdCobros 
+                    FROM CobrosDetalle 
+                    WHERE IdLiquidaciones = @Id";
+                
+                var listaCobrosAfectados = connection.Query<int>(queryGetCobros, pId, transaction).ToList();
+
+                // ---------------------------------------------------------
+                // PASO 2: Eliminar el vínculo en CobrosDetalle
+                // ---------------------------------------------------------
+                string deleteCobrosDet = "DELETE FROM CobrosDetalle WHERE IdLiquidaciones = @Id";
+                connection.Execute(deleteCobrosDet, pId, transaction);
+
+                // ---------------------------------------------------------
+                // PASO 3: Recalcular y Actualizar las Cabeceras de Cobros
+                // ---------------------------------------------------------
+                foreach (var idCobro in listaCobrosAfectados)
+                {
+                    // A. Calculamos el nuevo total sumando los detalles restantes.
+                    // ISNULL(..., 0) es vital: si borramos el único detalle, la suma es NULL, 
+                    // pero el total debe ser 0.
+                    string queryRecalculo = @"
+                        SELECT ISNULL(SUM(Importe), 0) 
+                        FROM CobrosDetalle 
+                        WHERE IdCobros = @IdCobro";
+                    
+                    decimal nuevoTotal = connection.ExecuteScalar<decimal>(queryRecalculo, new { IdCobro = idCobro }, transaction);
+
+                    // B. Actualizamos la cabecera
+                    string updateCabecera = "UPDATE Cobros SET Total = @Total WHERE IdCobros = @IdCobro";
+                    connection.Execute(updateCabecera, new { Total = nuevoTotal, IdCobro = idCobro }, transaction);
+                }
+
+                // ---------------------------------------------------------
+                // PASO 4: Eliminar LiquidacionDetalle (Hijos propios)
+                // ---------------------------------------------------------
+                string deleteLiqDet = "DELETE FROM LiquidacionDetalle WHERE IdLiquidaciones = @Id";
+                connection.Execute(deleteLiqDet, pId, transaction);
+
+                // ---------------------------------------------------------
+                // PASO 5: Eliminar Liquidaciones (Padre propio)
+                // ---------------------------------------------------------
+                string deleteLiqCab = "DELETE FROM Liquidaciones WHERE IdLiquidaciones = @Id";
+                connection.Execute(deleteLiqCab, pId, transaction);
 
                 transaction.Commit();
             }
@@ -603,7 +646,8 @@ public static void ModificarItemIndividual(LiquidacionDetalle item)
                 CantidadRecetas = @CantidadRecetas, 
                 TotalBruto = @TotalBruto, 
                 MontoCargoOS = @MontoCargoOS, 
-                MontoBonificacion = @MontoBonificacion
+                MontoBonificacion = @MontoBonificacion,
+                SaldoPendiente = @SaldoPendiente
             WHERE IdLiquidacionDetalle = @IdLiquidacionDetalle";
         
         connection.Execute(query, item);
@@ -613,18 +657,78 @@ public static void ModificarItemIndividual(LiquidacionDetalle item)
     }
 }
 
-// 4. Eliminar ítem suelto
 public static void EliminarItemIndividual(int idDetalle, int idLiquidacionPadre)
 {
     using (SqlConnection connection = new SqlConnection(_connectionString))
     {
         connection.Open();
-        
-        string query = "DELETE FROM LiquidacionDetalle WHERE IdLiquidacionDetalle = @pId";
-        connection.Execute(query, new { pId = idDetalle });
+        using (var transaction = connection.BeginTransaction())
+        {
+            try
+            {
+                // ---------------------------------------------------------
+                // PASO 1: Identificar Cobros Afectados (Antes de tocar nada)
+                // ---------------------------------------------------------
+                // Buscamos si esta Liquidación (el Padre) está metida en algún Cobro.
+                string queryGetCobros = @"
+                    SELECT DISTINCT IdCobros 
+                    FROM CobrosDetalle 
+                    WHERE IdLiquidaciones = @IdPadre";
+                
+                var listaCobrosAfectados = connection.Query<int>(queryGetCobros, new { IdPadre = idLiquidacionPadre }, transaction).ToList();
 
-        // Actualizar Total Padre
-        ActualizarTotalCabecera(idLiquidacionPadre, connection);
+                // ---------------------------------------------------------
+                // PASO 2: Eliminar el Ítem (Hijo)
+                // ---------------------------------------------------------
+                string deleteItem = "DELETE FROM LiquidacionDetalle WHERE IdLiquidacionDetalle = @IdDetalle";
+                connection.Execute(deleteItem, new { IdDetalle = idDetalle }, transaction);
+
+                // ---------------------------------------------------------
+                // PASO 3: Recalcular Total de la Liquidación (Padre)
+                // ---------------------------------------------------------
+                // Sumamos lo que quedó vivo. Si no quedó nada, es 0.
+                string querySumLiq = "SELECT ISNULL(SUM(Importe), 0) FROM LiquidacionDetalle WHERE IdLiquidaciones = @IdPadre";
+                decimal nuevoTotalLiquidacion = connection.ExecuteScalar<decimal>(querySumLiq, new { IdPadre = idLiquidacionPadre }, transaction);
+
+                // Actualizamos la cabecera de la Liquidación
+                string updateLiq = "UPDATE Liquidaciones SET Total = @Total WHERE IdLiquidaciones = @IdPadre";
+                connection.Execute(updateLiq, new { Total = nuevoTotalLiquidacion, IdPadre = idLiquidacionPadre }, transaction);
+
+                // ---------------------------------------------------------
+                // PASO 4: Propagar el cambio a los Cobros (El Abuelo)
+                // ---------------------------------------------------------
+                if (listaCobrosAfectados.Any())
+                {
+                    // A. Actualizar el renglón específico en CobrosDetalle
+                    // El importe en el detalle del cobro debe coincidir con el nuevo total de la liquidación
+                    string updateCobrosDetalle = @"
+                        UPDATE CobrosDetalle 
+                        SET Importe = @NuevoImporte 
+                        WHERE IdLiquidaciones = @IdPadre";
+                    
+                    connection.Execute(updateCobrosDetalle, new { NuevoImporte = nuevoTotalLiquidacion, IdPadre = idLiquidacionPadre }, transaction);
+
+                    // B. Recalcular las Cabeceras de los Cobros afectados
+                    foreach (var idCobro in listaCobrosAfectados)
+                    {
+                        // Sumar todos los detalles de ese cobro
+                        string querySumCobro = "SELECT ISNULL(SUM(Importe), 0) FROM CobrosDetalle WHERE IdCobros = @IdCobro";
+                        decimal nuevoTotalCobro = connection.ExecuteScalar<decimal>(querySumCobro, new { IdCobro = idCobro }, transaction);
+
+                        // Actualizar cabecera Cobros
+                        string updateCobroCab = "UPDATE Cobros SET Total = @Total WHERE IdCobros = @IdCobro";
+                        connection.Execute(updateCobroCab, new { Total = nuevoTotalCobro, IdCobro = idCobro }, transaction);
+                    }
+                }
+
+                transaction.Commit();
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
+        }
     }
 }
 
