@@ -1032,7 +1032,7 @@ public static void AgregarCobroDetalle(int idCobroPadre, int idObraSocial, DateT
         {
             try
             {
-                // 1. Insertamos el Cobro (Ahora guardamos el link a la liquidación)
+                // 1. Insertamos el Cobro 
                 string sqlInsert = @"INSERT INTO CobrosDetalle 
                                    (IdCobros, IdObrasSociales, FechaCobroDetalle, ImporteCobrado, TipoPago, MontoDebito, MotivoDebito, IdLiquidacionDetalle)
                                    VALUES 
@@ -1046,25 +1046,30 @@ public static void AgregarCobroDetalle(int idCobroPadre, int idObraSocial, DateT
                     pTipo = tipo, 
                     pDebito = debito, 
                     pMotivo = motivo,
-                    pIdLiqDet = idLiquidacionDetalle // Puede ser null si es pago a cuenta
+                    pIdLiqDet = idLiquidacionDetalle 
                 }, transaction);
 
-                // 2. LOGICA DE IMPUTACIÓN (Si viene vinculado a una deuda)
+                // 2. LOGICA DE IMPUTACIÓN CORREGIDA
                 if (idLiquidacionDetalle.HasValue && idLiquidacionDetalle.Value > 0)
                 {
-                    // Restamos el importe del SaldoPendiente
+                    // CAMBIO CRÍTICO: Restamos (Importe + Debito). 
+                    // El débito también reduce la deuda pendiente porque es un monto que ya no vamos a cobrar.
                     string sqlUpdateLiq = @"
                         UPDATE LiquidacionDetalle 
-                        SET SaldoPendiente = SaldoPendiente - @pPago
+                        SET SaldoPendiente = SaldoPendiente - (@pPago + @pDeb)
                         WHERE IdLiquidacionDetalle = @pIdLiqDet";
                     
-                    connection.Execute(sqlUpdateLiq, new { pPago = importe, pIdLiqDet = idLiquidacionDetalle }, transaction);
+                    connection.Execute(sqlUpdateLiq, new { 
+                        pPago = importe, 
+                        pDeb = debito, // <--- Pasamos el débito para restarlo también
+                        pIdLiqDet = idLiquidacionDetalle 
+                    }, transaction);
 
-                    // Verificamos si se pagó total (Saldo <= 0) para marcar Pagado = 1
+                    // Verificamos si se saldó (tolerancia 0.05)
                     string sqlCheckPagado = @"
                         UPDATE LiquidacionDetalle 
                         SET Pagado = 1 
-                        WHERE IdLiquidacionDetalle = @pIdLiqDet AND SaldoPendiente <= 0.05"; // 0.05 de tolerancia por redondeo
+                        WHERE IdLiquidacionDetalle = @pIdLiqDet AND SaldoPendiente <= 0.05";
                     
                     connection.Execute(sqlCheckPagado, new { pIdLiqDet = idLiquidacionDetalle }, transaction);
                 }
@@ -1115,9 +1120,9 @@ public static void EliminarCobroDetalle(int idCobroDetalle)
         {
             try
             {
-                // 1. Obtenemos datos del cobro para saber si imputaba deuda
+                // 1. Obtenemos datos del cobro INCLUYENDO EL DÉBITO
                 var info = connection.QueryFirstOrDefault<dynamic>(
-                    "SELECT ImporteCobrado, IdLiquidacionDetalle FROM CobrosDetalle WHERE IdCobrosDetalle = @id", 
+                    "SELECT ImporteCobrado, MontoDebito, IdLiquidacionDetalle FROM CobrosDetalle WHERE IdCobrosDetalle = @id", 
                     new { id = idCobroDetalle }, 
                     transaction
                 );
@@ -1125,20 +1130,21 @@ public static void EliminarCobroDetalle(int idCobroDetalle)
                 if (info != null && info.IdLiquidacionDetalle != null)
                 {
                     // 2. RESTAURAMOS LA DEUDA EN LA LIQUIDACIÓN
-                    // Sumamos el importe borrado al SaldoPendiente y ponemos Pagado = 0
+                    // Sumamos (Importe + Debito) al SaldoPendiente
                     string sqlRestaurar = @"UPDATE LiquidacionDetalle 
-                                            SET SaldoPendiente = SaldoPendiente + @imp, 
+                                            SET SaldoPendiente = SaldoPendiente + (@imp + @deb), 
                                                 Pagado = 0 
                                             WHERE IdLiquidacionDetalle = @idLiq";
                     
-                    connection.Execute(sqlRestaurar, new { imp = info.ImporteCobrado, idLiq = info.IdLiquidacionDetalle }, transaction);
+                    connection.Execute(sqlRestaurar, new { 
+                        imp = info.ImporteCobrado, 
+                        deb = info.MontoDebito, // <--- Restauramos el débito también
+                        idLiq = info.IdLiquidacionDetalle 
+                    }, transaction);
                 }
 
                 // 3. Borramos el cobro físico
                 connection.Execute("DELETE FROM CobrosDetalle WHERE IdCobrosDetalle = @id", new { id = idCobroDetalle }, transaction);
-
-                // 4. (Opcional) Si el Lote Padre queda vacío, podrías borrarlo también, 
-                // pero por seguridad mejor dejarlo o manejarlo aparte.
 
                 transaction.Commit();
             }
