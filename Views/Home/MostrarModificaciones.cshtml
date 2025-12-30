@@ -474,89 +474,120 @@ if (idOS !== "0" && idOS !== "" && modoActual === 'Mandataria') {
             url = `@Url.Action("BuscarDetallesGlobalesAjax", "Home")?desde=${desde}&hasta=${hasta}&idMandataria=${mand}&idOS=${idOS}`;
         }
 
-        try {
-            const r = await fetch(url);
-            const res = await r.json();
-            
-            if (res.success && res.data.length > 0) {
-                tbody.innerHTML = ''; 
-                
-                if (modoActual === 'Mandataria') {
-                    res.data.forEach(l => {
-    const f = new Date(l.FechaPresentacion || l.fechaPresentacion).toLocaleDateString('es-AR');
-    const nm = l.NombreMandataria || mapaMandatarias[l.IdMandatarias || l.idMandatarias] || "---";
-    const idLiq = l.IdLiquidaciones || l.idLiquidaciones;
+      // REEMPLAZAR DENTRO DE buscarLiquidaciones()
+try {
+    const r = await fetch(url);
+    const res = await r.json();
     
-    const total = parseFloat(l.TotalReal || l.totalReal || 0);
-    // --- NUEVO CÁLCULO DE SALDO ---
-    const saldo = parseFloat(l.SaldoPendiente || l.saldoPendiente || 0);
+    if (res.success && res.data.length > 0) {
+        tbody.innerHTML = '';
+        if (modoActual === 'Mandataria') {
+            res.data.forEach(l => {
+                const f = new Date(l.FechaPresentacion || l.fechaPresentacion).toLocaleDateString('es-AR');
+                const nm = l.NombreMandataria || mapaMandatarias[l.IdMandatarias || l.idMandatarias] || "---";
+                const idLiq = l.IdLiquidaciones || l.idLiquidaciones;
+                
+                const total = parseFloat(l.TotalReal || l.totalReal || 0);
+                const saldo = parseFloat(l.SaldoPendiente || l.saldoPendiente || 0);
 
-    tbody.innerHTML += `<tr>
-        <td class="fw-bold fs-5">${idLiq}</td>
-        <td>${f}</td>
-        <td class="fw-bold text-primary">${nm}</td>
-        <td>${l.Observaciones || l.observaciones || '-'}</td>
-        <td class="text-end fw-bold">$${total.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
-        
-        <td class="text-end fw-black text-danger" style="font-size: 1.1em;">
-            $${saldo.toLocaleString('es-AR', {minimumFractionDigits:2})}
-        </td>
-
-        <td class="text-center">
-            <button class="btn btn-warning btn-sm fw-bold me-1" onclick="editarCabecera(${idLiq})">✏️</button>
-            <button class="btn btn-info btn-sm text-white fw-bold me-1" onclick="verLiquidacion(${idLiq}, '${f}', '${nm}', ${l.IdMandatarias || l.idMandatarias})">👁️ VER</button>
-            <button class="btn btn-danger btn-sm fw-bold" onclick="eliminarLiquidacion(${idLiq})">🗑️</button>
-        </td></tr>`;
-});
+                // --- LÓGICA DE UX PARA 85 AÑOS ---
+                let htmlSaldo = "";
+                if (saldo <= 1) { // Tolerancia de $1
+                    // Si está pagado, mostramos la fecha
+                    const fechaPago = l.FechaCancelacion ? new Date(l.FechaCancelacion).toLocaleDateString('es-AR') : "SI";
+                    htmlSaldo = `<span class="badge bg-success text-white fs-6">✅ PAGADO: ${fechaPago}</span>`;
                 } else {
-                    let contadorVisibles = 0;
-                    res.data.forEach(x => {
-                        const pagado = (x.Pagado === true || x.Pagado === 1);
-                        if (pagado) return; 
-
-                        contadorVisibles++;
-                        const f = (x.FechaPresentacion||x.fechaPresentacion||'').split('T')[0];
-                        const neto = parseFloat(x.TotalBruto||x.totalBruto||0); 
-                        const saldo = parseFloat(x.SaldoPendiente);
-                        const visualSaldo = isNaN(saldo) ? neto : saldo; 
-                        
-                        const idDet = x.IdLiquidacionDetalle || x.idLiquidacionDetalle;
-                        const idPadre = x.IdLiquidaciones || x.idLiquidaciones;
-
-                        const datosPrint = JSON.stringify({
-                            os: x.NombreObraSocial || x.nombreObraSocial,
-                            periodo: x.Periodo || x.periodo,
-                            plan: x.NombrePlan || "---",
-                            recetas: x.CantidadRecetas || 0,
-                            bruto: parseFloat(x.BrutoOriginal || 0), 
-                            cargo: parseFloat(x.MontoCargoOS || 0),
-                            bonif: parseFloat(x.MontoBonificacion || 0),
-                            neto: neto,
-                            deuda: visualSaldo
-                        }).replace(/"/g, '&quot;');
-
-                        tbody.innerHTML += `<tr>
-                            <td class="text-center small">${f}</td>
-                            <td class="small text-muted">${x.NombreMandataria||x.nombreMandataria}</td>
-                            <td class="fw-bold text-primary fs-5">${x.NombreObraSocial||x.nombreObraSocial}</td>
-                            <td class="text-center fw-bold">${x.CantidadRecetas||x.cantidadRecetas}</td>
-                            <td class="text-end text-muted">$${neto.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
-                            <td class="text-end fw-black text-danger">$${visualSaldo.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
-                            <td class="text-center">
-                                <button class="btn btn-sm btn-info text-white me-1" onclick="verCobrosDeLiquidacion(${idDet})" title="Ver Cobros">👁️</button>
-                                <button class="btn btn-sm btn-warning me-1" onclick="abrirItemABM(${idDet}, ${idPadre})">✏️</button>
-                                <button class="btn btn-sm btn-danger me-1" onclick="eliminarItemIndividual(${idDet})">🗑️</button>
-                                <button class="btn btn-sm btn-primary" onclick="imprimirItemIndividual(${datosPrint})">🖨️</button>
-                            </td>
-                        </tr>`;
-                    });
-
-                    if(contadorVisibles === 0) {
-                        tbody.innerHTML = `<tr><td colspan="${cols}" class="text-center p-4 fs-4 text-success fw-bold">👏 ¡No hay deudas pendientes con estos filtros!</td></tr>`;
-                    }
+                    // Si debe, mostramos el rojo furioso
+                    htmlSaldo = `$${saldo.toLocaleString('es-AR', {minimumFractionDigits:2})}`;
                 }
-            } else { tbody.innerHTML = `<tr><td colspan="${cols}" class="text-center p-4 fs-4 text-muted">Sin resultados.</td></tr>`; }
-        } catch (e) { console.error(e); tbody.innerHTML = `<tr><td colspan="${cols}" class="text-danger text-center">Error de conexión.</td></tr>`; }
+
+                tbody.innerHTML += 
+                `<tr>
+                    <td class="fw-bold fs-5">${idLiq}</td>
+                    <td>${f}</td>
+                    <td class="fw-bold text-primary">${nm}</td>
+                    <td>${l.Observaciones || l.observaciones || '-'}</td>
+                    <td class="text-end fw-bold">$${total.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+                    
+                    <td class="text-end fw-black text-danger" style="font-size: 1.1em;">
+                        ${htmlSaldo}
+                    </td>
+
+                    <td class="text-center">
+                        <button class="btn btn-warning btn-sm fw-bold me-1" onclick="editarCabecera(${idLiq})">✏️</button>
+                        <button class="btn btn-info btn-sm text-white fw-bold me-1" onclick="verLiquidacion(${idLiq}, '${f}', '${nm}', ${l.IdMandatarias || l.idMandatarias})">👁️ VER</button>
+                        <button class="btn btn-danger btn-sm fw-bold" onclick="eliminarLiquidacion(${idLiq})">🗑️</button>
+                    </td></tr>`;
+            });
+        } else {
+            // MODO POR OBRA SOCIAL
+            let contadorVisibles = 0;
+            res.data.forEach(x => {
+                // AQUÍ QUITAMOS EL FILTRO "return if pagado" PARA QUE VEA EL HISTORIAL SI QUIERE
+                // O LO DEJAMOS SI SOLO QUIERE VER DEUDAS. ASUMO QUE QUIERE VER CUÁNDO SE PAGÓ.
+                // Si quieres ocultar los pagados, descomenta la linea siguiente:
+                // if (x.Pagado === true || x.Pagado === 1) return; 
+
+                contadorVisibles++;
+                const f = (x.FechaPresentacion||x.fechaPresentacion||'').split('T')[0];
+                const neto = parseFloat(x.TotalBruto||x.totalBruto||0); 
+                const saldo = parseFloat(x.SaldoPendiente);
+                const visualSaldo = isNaN(saldo) ? neto : saldo; 
+                
+                const idDet = x.IdLiquidacionDetalle || x.idLiquidacionDetalle;
+                const idPadre = x.IdLiquidaciones || x.idLiquidaciones;
+
+                // --- LÓGICA DE UX PARA ÍTEMS ---
+                let htmlSaldoItem = "";
+                if (visualSaldo <= 1) {
+                     const fechaPago = x.FechaCancelacion ? new Date(x.FechaCancelacion).toLocaleDateString('es-AR') : "SI";
+                     htmlSaldoItem = `<span class="badge bg-success text-white">✅ ${fechaPago}</span>`;
+                } else {
+                     htmlSaldoItem = `$${visualSaldo.toLocaleString('es-AR', {minimumFractionDigits:2})}`;
+                }
+
+                // Datos para imprimir (JSON safe)
+                const datosPrint = JSON.stringify({
+                    os: x.NombreObraSocial || x.nombreObraSocial,
+                    periodo: x.Periodo || x.periodo,
+                    plan: x.NombrePlan || "---",
+                    recetas: x.CantidadRecetas || 0,
+                    bruto: parseFloat(x.BrutoOriginal || 0), 
+                    cargo: parseFloat(x.MontoCargoOS || 0),
+                    bonif: parseFloat(x.MontoBonificacion || 0),
+                    neto: neto,
+                    deuda: visualSaldo
+                }).replace(/"/g, '&quot;');
+
+                tbody.innerHTML += `<tr>
+                    <td class="text-center small">${f}</td>
+                    <td class="small text-muted">${x.NombreMandataria||x.nombreMandataria}</td>
+                    <td class="fw-bold text-primary fs-5">${x.NombreObraSocial||x.nombreObraSocial}</td>
+                    <td class="text-center fw-bold">${x.CantidadRecetas||x.cantidadRecetas}</td>
+                    <td class="text-end text-muted">$${neto.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+                    
+                    <td class="text-end fw-black text-danger">
+                        ${htmlSaldoItem}
+                    </td>
+
+                    <td class="text-center">
+                        <button class="btn btn-sm btn-info text-white me-1" onclick="verCobrosDeLiquidacion(${idDet})" title="Ver Cobros">👁️</button>
+                        <button class="btn btn-sm btn-warning me-1" onclick="abrirItemABM(${idDet}, ${idPadre})">✏️</button>
+                        <button class="btn btn-sm btn-danger me-1" onclick="eliminarItemIndividual(${idDet})">🗑️</button>
+                        <button class="btn btn-sm btn-primary" onclick="imprimirItemIndividual(${datosPrint})">🖨️</button>
+                    </td>
+                </tr>`;
+            });
+
+            if(contadorVisibles === 0) {
+                tbody.innerHTML = `<tr><td colspan="${cols}" class="text-center p-4 fs-4 text-success fw-bold">👏 ¡No hay datos para mostrar!</td></tr>`;
+            }
+        }
+    } else { tbody.innerHTML = `<tr><td colspan="${cols}" class="text-center p-4 fs-4 text-muted">Sin resultados.</td></tr>`; }
+} catch (e) { 
+    console.error(e);
+    tbody.innerHTML = `<tr><td colspan="${cols}" class="text-danger text-center">Error de conexión.</td></tr>`; 
+}
     }
 
     function limpiarFiltros() {

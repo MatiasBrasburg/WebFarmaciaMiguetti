@@ -461,8 +461,6 @@ public static List<dynamic> BuscarLiquidaciones(int? id, DateTime? desde, DateTi
 {
     using (SqlConnection connection = new SqlConnection(_connectionString))
     {
-        // ARQUITECTURA: Calculamos el Saldo Pendiente sumando el de cada hijo (Detalle).
-        // Como el detalle se actualiza con los pagos, esto refleja la deuda real en tiempo real.
         string query = @"
             SELECT 
                 L.IdLiquidaciones,
@@ -472,9 +470,14 @@ public static List<dynamic> BuscarLiquidaciones(int? id, DateTime? desde, DateTi
                 L.IdMandatarias,
                 M.RazonSocial as NombreMandataria,
                 ISNULL(SUM(LD.MontoCargoOS - LD.MontoBonificacion), 0) as TotalReal,
-                
-                -- NUEVA LÍNEA: Suma de saldos pendientes de los hijos
-                ISNULL(SUM(LD.SaldoPendiente), 0) as SaldoPendiente 
+                ISNULL(SUM(LD.SaldoPendiente), 0) as SaldoPendiente,
+
+                -- NUEVO: Buscamos la fecha del último cobro registrado para esta liquidación
+                (SELECT MAX(CD.FechaCobroDetalle) 
+                 FROM CobrosDetalle CD 
+                 INNER JOIN LiquidacionDetalle Det ON CD.IdLiquidacionDetalle = Det.IdLiquidacionDetalle
+                 WHERE Det.IdLiquidaciones = L.IdLiquidaciones
+                ) as FechaCancelacion
 
             FROM Liquidaciones L
             INNER JOIN Mandatarias M ON L.IdMandatarias = M.IdMandatarias
@@ -534,19 +537,27 @@ public static void EliminarLiquidacion(int idLiquidacion)
                 // ---------------------------------------------------------
                 // PASO 1: Identificar qué Cobros se verán afectados
                 // ---------------------------------------------------------
-                // Necesitamos saber los IDs de los cobros ANTES de borrar el detalle
-                // para poder recalcularlos después.
+                // CORRECCIÓN: Hacemos JOIN porque CobrosDetalle no tiene IdLiquidaciones directo.
+                // Buscamos los cobros que apuntan a los HIJOS (Detalles) de esta liquidación.
                 string queryGetCobros = @"
-                    SELECT DISTINCT IdCobros 
-                    FROM CobrosDetalle 
-                    WHERE IdLiquidaciones = @Id";
+                    SELECT DISTINCT CD.IdCobros 
+                    FROM CobrosDetalle CD
+                    INNER JOIN LiquidacionDetalle LD ON CD.IdLiquidacionDetalle = LD.IdLiquidacionDetalle
+                    WHERE LD.IdLiquidaciones = @Id";
                 
                 var listaCobrosAfectados = connection.Query<int>(queryGetCobros, pId, transaction).ToList();
 
                 // ---------------------------------------------------------
                 // PASO 2: Eliminar el vínculo en CobrosDetalle
                 // ---------------------------------------------------------
-                string deleteCobrosDet = "DELETE FROM CobrosDetalle WHERE IdLiquidaciones = @Id";
+                // CORRECCIÓN: Borramos usando una subquery que busca los IDs de los detalles hijos.
+                string deleteCobrosDet = @"
+                    DELETE FROM CobrosDetalle 
+                    WHERE IdLiquidacionDetalle IN (
+                        SELECT IdLiquidacionDetalle 
+                        FROM LiquidacionDetalle 
+                        WHERE IdLiquidaciones = @Id
+                    )";
                 connection.Execute(deleteCobrosDet, pId, transaction);
 
                 // ---------------------------------------------------------
@@ -555,18 +566,22 @@ public static void EliminarLiquidacion(int idLiquidacion)
                 foreach (var idCobro in listaCobrosAfectados)
                 {
                     // A. Calculamos el nuevo total sumando los detalles restantes.
-                    // ISNULL(..., 0) es vital: si borramos el único detalle, la suma es NULL, 
-                    // pero el total debe ser 0.
                     string queryRecalculo = @"
-                        SELECT ISNULL(SUM(Importe), 0) 
+                        SELECT ISNULL(SUM(ImporteCobrado), 0)  -- Ojo: ImporteCobrado (según tu modelo)
                         FROM CobrosDetalle 
                         WHERE IdCobros = @IdCobro";
                     
                     decimal nuevoTotal = connection.ExecuteScalar<decimal>(queryRecalculo, new { IdCobro = idCobro }, transaction);
 
                     // B. Actualizamos la cabecera
-                    string updateCabecera = "UPDATE Cobros SET Total = @Total WHERE IdCobros = @IdCobro";
-                    connection.Execute(updateCabecera, new { Total = nuevoTotal, IdCobro = idCobro }, transaction);
+                    // NOTA: Asegúrate que la tabla 'Cobros' tenga columna 'Total' o la que uses para el monto.
+                    // Si no tienes columna Total en Cobros y se calcula al vuelo, este paso sobra, 
+                    // pero asumo que guardas el histórico.
+                    /* Si tu tabla Cobros no tiene columna 'Total', comenta estas 2 lineas. 
+                       Si la tiene, déjalas.
+                    */
+                    // string updateCabecera = "UPDATE Cobros SET Total = @Total WHERE IdCobros = @IdCobro";
+                    // connection.Execute(updateCabecera, new { Total = nuevoTotal, IdCobro = idCobro }, transaction);
                 }
 
                 // ---------------------------------------------------------
@@ -583,15 +598,14 @@ public static void EliminarLiquidacion(int idLiquidacion)
 
                 transaction.Commit();
             }
-            catch
+            catch (Exception ex) // Agregamos ex para ver el error si pasa algo más
             {
                 transaction.Rollback();
-                throw;
+                throw; 
             }
         }
     }
 }
-
 
 // 1. Traer un solo ítem para editarlo
 public static LiquidacionDetalle TraerDetallePorId(int idDetalle)
@@ -639,6 +653,8 @@ public static void ModificarItemIndividual(LiquidacionDetalle item)
     {
         connection.Open();
 
+        // PASO 1: Actualizamos los datos y RECALCULAMOS EL SALDO en el mismo acto.
+        // La fórmula es: (Nuevo Cargo - Nueva Bonif) - (Todo lo que ya me pagaron en CobrosDetalle)
         string query = @"
             UPDATE LiquidacionDetalle 
             SET IdObrasSociales = @IdObrasSociales, 
@@ -647,12 +663,26 @@ public static void ModificarItemIndividual(LiquidacionDetalle item)
                 TotalBruto = @TotalBruto, 
                 MontoCargoOS = @MontoCargoOS, 
                 MontoBonificacion = @MontoBonificacion,
-                SaldoPendiente = @SaldoPendiente
-            WHERE IdLiquidacionDetalle = @IdLiquidacionDetalle";
+                
+                -- MAGIA AQUÍ: Restamos los pagos existentes al nuevo total
+                SaldoPendiente = (@MontoCargoOS - @MontoBonificacion) - ISNULL((
+                    SELECT SUM(ImporteCobrado + MontoDebito) 
+                    FROM CobrosDetalle 
+                    WHERE IdLiquidacionDetalle = @IdLiquidacionDetalle
+                ), 0)
+
+            WHERE IdLiquidacionDetalle = @IdLiquidacionDetalle;
+
+            -- PASO 2 (CRÍTICO): Actualizar el estado 'Pagado'
+            -- Si bajaste el precio y el saldo quedó en 0 (o negativo), el sistema debe marcarlo como PAGADO.
+            UPDATE LiquidacionDetalle
+            SET Pagado = CASE WHEN SaldoPendiente <= 1.00 THEN 1 ELSE 0 END
+            WHERE IdLiquidacionDetalle = @IdLiquidacionDetalle;
+        ";
         
         connection.Execute(query, item);
         
-        // Actualizar Total Padre
+        // PASO 3: Actualizar el Total de la Liquidación Padre (Cabecera)
         ActualizarTotalCabecera(item.IdLiquidaciones, connection);
     }
 }
@@ -779,7 +809,6 @@ public static List<dynamic> BuscarDetallesGlobales(DateTime? desde, DateTime? ha
 {
     using (SqlConnection connection = new SqlConnection(_connectionString))
     {
-        // CAMBIO: Agregamos JOIN con PlanBonificacion y traemos columnas de desglose
         string query = @"
             SELECT 
                 LD.IdLiquidacionDetalle,
@@ -788,24 +817,26 @@ public static List<dynamic> BuscarDetallesGlobales(DateTime? desde, DateTime? ha
                 L.Periodo,
                 M.RazonSocial as NombreMandataria,
                 OS.Nombre as NombreObraSocial,
-                PB.NombrePlan,                       -- <--- NUEVO: Nombre del Plan
+                PB.NombrePlan,
                 LD.CantidadRecetas,
-                
-                -- Valores Desglosados para Impresión
-                LD.TotalBruto as BrutoOriginal,      -- <--- NUEVO: Bruto Real (Total Recetas)
-                LD.MontoCargoOS,                     -- <--- NUEVO: Cargo
-                LD.MontoBonificacion,                -- <--- NUEVO: Bonif
-
-                -- Este es el 'A Cobrar' (Neto) que usamos para la suma
+                LD.TotalBruto as BrutoOriginal,
+                LD.MontoCargoOS,
+                LD.MontoBonificacion,
                 (LD.MontoCargoOS - LD.MontoBonificacion) as TotalBruto,
-                
                 LD.SaldoPendiente,
-                LD.Pagado
+                LD.Pagado,
+
+                -- NUEVO: Fecha del último pago de ESTE ítem
+                (SELECT MAX(FechaCobroDetalle) 
+                 FROM CobrosDetalle 
+                 WHERE IdLiquidacionDetalle = LD.IdLiquidacionDetalle
+                ) as FechaCancelacion
+
             FROM LiquidacionDetalle LD
             INNER JOIN Liquidaciones L ON LD.IdLiquidaciones = L.IdLiquidaciones
             INNER JOIN Mandatarias M ON L.IdMandatarias = M.IdMandatarias
             INNER JOIN ObrasSociales OS ON LD.IdObrasSociales = OS.IdObrasSociales
-            LEFT JOIN PlanBonificacion PB ON LD.IdPlanBonificacion = PB.IdPlanBonificacion -- <--- JOIN NUEVO
+            LEFT JOIN PlanBonificacion PB ON LD.IdPlanBonificacion = PB.IdPlanBonificacion
             WHERE 1=1 ";
 
         if (desde.HasValue) query += " AND L.FechaPresentacion >= @pDesde";
@@ -816,10 +847,7 @@ public static List<dynamic> BuscarDetallesGlobales(DateTime? desde, DateTime? ha
         query += " ORDER BY L.FechaPresentacion DESC, M.RazonSocial, OS.Nombre";
 
         return connection.Query<dynamic>(query, new { 
-            pDesde = desde, 
-            pHasta = hasta, 
-            pMand = idMandataria, 
-            pOS = idOS 
+            pDesde = desde, pHasta = hasta, pMand = idMandataria, pOS = idOS 
         }).ToList();
     }
 }
@@ -857,34 +885,32 @@ public static Usuario TraerUsuarioPorId(int idUsuario)
 // =============================================================================
     // TRAER DEUDAS (Con lógica de Fallback para datos viejos)
     // =============================================================================
-    public static List<dynamic> TraerDeudasPendientesPorOS(int idObraSocial)
+   public static List<dynamic> TraerDeudasPendientesPorOS(int idObraSocial)
+{
+    using (SqlConnection connection = new SqlConnection(_connectionString))
     {
-        using (SqlConnection connection = new SqlConnection(_connectionString))
-        {
-            // TRUCO: 
-            // 1. Usamos ISNULL en Pagado para que no falle si es null.
-            // 2. En el SELECT, si SaldoPendiente es NULL o 0 (y no está pagado), mostramos el TotalBruto.
-            //    Así las liquidaciones viejas aparecen como "Deuda Total" en vez de ocultarse.
-            
-            string query = @"
-                SELECT 
-                    LD.IdLiquidacionDetalle,
-                    L.Periodo,
-                    L.FechaPresentacion,
-                    LD.TotalBruto as ImporteOriginal,
-                    CASE 
-                        WHEN LD.SaldoPendiente IS NULL OR LD.SaldoPendiente = 0 THEN LD.TotalBruto 
-                        ELSE LD.SaldoPendiente 
-                    END as SaldoPendiente
-                FROM LiquidacionDetalle LD
-                INNER JOIN Liquidaciones L ON LD.IdLiquidaciones = L.IdLiquidaciones
-                WHERE LD.IdObrasSociales = @pIdOS 
-                  AND (LD.Pagado = 0 OR LD.Pagado IS NULL) -- Traer si Pagado es 0 o NULL
-                ORDER BY L.FechaPresentacion ASC";
+        string query = @"
+            SELECT 
+                LD.IdLiquidacionDetalle,
+                L.Periodo,
+                L.FechaPresentacion,
+                LD.TotalBruto as ImporteOriginal,
+                
+                -- CORRECCIÓN: Si es 0, respetamos el 0. Solo si es NULL asumimos deuda total.
+                ISNULL(LD.SaldoPendiente, LD.TotalBruto) as SaldoPendiente
 
-            return connection.Query<dynamic>(query, new { pIdOS = idObraSocial }).ToList();
-        }
+            FROM LiquidacionDetalle LD
+            INNER JOIN Liquidaciones L ON LD.IdLiquidaciones = L.IdLiquidaciones
+            WHERE LD.IdObrasSociales = @pIdOS 
+              -- IMPORTANTE: Filtramos lo que ya está pagado para que no aparezca en la lista
+              AND (LD.Pagado = 0 OR LD.Pagado IS NULL) 
+              -- Y por seguridad, que el saldo sea mayor a 0.05 (tolerancia de centavos)
+              AND ISNULL(LD.SaldoPendiente, LD.TotalBruto) > 0.05
+            ORDER BY L.FechaPresentacion ASC";
+
+        return connection.Query<dynamic>(query, new { pIdOS = idObraSocial }).ToList();
     }
+}
 // 2. Traer Liquidaciones donde participa esa Obra Social (Para imputar pagos)
 public static List<Liquidaciones> TraerLiquidacionesPendientesPorOS(int idObraSocial)
 {
@@ -1086,9 +1112,37 @@ public static void AgregarCobroDetalle(int idCobroPadre, int idObraSocial, DateT
 // -----------------------------------------------------------------------------------
 public static void ModificarCobroDetalle(int idCobroDetalle, int idObraSocial, DateTime fecha, decimal importe, string tipo, decimal debitos, string motivo)
 {
-    using (SqlConnection db = new SqlConnection(_connectionString))
+    using (SqlConnection connection = new SqlConnection(_connectionString))
     {
-        string sql = @"UPDATE CobrosDetalle SET 
+        connection.Open();
+        using (var transaction = connection.BeginTransaction())
+        {
+            try
+            {
+                // 1. OBTENER ESTADO ANTERIOR
+                var anterior = connection.QueryFirstOrDefault<dynamic>(
+                    "SELECT ImporteCobrado, MontoDebito, IdLiquidacionDetalle FROM CobrosDetalle WHERE IdCobrosDetalle = @id",
+                    new { id = idCobroDetalle },
+                    transaction
+                );
+
+                // 2. REVERTIR IMPACTO EN LA DEUDA (Devolver plata a la deuda original)
+                if (anterior != null && anterior.IdLiquidacionDetalle != null)
+                {
+                    string sqlRevertir = @"
+                        UPDATE LiquidacionDetalle 
+                        SET SaldoPendiente = SaldoPendiente + (@imp + @deb), 
+                            Pagado = 0 
+                        WHERE IdLiquidacionDetalle = @idLiq";
+                    connection.Execute(sqlRevertir, new { 
+                        imp = anterior.ImporteCobrado, 
+                        deb = anterior.MontoDebito, 
+                        idLiq = anterior.IdLiquidacionDetalle 
+                    }, transaction);
+                }
+
+                // 3. ACTUALIZAR EL COBRO
+                string sqlUpdate = @"UPDATE CobrosDetalle SET 
                         IdObrasSociales = @idOS, 
                         FechaCobroDetalle = @fecha, 
                         ImporteCobrado = @imp, 
@@ -1097,15 +1151,42 @@ public static void ModificarCobroDetalle(int idCobroDetalle, int idObraSocial, D
                         MotivoDebito = @mot 
                        WHERE IdCobrosDetalle = @id";
                        
-        db.Execute(sql, new { 
-            id = idCobroDetalle, 
-            idOS = idObraSocial, 
-            fecha = fecha, 
-            imp = importe, 
-            tipo = tipo, 
-            deb = debitos, 
-            mot = motivo ?? "" 
-        });
+                connection.Execute(sqlUpdate, new { 
+                    id = idCobroDetalle, 
+                    idOS = idObraSocial, 
+                    fecha = fecha, 
+                    imp = importe, 
+                    tipo = tipo, 
+                    deb = debitos, 
+                    mot = motivo ?? "" 
+                }, transaction);
+
+                // 4. APLICAR NUEVO IMPACTO A LA DEUDA
+                if (anterior != null && anterior.IdLiquidacionDetalle != null)
+                {
+                    string sqlAplicar = @"
+                        UPDATE LiquidacionDetalle 
+                        SET SaldoPendiente = SaldoPendiente - (@imp + @deb)
+                        WHERE IdLiquidacionDetalle = @idLiq";
+
+                    connection.Execute(sqlAplicar, new { 
+                        imp = importe, 
+                        deb = debitos, 
+                        idLiq = anterior.IdLiquidacionDetalle 
+                    }, transaction);
+
+                    // Chequeo de Pagado (Tolerancia $1)
+                    string sqlCheck = @"
+                        UPDATE LiquidacionDetalle 
+                        SET Pagado = 1 
+                        WHERE IdLiquidacionDetalle = @idLiq AND SaldoPendiente <= 1.00";
+                    connection.Execute(sqlCheck, new { idLiq = anterior.IdLiquidacionDetalle }, transaction);
+                }
+
+                transaction.Commit();
+            }
+            catch { transaction.Rollback(); throw; }
+        }
     }
 }
 // -----------------------------------------------------------------------------------

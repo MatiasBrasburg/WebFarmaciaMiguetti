@@ -268,9 +268,14 @@ var jsonMandatarias = JsonSerializer.Serialize(listaMandatarias.Select(x => new 
                             </div>
                             <div class="col-md-2"><label class="form-label small">FECHA PAGO</label><input type="date" id="v_FechaItem" class="form-control form-control-sm"></div>
                             <div class="col-md-2"><label class="form-label small">TIPO</label><select id="v_TipoItem" class="form-select form-select-sm">@foreach(var t in listaTiposPago){<option value="@t">@t</option>}</select></div>
-                            <div class="col-md-2"><label class="form-label small text-success">IMPORTE</label><input type="number" id="v_Imp" class="form-control form-control-sm text-success fw-bold" placeholder="0.00" data-enter="agregarAlLote"></div>
-                            <div class="col-md-2"><label class="form-label small text-danger">DEBITO</label><input type="number" id="v_Imp" class="form-control form-control-sm text-success fw-bold" placeholder="0.00" data-enter="agregarAlLote"></div>
-
+                            <div class="col-md-2">
+    <label class="form-label small text-success">IMPORTE</label>
+    <input type="number" id="v_Imp" class="form-control form-control-sm text-success fw-bold" placeholder="0.00" data-enter="agregarAlLote">
+</div>
+<div class="col-md-2">
+    <label class="form-label small text-danger">DÉBITO</label>
+    <input type="number" id="v_Deb" class="form-control form-control-sm text-danger fw-bold" placeholder="0.00" data-enter="agregarAlLote">
+</div>
                             <div class="col-md-2"><button class="btn btn-primary fw-bold w-100 btn-sm" onclick="agregarAlLote()">AGREGAR</button></div>
                         </div>
                         <input type="hidden" id="v_IdLiqDetalle" value="">
@@ -871,31 +876,45 @@ var jsonMandatarias = JsonSerializer.Serialize(listaMandatarias.Select(x => new 
 
     async function agregarAlLote() {
         const idOS = document.getElementById('valV_OS').value;
-        const imp = document.getElementById('v_Imp').value.replace(',','.');
+        const imp = document.getElementById('v_Imp').value.replace(',', '.');
+        
+        // CORRECCIÓN: Leemos el valor del nuevo ID 'v_Deb'
+        const deb = document.getElementById('v_Deb').value.replace(',', '.') || 0;
+        
         const idLiq = document.getElementById('v_IdLiqDetalle').value || null;
 
-        if(idOS==0 || imp==0) { alert("Datos incompletos."); return; }
+        if (idOS == 0 || imp == 0) { alert("Datos incompletos."); return; }
 
         const fd = new FormData();
-        fd.append("IdCobro", 0); 
+        fd.append("IdCobro", 0);
         fd.append("IdObraSocial", idOS); fd.append("IdObrasSociales", idOS);
-        fd.append("IdMandataria", loteContexto.mandatariaId); 
+        fd.append("IdMandataria", loteContexto.mandatariaId);
         fd.append("FechaCobro", document.getElementById('v_FechaItem').value);
         fd.append("TipoPago", document.getElementById('v_TipoItem').value);
         fd.append("NumeroComprobante", loteContexto.comp);
-        fd.append("ImporteCobrado", imp); fd.append("MontoDebitos", 0); fd.append("MotivoDebito", "");
-        if(idLiq) fd.append("IdLiquidacionDetalle", idLiq);
-
+        fd.append("ImporteCobrado", imp);
+        
+        // CORRECCIÓN: Enviamos la variable 'deb' real
+        fd.append("MontoDebitos", deb);
+        fd.append("MotivoDebito", "");
+        
+        if (idLiq) fd.append("IdLiquidacionDetalle", idLiq);
+        
         try {
-            await fetch('@Url.Action("GuardarCobro", "Home")', { method:'POST', body:fd });
-            document.getElementById('v_Imp').value=""; document.getElementById('txtV_OS').value=""; document.getElementById('valV_OS').value="0";
-            document.getElementById('v_IdLiqDetalle').value=""; document.getElementById('lblDeudaSeleccionadaVer').style.display='none';
+            await fetch('@Url.Action("GuardarCobro", "Home")', { method: 'POST', body: fd });
             
-            buscarCobros(); 
+            // LIMPIEZA
+            document.getElementById('v_Imp').value = "";
+            document.getElementById('v_Deb').value = ""; // Limpiamos el débito también
+            document.getElementById('txtV_OS').value = "";
+            document.getElementById('valV_OS').value = "0";
+            document.getElementById('v_IdLiqDetalle').value = "";
+            document.getElementById('lblDeudaSeleccionadaVer').style.display = 'none';
+
+            buscarCobros();
             traerDetalles(loteContexto.idPadre);
-            // FOCO AL BUSCADOR
             document.getElementById('txtV_OS').focus();
-        } catch(e) { alert("Error de red."); }
+        } catch (e) { alert("Error de red."); }
     }
 
     async function eliminarLoteCompleto(idPadre) {
