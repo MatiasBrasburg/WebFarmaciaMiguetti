@@ -415,6 +415,7 @@ public class HomeController : Controller
     [HttpPost]
     public IActionResult GuardarItemIndividual(int IdLiquidacionPadre, int IdItem, int IdOS, int IdPlan, int Recetas, decimal Total, decimal CargoOS, decimal Bonificacion)
     {
+        
         try
         {
             // Validaciones básicas
@@ -874,7 +875,39 @@ public IActionResult ObtenerCobrosPorLiquidacionDetalle(int idDetalle)
 
 
 
+[HttpGet]
+public IActionResult ObtenerDatosFarmaciaAjax()
+{
+    try
+    {
+        // 1. Buscamos el ID del usuario en sesión
+        var usuarioJson = HttpContext.Session.GetString("Usuario");
+        if (string.IsNullOrEmpty(usuarioJson)) 
+            return Json(new { success = false });
 
+        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        var userSession = System.Text.Json.JsonSerializer.Deserialize<Usuario>(usuarioJson, options);
+
+        // 2. IMPORTANTE: Vamos a la BD a buscar el dato FRESCO (no el de la sesión vieja)
+        var usuarioReal = BD.TraerUsuarioPorId(userSession.IdUsuario); 
+
+        if (usuarioReal != null)
+        {
+            return Json(new { 
+                success = true, 
+                nombre = usuarioReal.RazonSocial ?? "FARMACIA",
+                domicilio = usuarioReal.Domicilio ?? "",
+                cuit = usuarioReal.Cuit.ToString() ?? "",
+                iva = usuarioReal.Iva ?? "Consumidor Final"
+            });
+        }
+        return Json(new { success = false });
+    }
+    catch 
+    {
+        return Json(new { success = false });
+    }
+}
 
 
 

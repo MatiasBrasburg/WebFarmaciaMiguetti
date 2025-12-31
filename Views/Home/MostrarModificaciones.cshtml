@@ -25,20 +25,22 @@
     string ivaFarmacia = "Consumidor Final";
 
     var usuarioJson = HttpContextAccessor.HttpContext.Session.GetString("Usuario");
-    if (!string.IsNullOrEmpty(usuarioJson))
-    {
-        try {
-            var usuarioObj = JsonSerializer.Deserialize<Usuario>(usuarioJson);
-            if(usuarioObj != null) {
-                nombreFarmacia = usuarioObj.RazonSocial ?? "FARMACIA MIGUETTI";
-                direccionFarmacia = usuarioObj.Domicilio ?? "";
-                cuitFarmacia = usuarioObj.Cuit.ToString() ?? "";
-                ivaFarmacia = usuarioObj.Iva ?? "";
-            }
-        } catch { }
-    }
+if (!string.IsNullOrEmpty(usuarioJson))
+{
+    try {
+        // --- CORRECCIÓN: Agregar opciones para ignorar mayúsculas/minúsculas ---
+        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true }; 
+        var usuarioObj = JsonSerializer.Deserialize<Usuario>(usuarioJson, options);
+        
+        if(usuarioObj != null) {
+            nombreFarmacia = usuarioObj.RazonSocial ?? "FARMACIA MIGUETTI"; // Ojo: asegúrate que tu clase Usuario tenga esta prop.
+            direccionFarmacia = usuarioObj.Domicilio ?? "";
+            cuitFarmacia = usuarioObj.Cuit.ToString() ?? "";
+            ivaFarmacia = usuarioObj.Iva ?? "";
+        }
+    } catch { }
 }
-
+}
 <style>
     /* ESTILOS DE ALTO IMPACTO (UX 85 AÑOS) */
     body { font-family: 'Verdana', sans-serif; background-color: #f4f6f9; color: #000; }
@@ -1053,7 +1055,13 @@ async function abrirItemABM(idItem, idPadre = 0, idMandatariaExterna = 0) {
 
         // IMPRESIÓN (AHORA CON TOTALES)
    // IMPRESIÓN (AHORA CON TOTALES Y DEUDA)
-    function imprimirReporteGlobal() {
+   async function imprimirReporteGlobal() {
+    let infoFarmaciaActual = farmaciaInfo; 
+    try {
+        const r = await fetch('@Url.Action("ObtenerDatosFarmaciaAjax", "Home")');
+        const res = await r.json();
+        if (res.success) infoFarmaciaActual = res;
+    } catch (e) { }
         const idLiq = document.getElementById('verId').textContent;
         const fecha = document.getElementById('verFecha').textContent;
         const mandataria = document.getElementById('verMandataria').textContent;
@@ -1113,10 +1121,17 @@ async function abrirItemABM(idItem, idPadre = 0, idMandatariaExterna = 0) {
             <td style="text-align:right; font-size:1.1em; color:#ff4d4d;">$${tDeuda.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
         </tr>`;
 
-        abrirVentanaImpresion(idLiq, mandataria, fecha, filasHTML);
+        abrirVentanaImpresion(idLiq, mandataria, fecha, filasHTML, null, infoFarmaciaActual);
     }
 
-    function imprimirItemIndividual(datos) {
+     async function imprimirItemIndividual(datos) {
+        let infoFarmaciaActual = farmaciaInfo; 
+    try {
+        const r = await fetch('@Url.Action("ObtenerDatosFarmaciaAjax", "Home")');
+        const res = await r.json();
+        if (res.success) infoFarmaciaActual = res;
+    } catch (e) { }
+
         const filasHTML = `<tr>
             <td style="text-align:left; padding:5px;">${datos.os}</td>
             <td style="text-align:center;">${datos.plan}</td>
@@ -1128,11 +1143,12 @@ async function abrirItemABM(idItem, idPadre = 0, idMandatariaExterna = 0) {
             <td style="text-align:right; color:red; font-weight:bold;">$${datos.deuda.toFixed(2)}</td>
         </tr>`;
         
-        abrirVentanaImpresion(datos.periodo, "IMPRESIÓN INDIVIDUAL", new Date().toLocaleDateString('es-AR'), filasHTML, datos.deuda);
+      abrirVentanaImpresion(datos.periodo, "IMPRESIÓN INDIVIDUAL", new Date().toLocaleDateString('es-AR'), filasHTML, datos.deuda, infoFarmaciaActual);
     }
 
     // REEMPLAZAR TU FUNCIÓN "abrirVentanaImpresion" POR ESTA:
-    function abrirVentanaImpresion(ref, mand, fecha, filas, saldoPendiente = null) {
+   function abrirVentanaImpresion(ref, mand, fecha, filas, saldoPendiente = null, datosFarmacia = null) {
+    const info = datosFarmacia || farmaciaInfo;
         const v = window.open('', '', 'height=800,width=1000');
         
         const htmlDeuda = (saldoPendiente !== null && saldoPendiente !== undefined) 
@@ -1156,9 +1172,9 @@ async function abrirItemABM(idItem, idPadre = 0, idMandatariaExterna = 0) {
             .footer { text-align:center; margin-top:50px; font-size:10px; color: #666; border-top: 1px solid #ccc; padding-top: 10px;}
         </style></head><body>
             <div class="header-farmacia">
-                ${farmaciaInfo.nombre}<br>
-                ${farmaciaInfo.domicilio}<br>
-                CUIT: ${farmaciaInfo.cuit} - Condición IVA: ${farmaciaInfo.iva}
+                ${info.nombre}<br>
+                ${info.domicilio}<br>
+                CUIT: ${info.cuit} - Condición IVA: ${info.iva}
             </div>
             <h1>DETALLE DE LIQUIDACIÓN</h1>
             <div class="info-box">
