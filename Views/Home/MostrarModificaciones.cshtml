@@ -75,6 +75,7 @@ if (!string.IsNullOrEmpty(usuarioJson))
     .item-sugerencia { padding: 15px; cursor: pointer; border-bottom: 2px solid #ccc; font-weight: 800; font-size: 1.1rem; color: #333; }
     .item-sugerencia:hover { background-color: #0d6efd; color: white; }
     .active-sugerencia { background-color: #0d6efd; color: white; } /* Resaltado para flechas */
+   
 </style>
 
 <div class="container-fluid mt-4">
@@ -1126,8 +1127,8 @@ async function abrirItemABM(idItem, idPadre = 0, idMandatariaExterna = 0) {
             <td style="text-align:right;color:#000;">$${tBruto.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
             <td style="text-align:right;color:#000;">$${tCargo.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
             <td style="text-align:right;color:#000;">$${tBonif.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
-            <td style="text-align:right; font-size:1.1em; color:#000;">$${tNeto.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
-            <td style="text-align:right; font-size:1.1em; color:#ff4d4d;">$${tDeuda.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+            <td style="text-align:right; font-size:1em; color:#000;">$${tNeto.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+            <td style="text-align:right; font-size:1em; color:#ff4d4d;">$${tDeuda.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
         </tr>`;
 
         abrirVentanaImpresion(idLiq, mandataria, fecha, filasHTML, null, infoFarmaciaActual);

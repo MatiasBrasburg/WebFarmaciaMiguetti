@@ -703,6 +703,8 @@ public static void ModificarItemIndividual(LiquidacionDetalle item)
     }
 }
 
+// EN: Models/BD.cs
+
 public static void EliminarItemIndividual(int idDetalle, int idLiquidacionPadre)
 {
     using (SqlConnection connection = new SqlConnection(_connectionString))
@@ -712,59 +714,36 @@ public static void EliminarItemIndividual(int idDetalle, int idLiquidacionPadre)
         {
             try
             {
-                // ---------------------------------------------------------
-                // PASO 1: Identificar Cobros Afectados (Antes de tocar nada)
-                // ---------------------------------------------------------
-                // Buscamos si esta Liquidación (el Padre) está metida en algún Cobro.
+                // 1. Identificar Cobros Afectados (Buscamos los cobros que pagaban ESTE ítem específico)
                 string queryGetCobros = @"
                     SELECT DISTINCT IdCobros 
                     FROM CobrosDetalle 
-                    WHERE IdLiquidaciones = @IdPadre";
+                    WHERE IdLiquidacionDetalle = @IdDetalle";
                 
-                var listaCobrosAfectados = connection.Query<int>(queryGetCobros, new { IdPadre = idLiquidacionPadre }, transaction).ToList();
+                var listaCobrosAfectados = connection.Query<int>(queryGetCobros, new { IdDetalle = idDetalle }, transaction).ToList();
 
-                // ---------------------------------------------------------
-                // PASO 2: Eliminar el Ítem (Hijo)
-                // ---------------------------------------------------------
+                // 2. Eliminar los PAGOS asociados a este ítem (Limpieza de hijos)
+                // Si borramos la deuda, debemos borrar el pago parcial asociado para que no quede basura.
+                string deleteCobros = "DELETE FROM CobrosDetalle WHERE IdLiquidacionDetalle = @IdDetalle";
+                connection.Execute(deleteCobros, new { IdDetalle = idDetalle }, transaction);
+
+                // 3. Eliminar el Ítem de Liquidación
                 string deleteItem = "DELETE FROM LiquidacionDetalle WHERE IdLiquidacionDetalle = @IdDetalle";
                 connection.Execute(deleteItem, new { IdDetalle = idDetalle }, transaction);
 
-                // ---------------------------------------------------------
-                // PASO 3: Recalcular Total de la Liquidación (Padre)
-                // ---------------------------------------------------------
-                // Sumamos lo que quedó vivo. Si no quedó nada, es 0.
-                string querySumLiq = "SELECT ISNULL(SUM(Importe), 0) FROM LiquidacionDetalle WHERE IdLiquidaciones = @IdPadre";
-                decimal nuevoTotalLiquidacion = connection.ExecuteScalar<decimal>(querySumLiq, new { IdPadre = idLiquidacionPadre }, transaction);
+                // 4. Recalcular Total de la Liquidación (Padre)
+                ActualizarTotalCabecera(idLiquidacionPadre, connection, transaction);
 
-                // Actualizamos la cabecera de la Liquidación
-                string updateLiq = "UPDATE Liquidaciones SET Total = @Total WHERE IdLiquidaciones = @IdPadre";
-                connection.Execute(updateLiq, new { Total = nuevoTotalLiquidacion, IdPadre = idLiquidacionPadre }, transaction);
-
-                // ---------------------------------------------------------
-                // PASO 4: Propagar el cambio a los Cobros (El Abuelo)
-                // ---------------------------------------------------------
-                if (listaCobrosAfectados.Any())
+                // 5. Recalcular las Cabeceras de los Cobros afectados (Si había pagos)
+                foreach (var idCobro in listaCobrosAfectados)
                 {
-                    // A. Actualizar el renglón específico en CobrosDetalle
-                    // El importe en el detalle del cobro debe coincidir con el nuevo total de la liquidación
-                    string updateCobrosDetalle = @"
-                        UPDATE CobrosDetalle 
-                        SET Importe = @NuevoImporte 
-                        WHERE IdLiquidaciones = @IdPadre";
-                    
-                    connection.Execute(updateCobrosDetalle, new { NuevoImporte = nuevoTotalLiquidacion, IdPadre = idLiquidacionPadre }, transaction);
+                    // Sumamos lo que quedó vivo en el cobro
+                    string querySumCobro = "SELECT ISNULL(SUM(ImporteCobrado), 0) FROM CobrosDetalle WHERE IdCobros = @IdCobro";
+                    decimal nuevoTotalCobro = connection.ExecuteScalar<decimal>(querySumCobro, new { IdCobro = idCobro }, transaction);
 
-                    // B. Recalcular las Cabeceras de los Cobros afectados
-                    foreach (var idCobro in listaCobrosAfectados)
-                    {
-                        // Sumar todos los detalles de ese cobro
-                        string querySumCobro = "SELECT ISNULL(SUM(Importe), 0) FROM CobrosDetalle WHERE IdCobros = @IdCobro";
-                        decimal nuevoTotalCobro = connection.ExecuteScalar<decimal>(querySumCobro, new { IdCobro = idCobro }, transaction);
-
-                        // Actualizar cabecera Cobros
-                        string updateCobroCab = "UPDATE Cobros SET Total = @Total WHERE IdCobros = @IdCobro";
-                        connection.Execute(updateCobroCab, new { Total = nuevoTotalCobro, IdCobro = idCobro }, transaction);
-                    }
+                    // AQUI SI SE PUEDE ACTUALIZAR EL TOTAL DEL COBRO (Si tienes columna Total en Cobros, sino comenta esta línea)
+                    // string updateCobroCab = "UPDATE Cobros SET Total = @Total WHERE IdCobros = @IdCobro";
+                    // connection.Execute(updateCobroCab, new { Total = nuevoTotalCobro, IdCobro = idCobro }, transaction);
                 }
 
                 transaction.Commit();
@@ -778,6 +757,15 @@ public static void EliminarItemIndividual(int idDetalle, int idLiquidacionPadre)
     }
 }
 
+// Helper para actualizar cabecera dentro de la transacción
+private static void ActualizarTotalCabecera(int idLiq, SqlConnection conn, SqlTransaction trans)
+{
+    string sqlUpdate = @"
+        UPDATE Liquidaciones 
+        SET TotalPresentado = (SELECT COALESCE(SUM(TotalBruto), 0) FROM LiquidacionDetalle WHERE IdLiquidaciones = @pId)
+        WHERE IdLiquidaciones = @pId";
+    conn.Execute(sqlUpdate, new { pId = idLiq }, trans);
+}
 // MÉTODO PRIVADO PARA RECALCULAR TOTALES (Evita inconsistencias)
 private static void ActualizarTotalCabecera(int idLiq, SqlConnection conn)
 {
