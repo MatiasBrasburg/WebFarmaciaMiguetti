@@ -698,7 +698,16 @@ try {
     document.getElementById('btnAgregarFila').addEventListener('click', function() {
         const os = document.getElementById('inputOS'); const plan = document.getElementById('inputPlan');
         if (os.value == "0" || plan.value == "0") { alert("⚠️ Faltan datos."); return; }
-        
+        const idOsNuevo = parseInt(os.value);
+        const idPlanNuevo = parseInt(plan.value);
+
+        // Buscamos si ya existe esa combinación en el array 'detallesTemporales'
+        const existe = detallesTemporales.some(d => d.IdObrasSociales === idOsNuevo && d.IdPlanBonificacion === idPlanNuevo);
+
+        if (existe) {
+            alert("⛔ ALTO: Ya cargaste esta Obra Social con este Plan en la lista.\nNo se pueden repetir.");
+            return; 
+        }
         const nuevo = {
             idTemp: ++indiceTemporal,
             IdObrasSociales: parseInt(os.value), IdPlanBonificacion: parseInt(plan.value), 
@@ -1036,7 +1045,7 @@ async function abrirItemABM(idItem, idPadre = 0, idMandatariaExterna = 0) {
                 if(modoActual === 'OS') buscarLiquidaciones(); 
                 else recargarTablaVisor(); 
             }
-            else alert("Error.");
+            else alert("Error: No se puede agregar esta liquidacion, ya que existe un ítem con la misma Obra Social y Plan.");
         } catch(e) { alert("Error."); }
     }
     

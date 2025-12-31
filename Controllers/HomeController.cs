@@ -421,7 +421,20 @@ public class HomeController : Controller
             // Validaciones básicas
             if (IdOS == 0) return Json(new { success = false, message = "Debe elegir Obra Social" });
             if (Total <= 0) return Json(new { success = false, message = "El total debe ser mayor a 0" });
+var itemsExistentes = BD.TraerDetallesPorIdLiquidacion(IdLiquidacionPadre);
 
+            // 2. Buscamos si hay otro ítem con la misma OS y Plan (excluyendo el que estamos editando si es edición)
+            bool esDuplicado = itemsExistentes.Any(x => 
+                x.IdObrasSociales == IdOS && 
+                x.IdPlanBonificacion == IdPlan && 
+                x.IdLiquidacionDetalle != IdItem // Importante: ¡No chocar con uno mismo al editar!
+            );
+
+            if (esDuplicado)
+            {
+                return Json(new { success = false, message = "⛔ ERROR: Ya existe esa Obra Social con ese Plan en esta liquidación." });
+            }
+            
             LiquidacionDetalle item = new LiquidacionDetalle
             {
                 IdLiquidacionDetalle = IdItem,
@@ -564,6 +577,9 @@ public IActionResult BuscarDetallesGlobalesAjax(DateTime? desde, DateTime? hasta
    
 
 BD.ModificarUsuario(userDeSesion.IdUsuario, Contraseña ?? usuarioCompleto.Contraseña, RazonSocial ?? usuarioCompleto.RazonSocial, Domicilio ?? usuarioCompleto.Domicilio, Cuit ?? usuarioCompleto.Cuit, Iva ?? usuarioCompleto.Iva);
+
+Usuario usuarioActualizado = BD.TraerUsuarioPorId(userDeSesion.IdUsuario);
+HttpContext.Session.SetString("Usuario", Objeto.ObjectToString<Usuario>(usuarioActualizado));
 
 
         return RedirectToAction("IrAConfiguracion", "Home");
