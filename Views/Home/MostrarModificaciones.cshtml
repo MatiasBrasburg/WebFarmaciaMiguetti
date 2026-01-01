@@ -13,33 +13,29 @@
         try { listaObrasSociales = listaObrasSociales.OrderBy(x => x.Nombre).ToList(); } catch { }
     }
     
-    // --- CORRECCIÓN CLAVE: Definimos AMBAS variables JSON ---
     var jsonObrasSociales = JsonSerializer.Serialize(listaObrasSociales.Select(x => new { id = x.IdObrasSociales, nombre = x.Nombre, idMandataria = x.IdMandataria }));
-    // Esta variable faltaba y rompía la página:
     var jsonMandatarias = JsonSerializer.Serialize(listaMandatarias.Select(x => new { id = x.IdMandatarias, nombre = x.RazonSocial }));
 
-    // --- RECUPERAR DATOS DE LA FARMACIA DESDE SESIÓN ---
     string nombreFarmacia = "FARMACIA";
     string direccionFarmacia = "Domicilio no configurado";
     string cuitFarmacia = "---";
     string ivaFarmacia = "Consumidor Final";
 
     var usuarioJson = HttpContextAccessor.HttpContext.Session.GetString("Usuario");
-if (!string.IsNullOrEmpty(usuarioJson))
-{
-    try {
-        // --- CORRECCIÓN: Agregar opciones para ignorar mayúsculas/minúsculas ---
-        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true }; 
-        var usuarioObj = JsonSerializer.Deserialize<Usuario>(usuarioJson, options);
-        
-        if(usuarioObj != null) {
-            nombreFarmacia = usuarioObj.RazonSocial ?? "FARMACIA MIGUETTI"; // Ojo: asegúrate que tu clase Usuario tenga esta prop.
-            direccionFarmacia = usuarioObj.Domicilio ?? "";
-            cuitFarmacia = usuarioObj.Cuit.ToString() ?? "";
-            ivaFarmacia = usuarioObj.Iva ?? "";
-        }
-    } catch { }
-}
+    if (!string.IsNullOrEmpty(usuarioJson))
+    {
+        try {
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true }; 
+            var usuarioObj = JsonSerializer.Deserialize<Usuario>(usuarioJson, options);
+            
+            if(usuarioObj != null) {
+                nombreFarmacia = usuarioObj.RazonSocial ?? "FARMACIA MIGUETTI"; 
+                direccionFarmacia = usuarioObj.Domicilio ?? "";
+                cuitFarmacia = usuarioObj.Cuit.ToString() ?? "";
+                ivaFarmacia = usuarioObj.Iva ?? "";
+            }
+        } catch { }
+    }
 }
 <style>
     /* ESTILOS DE ALTO IMPACTO (UX 85 AÑOS) */
@@ -74,8 +70,7 @@ if (!string.IsNullOrEmpty(usuarioJson))
     .lista-sugerencias { position: absolute; top: 100%; left: 0; width: 100%; background: white; border: 4px solid #000; border-top: none; z-index: 10000; display: none; max-height: 300px; overflow-y: auto; box-shadow: 0px 10px 20px rgba(0,0,0,0.4); }
     .item-sugerencia { padding: 15px; cursor: pointer; border-bottom: 2px solid #ccc; font-weight: 800; font-size: 1.1rem; color: #333; }
     .item-sugerencia:hover { background-color: #0d6efd; color: white; }
-    .active-sugerencia { background-color: #0d6efd; color: white; } /* Resaltado para flechas */
-   
+    .active-sugerencia { background-color: #0d6efd; color: white; }
 </style>
 
 <div class="container-fluid mt-4">
@@ -186,16 +181,25 @@ if (!string.IsNullOrEmpty(usuarioJson))
                             <div class="col-md-2"><label class="form-label">Recetas</label><input type="number" id="inputRecetas" class="form-control" placeholder = "0"></div>
                         </div>
                         <div class="row g-3 mt-1 align-items-end">
-                            <div class="col-md-3"><label class="form-label">Total ($)</label><input type="number" id="inputTotal" class="form-control" step="1"   placeholder="0.00" oninput="recalcularNeto('inputTotal', 'inputPlan', 'inputNeto', 'lblPorcentajeAplicado')"></div>
-                            <div class="col-md-3"><label class="form-label">Cargo O.S.</label><input type="number" id="inputCargoOS" class="form-control" step="1" placeholder="0.00"></div>
                             <div class="col-md-3">
-                               
+                                <label class="form-label">Total ($)</label>
+                                <input type="text" id="inputTotal" class="form-control" placeholder="0,00" 
+                                       onfocus="limpiarNumero(this)" onblur="formatearNumero(this)"
+                                       onkeyup="recalcularNeto('inputTotal', 'inputPlan', 'inputNeto', 'lblPorcentajeAplicado')">
+                            </div>
+                            
+                            <div class="col-md-3">
+                                <label class="form-label">Cargo O.S.</label>
+                                <input type="text" id="inputCargoOS" class="form-control" placeholder="0,00" 
+                                       onfocus="limpiarNumero(this)" onblur="formatearNumero(this)">
+                            </div>
+                            
+                            <div class="col-md-3">
                                 <label class="form-label text-success">
                                     Bonif ($) 
                                     <small class="text-muted" id="lblPorcentajeAplicado" style="margin-left: 10px;">Plan: 0%</small>
                                 </label>
-                                <input type="number" id="inputNeto" class="form-control fw-bold text-success border-success bg-light" readonly value="0.00">
-                                
+                                <input type="text" id="inputNeto" class="form-control fw-bold text-success border-success bg-light" readonly value="0,00">
                             </div>
                             <div class="col-md-3"><button type="button" class="btn btn-success btn-super w-100" id="btnAgregarFila">⬇️ AGREGAR</button></div>
                         </div>
@@ -318,10 +322,23 @@ if (!string.IsNullOrEmpty(usuarioJson))
                             <option value="0">- Primero OS -</option>
                         </select>
                     </div>
-                    <div class="col-md-3"><label class="form-label">Recetas</label><input type="number" id="item_Recetas" class="form-control" placeholder="0.00"></div>
-                    <div class="col-md-3"><label class="form-label">Total ($)</label><input type="number" id="item_Total" class="form-control" step="1" placeholder="0.00" oninput="recalcularNeto('item_Total', 'item_IdPlan', 'item_Neto', 'item_lblPorc')"></div>
-                    <div class="col-md-3"><label class="form-label">Cargo O.S.</label><input type="number" id="item_CargoOS" class="form-control" step="1" placeholder="0.00"></div>
-                    <div class="col-md-3"><label class="form-label text-success">Bonif ($) <small id="item_lblPorc">0%</label></small><input type="number" id="item_Neto" class="form-control fw-bold bg-white" readonly value="0.00"></div>
+                    
+                    <div class="col-md-3"><label class="form-label">Recetas</label><input type="number" id="item_Recetas" class="form-control" placeholder="0"></div>
+                    
+                    <div class="col-md-3">
+                        <label class="form-label">Total ($)</label>
+                        <input type="text" id="item_Total" class="form-control fw-bold" placeholder="0,00" 
+                               onfocus="limpiarNumero(this)" onblur="formatearNumero(this)"
+                               onkeyup="recalcularNeto('item_Total', 'item_IdPlan', 'item_Neto', 'item_lblPorc')">
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label class="form-label">Cargo O.S.</label>
+                        <input type="text" id="item_CargoOS" class="form-control fw-bold" placeholder="0,00"
+                               onfocus="limpiarNumero(this)" onblur="formatearNumero(this)">
+                    </div>
+                    
+                    <div class="col-md-3"><label class="form-label text-success">Bonif ($) <small id="item_lblPorc">0%</small></label><input type="text" id="item_Neto" class="form-control fw-bold bg-white" readonly value="0,00"></div>
                 </div>
             </div>
             <div class="modal-footer bg-light">
@@ -383,7 +400,6 @@ if (!string.IsNullOrEmpty(usuarioJson))
     const modalCobros = new bootstrap.Modal(document.getElementById('modalVerCobrosLiq'));
 
     var datosOS = @Html.Raw(jsonObrasSociales);
-    // ESTA VARIABLE AHORA SÍ ESTÁ DEFINIDA ARRIBA
     var datosMand = @Html.Raw(jsonMandatarias ?? "[]"); 
     
     var modoActual = 'Mandataria'; 
@@ -398,7 +414,7 @@ if (!string.IsNullOrEmpty(usuarioJson))
         setupAuto('txtFiltroMandataria', 'listaFiltroMandataria', 'filtroMandataria', datosMand);
 setupAuto('txtLiqMandataria', 'listaLiqMandataria', 'liqMandataria', datosMand);
 setupAuto('txtEditMandataria', 'listaEditMandataria', 'edit_Mandataria', datosMand);
-        // --- NAVEGACIÓN MEJORADA (ENTER Y FLECHAS) ---
+        
         document.getElementById('modalABM').addEventListener('shown.bs.modal', function () { document.getElementById('liqFecha').focus(); });
         document.getElementById('modalVerDetalle').addEventListener('shown.bs.modal', function () { document.getElementById('buscadorDetalles').focus(); });
 
@@ -463,7 +479,7 @@ document.getElementById('liqMandataria').addEventListener('change', function() {
         const idOS = document.getElementById('filtroOS').value; 
 if (idOS !== "0" && idOS !== "" && modoActual === 'Mandataria') {
             cambiarModo('OS'); 
-            return; // Detenemos la función aquí. cambiarModo() se encargará de buscar de nuevo.
+            return; 
         }
         
         const tbody = document.getElementById('tbodyResultados');
@@ -689,11 +705,17 @@ try {
     }
 
     function recalcularNeto(idInTot, idSel, idInNet, idLbl) {
-        const total = parseFloat(document.getElementById(idInTot).value) || 0;
+        // --- ADAPTADO PARA LEER INPUT CON PUNTOS ---
+        const totalStr = document.getElementById(idInTot).value.replace(/\./g, '').replace(',', '.');
+        const total = parseFloat(totalStr) || 0;
+        
         const sel = document.getElementById(idSel);
         let porc = (sel.selectedIndex > 0) ? parseFloat(sel.options[sel.selectedIndex].getAttribute('data-bonif')) : 0;
         if(document.getElementById(idLbl)) document.getElementById(idLbl).textContent = `Plan: ${porc}%`;
-        document.getElementById(idInNet).value = (total * (porc / 100.0)).toFixed(2);
+        
+        const neto = total * (porc / 100.0);
+        // El neto es ReadOnly, lo mostramos formateado lindo tambien
+        document.getElementById(idInNet).value = neto.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     }
 
     document.getElementById('btnAgregarFila').addEventListener('click', function() {
@@ -709,20 +731,26 @@ try {
             alert("⛔ ALTO: Ya cargaste esta Obra Social con este Plan en la lista.\nNo se pueden repetir.");
             return; 
         }
+        
+        // --- LEER VALORES CON PUNTOS (Limpieza) ---
+        const vTotal = parseFloat(document.getElementById('inputTotal').value.replace(/\./g, '').replace(',', '.')) || 0;
+        const vCargo = parseFloat(document.getElementById('inputCargoOS').value.replace(/\./g, '').replace(',', '.')) || 0;
+        const vNeto  = parseFloat(document.getElementById('inputNeto').value.replace(/\./g, '').replace(',', '.')) || 0;
+
         const nuevo = {
             idTemp: ++indiceTemporal,
             IdObrasSociales: parseInt(os.value), IdPlanBonificacion: parseInt(plan.value), 
             CantidadRecetas: parseInt(document.getElementById('inputRecetas').value)||0,
-            TotalBruto: parseFloat(document.getElementById('inputTotal').value)||0,
-            MontoCargoOS: parseFloat(document.getElementById('inputCargoOS').value)||0,
-            MontoBonificacion: parseFloat(document.getElementById('inputNeto').value)||0,
+            TotalBruto: vTotal,
+            MontoCargoOS: vCargo,
+            MontoBonificacion: vNeto,
             nombreOSVisual: os.options[os.selectedIndex].text,
             nombrePlanVisual: plan.options[plan.selectedIndex].text
         };
         detallesTemporales.push(nuevo); dibujarTablaDetalles();
         
-        document.getElementById('inputRecetas').value="0"; document.getElementById('inputTotal').value="0.00";
-        document.getElementById('inputCargoOS').value="0.00"; document.getElementById('inputNeto').value="0.00";
+        document.getElementById('inputRecetas').value="0"; document.getElementById('inputTotal').value=""; // Dejar vacío para placeholder
+        document.getElementById('inputCargoOS').value=""; document.getElementById('inputNeto').value="0,00";
         document.getElementById('inputTotal').focus();
     });
 
@@ -732,11 +760,12 @@ try {
         detallesTemporales.forEach(d => {
             suma += d.TotalBruto; 
             tbody.innerHTML += `<tr><td>${d.nombreOSVisual}</td><td>${d.nombrePlanVisual}</td><td class="text-center">${d.CantidadRecetas}</td>
-                <td class="text-end">$${d.TotalBruto.toFixed(2)}</td><td class="text-end">$${d.MontoCargoOS.toFixed(2)}</td>
-                <td class="text-end fw-bold text-success">$${d.MontoBonificacion.toFixed(2)}</td>
+                <td class="text-end">$${d.TotalBruto.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+                <td class="text-end">$${d.MontoCargoOS.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+                <td class="text-end fw-bold text-success">$${d.MontoBonificacion.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
                 <td class="text-center"><button class="btn btn-sm btn-danger" onclick="quitarDetalle(${d.idTemp})">🗑️</button></td></tr>`;
         });
-        document.getElementById('spanTotalFinal').textContent = suma.toFixed(2);
+        document.getElementById('spanTotalFinal').textContent = suma.toLocaleString('es-AR', {minimumFractionDigits:2});
     }
     function quitarDetalle(id) { detallesTemporales = detallesTemporales.filter(d => d.idTemp !== id); dibujarTablaDetalles(); }
 
@@ -765,15 +794,14 @@ try {
         document.getElementById('liqId').value = "0"; document.getElementById('liqMandataria').value = "0";
         document.getElementById('txtLiqMandataria').value = "";
         const selectOS = document.getElementById('inputOS');
-    selectOS.disabled = true; // <--- LO BLOQUEAMOS
-    selectOS.innerHTML = '<option value="0">Seleccione Mandataria primero </option>'; // <--- MENSAJE DE AVISO
+        selectOS.disabled = true; 
+        selectOS.innerHTML = '<option value="0">Seleccione Mandataria primero </option>'; 
         detallesTemporales = []; dibujarTablaDetalles(); modalABM.show();
     }
 
     let idLiquidacionActualVisor = 0; 
-    let idMandatariaActualVisor = 0; // Para saber quién es el dueño al abrir el ítem
+    let idMandatariaActualVisor = 0; 
 
-// FUNCIÓN NUEVA: Filtra el select del Modal ITEM INDIVIDUAL
 function filtrarOSItemIndividual(idMandataria) {
     const selectOS = document.getElementById('item_IdOS');
     selectOS.innerHTML = '<option value="0">-- Seleccione O.S. --</option>';
@@ -784,7 +812,8 @@ function filtrarOSItemIndividual(idMandataria) {
     if (filtradas.length > 0) {
         filtradas.forEach(os => {
             const opt = document.createElement('option');
-            opt.value = os.id; opt.textContent = os.nombre;
+            opt.value = os.id;
+            opt.textContent = os.nombre;
             selectOS.appendChild(opt);
         });
         selectOS.disabled = false;
@@ -981,48 +1010,46 @@ async function recargarTablaVisor(idLiq = null) {
         if((await r.json()).success) { alert("Borrado."); buscarLiquidaciones(); } else alert("Error."); } catch(e){}
     }
     
-    // ABM ITEM INDIVIDUAL (MINI MODAL)
-async function abrirItemABM(idItem, idPadre = 0, idMandatariaExterna = 0) {
-    document.getElementById('item_Id').value = idItem;
-    document.getElementById('item_IdLiquidacionPadre').value = (idPadre > 0) ? idPadre : idLiquidacionActualVisor;
-    document.getElementById('tituloModalItem').textContent = (idItem === 0) ? "NUEVO ÍTEM" : "EDITAR ÍTEM";
-    
-    // 1. DETERMINAMOS LA MANDATARIA (Puede venir de afuera o del visor actual)
-    const mandId = idMandatariaExterna > 0 ? idMandatariaExterna : idMandatariaActualVisor;
-    
-    // 2. FILTRAMOS LAS O.S. ANTES DE HACER NADA
-    filtrarOSItemIndividual(mandId);
+    async function abrirItemABM(idItem, idPadre = 0, idMandatariaExterna = 0) {
+        document.getElementById('item_Id').value = idItem;
+        document.getElementById('item_IdLiquidacionPadre').value = (idPadre > 0) ? idPadre : idLiquidacionActualVisor;
+        document.getElementById('tituloModalItem').textContent = (idItem === 0) ? "NUEVO ÍTEM" : "EDITAR ÍTEM";
+        
+        const mandId = idMandatariaExterna > 0 ? idMandatariaExterna : idMandatariaActualVisor;
+        filtrarOSItemIndividual(mandId);
 
-    // Reset de campos visuales
-    document.getElementById('item_IdOS').value = "0"; 
-    document.getElementById('item_Recetas').ariaPlaceholder = "0.00"; 
-    document.getElementById('item_Total').ariaPlaceholder = "0.00";
-    document.getElementById('item_CargoOS').ariaPlaceholder = "0.00"; 
-    document.getElementById('item_Neto').ariaPlaceholder = "0.00";
+        document.getElementById('item_IdOS').value = "0"; 
+        document.getElementById('item_Recetas').ariaPlaceholder = "0.00"; 
+        document.getElementById('item_Total').ariaPlaceholder = "0.00";
+        document.getElementById('item_CargoOS').ariaPlaceholder = "0.00"; 
+        document.getElementById('item_Neto').ariaPlaceholder = "0.00";
+        
+        // Limpiar inputs (IMPORTANTE PARA FORMATO)
+        document.getElementById('item_Total').value = "";
+        document.getElementById('item_CargoOS').value = "";
+        document.getElementById('item_Neto').value = "0,00";
 
-    // Si es edición, cargamos los datos
-    if (idItem > 0) {
-        try {
-            const r = await fetch(`@Url.Action("ObtenerItemPorId", "Home")?idDetalle=${idItem}`);
-            const res = await r.json();
-            if(res.success) {
-                const d = res.data;
-                // Como ya filtramos el select, asignar el value funciona directo
-                document.getElementById('item_IdOS').value = d.idObrasSociales;
-                
-                // Cargamos planes y el resto
-                await cargarPlanesDeOS(d.idObrasSociales, 'item_IdPlan');
-                document.getElementById('item_IdPlan').value = d.idPlanBonificacion;
-                
-                document.getElementById('item_Recetas').value = d.cantidadRecetas;
-                document.getElementById('item_Total').value = d.totalBruto;
-                document.getElementById('item_CargoOS').value = d.montoCargoOS;
-                document.getElementById('item_Neto').value = d.montoBonificacion;
-            }
-        } catch(e) { alert("Error cargando ítem."); return; }
+        if (idItem > 0) {
+            try {
+                const r = await fetch(`@Url.Action("ObtenerItemPorId", "Home")?idDetalle=${idItem}`);
+                const res = await r.json();
+                if(res.success) {
+                    const d = res.data;
+                    document.getElementById('item_IdOS').value = d.idObrasSociales;
+                    
+                    await cargarPlanesDeOS(d.idObrasSociales, 'item_IdPlan');
+                    document.getElementById('item_IdPlan').value = d.idPlanBonificacion;
+                    
+                    document.getElementById('item_Recetas').value = d.cantidadRecetas;
+                    // Cargamos y formateamos al instante
+                    document.getElementById('item_Total').value = d.totalBruto.toLocaleString('es-AR', {minimumFractionDigits:2});
+                    document.getElementById('item_CargoOS').value = d.montoCargoOS.toLocaleString('es-AR', {minimumFractionDigits:2});
+                    document.getElementById('item_Neto').value = d.montoBonificacion.toLocaleString('es-AR', {minimumFractionDigits:2});
+                }
+            } catch(e) { alert("Error cargando ítem."); return; }
+        }
+        modalItem.show();
     }
-    modalItem.show();
-}
 
 
     function cerrarModalItem() { modalItem.hide(); document.body.classList.add('modal-open'); }
@@ -1034,9 +1061,11 @@ async function abrirItemABM(idItem, idPadre = 0, idMandatariaExterna = 0) {
         fd.append("IdOS", document.getElementById('item_IdOS').value);
         fd.append("IdPlan", document.getElementById('item_IdPlan').value);
         fd.append("Recetas", document.getElementById('item_Recetas').value);
-        fd.append("Total", document.getElementById('item_Total').value.replace('.', ','));
-        fd.append("CargoOS", document.getElementById('item_CargoOS').value.replace('.', ','));
-        fd.append("Bonificacion", document.getElementById('item_Neto').value.replace('.', ','));
+        
+        // LIMPIEZA DE PUNTOS PARA ENVIAR AL SERVER
+      fd.append("Total", document.getElementById('item_Total').value.replace(/\./g, '')); 
+    fd.append("CargoOS", document.getElementById('item_CargoOS').value.replace(/\./g, ''));
+    fd.append("Bonificacion", document.getElementById('item_Neto').value.replace(/\./g, ''));
 
         try {
             const r = await fetch('@Url.Action("GuardarItemIndividual", "Home")', { method: 'POST', body: fd });
@@ -1062,8 +1091,6 @@ async function abrirItemABM(idItem, idPadre = 0, idMandatariaExterna = 0) {
     }
 
     
-
-        // IMPRESIÓN (AHORA CON TOTALES)
    // IMPRESIÓN (AHORA CON TOTALES Y DEUDA)
    async function imprimirReporteGlobal() {
     let infoFarmaciaActual = farmaciaInfo; 
@@ -1127,8 +1154,8 @@ async function abrirItemABM(idItem, idPadre = 0, idMandatariaExterna = 0) {
             <td style="text-align:right;color:#000;">$${tBruto.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
             <td style="text-align:right;color:#000;">$${tCargo.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
             <td style="text-align:right;color:#000;">$${tBonif.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
-            <td style="text-align:right; font-size:1em; color:#000;">$${tNeto.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
-            <td style="text-align:right; font-size:1em; color:#ff4d4d;">$${tDeuda.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+            <td style="text-align:right; font-size:1.1em; color:#000;">$${tNeto.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+            <td style="text-align:right; font-size:1.1em; color:#ff4d4d;">$${tDeuda.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
         </tr>`;
 
         abrirVentanaImpresion(idLiq, mandataria, fecha, filasHTML, null, infoFarmaciaActual);
@@ -1210,7 +1237,7 @@ async function abrirItemABM(idItem, idPadre = 0, idMandatariaExterna = 0) {
             </table>
             <div class="firma">_______________________________<br>Firma Responsable</div>
             <div class="footer">Documento generado el: ${new Date().toLocaleString()}</div>
-        <\/body><\/html>`; // <--- AQUÍ ESTÁ EL ARREGLO DEL CÓDIGO ZOMBIE
+        </body></html>`; 
 
         v.document.write(contenido);
         v.document.close(); 
@@ -1245,6 +1272,25 @@ function filtrarOSPorMandataria(idMandataria) {
     // Reseteamos el plan
     document.getElementById('inputPlan').innerHTML = '<option value="0">- Primero elija OS -</option>';
     document.getElementById('inputPlan').disabled = true;
+}
+
+// === FUNCIONES DE FORMATO MONEDA ON-BLUR ===
+function limpiarNumero(input) {
+    let val = input.value;
+    // Si tiene algo escrito, le quitamos los puntos para que quede "crudo"
+    if (val) {
+        input.value = val.replace(/\./g, '').replace(',', '.');
+    }
+}
+
+function formatearNumero(input) {
+    let val = parseFloat(input.value.replace(',', '.'));
+    if (!isNaN(val)) {
+        // Al salir, lo volvemos lindo: 1.500,00
+        input.value = val.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    } else {
+        input.value = "";
+    }
 }
 </script>
 }
