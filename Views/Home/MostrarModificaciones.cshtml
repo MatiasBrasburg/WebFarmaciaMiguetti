@@ -114,10 +114,11 @@
                     </div>
                 </div>
                 
-                <div class="col-md-12 d-flex justify-content-end gap-2 mt-3">
-                    <button class="btn btn-primary btn-super px-5" onclick="buscarLiquidaciones()">🔍 BUSCAR</button>
-                    <button class="btn btn-secondary btn-super" onclick="limpiarFiltros()" title="Borrar filtros">🔄</button>
-                </div>
+               <div class="col-md-12 d-flex justify-content-end gap-2 mt-3">
+    <button class="btn btn-primary btn-super px-5" onclick="buscarLiquidaciones()">🔍 BUSCAR</button>
+    <button class="btn btn-secondary btn-super" onclick="limpiarFiltros()" title="Borrar filtros">🔄</button>
+    <button class="btn btn-dark btn-super fw-bold" onclick="imprimirListadoActual()">🖨️ IMPRIMIR LISTADO</button>
+</div>
             </div>
         </div>
     </div>
@@ -1244,6 +1245,8 @@ async function recargarTablaVisor(idLiq = null) {
         v.focus(); 
         setTimeout(() => { v.print(); v.close(); }, 500);
     }
+
+   
 function filtrarOSPorMandataria(idMandataria) {
     const selectOS = document.getElementById('inputOS');
     selectOS.innerHTML = '<option value="0">-- Seleccione O.S. --</option>';
@@ -1292,5 +1295,65 @@ function formatearNumero(input) {
         input.value = "";
     }
 }
+
+
+
+
+async function imprimirListadoActual() {
+        let info = farmaciaInfo;
+        try {
+            const r = await fetch('@Url.Action("ObtenerDatosFarmaciaAjax", "Home")?t=' + new Date().getTime());
+            const res = await r.json();
+            if (res.success) info = res;
+        } catch (e) { }
+
+        if (modoActual === 'Mandataria') {
+            imprimirListadoMandatarias(info);
+        } else {
+            imprimirListadoObrasSociales(info);
+        }
+    }
+
+    function imprimirListadoMandatarias(info) {
+        const tabla = document.getElementById('tbodyResultados');
+        let filas = "";
+        let tL = 0, tS = 0;
+        const limpiar = (t) => parseFloat(t.replace(/[$. ]/g, '').replace(',', '.')) || 0;
+
+        tabla.querySelectorAll('tr').forEach(tr => {
+            const cols = tr.querySelectorAll('td');
+            if (cols.length > 5) {
+                const total = limpiar(cols[4].textContent);
+                const saldo = cols[5].innerText.includes("PAGADO") ? 0 : limpiar(cols[5].innerText);
+                tL += total; tS += saldo;
+                filas += `<tr><td>${cols[0].textContent}</td><td>${cols[1].textContent}</td><td>${cols[2].textContent}</td><td>${cols[3].textContent}</td><td style="text-align:right">$${total.toLocaleString('es-AR')}</td><td style="text-align:right">$${saldo.toLocaleString('es-AR')}</td></tr>`;
+            }
+        });
+        const totales = `<tr style="background:#eee;font-weight:bold"><td colspan="4" style="text-align:right">TOTALES:</td><td style="text-align:right">$${tL.toLocaleString('es-AR')}</td><td style="text-align:right">$${tS.toLocaleString('es-AR')}</td></tr>`;
+        generarDocumentoImpresion("LISTADO POR MANDATARIAS", info, "<tr><th>N°</th><th>FECHA</th><th>MANDATARIA</th><th>OBS</th><th>TOTAL</th><th>SALDO</th></tr>", filas, totales);
+    }
+
+    function generarDocumentoImpresion(titulo, info, htmlTitulos, htmlFilas, htmlTotales) {
+        const v = window.open('', '', 'height=800,width=1200');
+        let contenido = `<html><head><title>${titulo}</title><style>
+            body { font-family: sans-serif; font-size: 12px; padding: 20px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+            .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; }
+        </style></head><body>
+            <div class="header"><b>${info.nombre}</b><br>${info.domicilio}<br>CUIT: ${info.cuit}</div>
+            <h2 style="text-align:center">${titulo}</h2>
+            <table><thead>${htmlTitulos}</thead><tbody>${htmlFilas}${htmlTotales}</tbody></table>
+        </body></html>`;
+        v.document.write(contenido);
+        v.document.close();
+        setTimeout(() => { v.print(); v.close(); }, 500);
+    }
+
+    function limpiarNumero(input) { if (input.value) input.value = input.value.replace(/\./g, '').replace(',', '.'); }
+    function formatearNumero(input) { 
+        let val = parseFloat(input.value.replace(',', '.'));
+        input.value = !isNaN(val) ? val.toLocaleString('es-AR', { minimumFractionDigits: 2 }) : "";
+    }
 </script>
 }
