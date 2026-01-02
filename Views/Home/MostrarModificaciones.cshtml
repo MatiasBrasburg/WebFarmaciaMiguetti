@@ -1,1114 +1,2340 @@
 @using System.Text.Json
+
 @using WebFarmaciaMiguetti.Models
+
 @using Microsoft.AspNetCore.Http
+
 @inject IHttpContextAccessor HttpContextAccessor
 
+
+
 @{
+
     ViewData["Title"] = "Gestión de Presentaciones";
+
     var listaMandatarias = (ViewBag.Mandatarias as IEnumerable<dynamic>)?.ToList() ?? new List<dynamic>();
+
     var listaObrasSociales = (ViewBag.ObrasSociales as IEnumerable<dynamic>)?.ToList() ?? new List<dynamic>();
 
+
+
     if (listaObrasSociales.Any())
+
     {
+
         try { listaObrasSociales = listaObrasSociales.OrderBy(x => x.Nombre).ToList(); } catch { }
+
     }
+
     
+
     var jsonObrasSociales = JsonSerializer.Serialize(listaObrasSociales.Select(x => new { id = x.IdObrasSociales, nombre = x.Nombre, idMandataria = x.IdMandataria }));
+
     var jsonMandatarias = JsonSerializer.Serialize(listaMandatarias.Select(x => new { id = x.IdMandatarias, nombre = x.RazonSocial }));
 
+
+
     string nombreFarmacia = "FARMACIA";
+
     string direccionFarmacia = "Domicilio no configurado";
+
     string cuitFarmacia = "---";
+
     string ivaFarmacia = "Consumidor Final";
 
+
+
     var usuarioJson = HttpContextAccessor.HttpContext.Session.GetString("Usuario");
+
     if (!string.IsNullOrEmpty(usuarioJson))
+
     {
+
         try {
+
             var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true }; 
+
             var usuarioObj = JsonSerializer.Deserialize<Usuario>(usuarioJson, options);
+
             
+
             if(usuarioObj != null) {
+
                 nombreFarmacia = usuarioObj.RazonSocial ?? "FARMACIA MIGUETTI"; 
+
                 direccionFarmacia = usuarioObj.Domicilio ?? "";
+
                 cuitFarmacia = usuarioObj.Cuit.ToString() ?? "";
+
                 ivaFarmacia = usuarioObj.Iva ?? "";
+
             }
+
         } catch { }
+
     }
+
 }
+
 <style>
+
     /* ESTILOS DE ALTO IMPACTO (UX 85 AÑOS) */
+
     body { font-family: 'Verdana', sans-serif; background-color: #f4f6f9; color: #000; }
+
     h1 { font-size: 2.2rem; font-weight: 900; color: #000; margin-bottom: 20px; text-transform: uppercase; border-bottom: 5px solid #000; display: inline-block; }
+
     
+
     .form-control, .form-select {
+
         border: 2px solid #6c757d; font-size: 1.1rem; padding: 8px 12px; color: #000; font-weight: 700; height: 45px;
+
     }
+
     .form-control:focus, .form-select:focus {
+
         border-color: #ffc107; box-shadow: 0 0 0 0.25rem rgba(255, 193, 7, 0.5); background-color: #fff3cd;
+
     }
+
     .form-label { font-weight: 900; font-size: 0.9rem; text-transform: uppercase; margin-bottom: 5px; display: block; }
+
     .btn-super { font-size: 1.1rem; font-weight: 800; padding: 10px 20px; border: 2px solid rgba(0,0,0,0.2); text-transform: uppercase; letter-spacing: 1px; }
+
     
+
     .table-bordered { border: 2px solid #000; }
+
     .table thead th { background-color: #343a40; color: white; font-size: 1.1rem; vertical-align: middle; padding: 15px; text-align: center; }
+
     .table tbody td { font-size: 1.05rem; vertical-align: middle; font-weight: 600; padding: 10px; }
+
+
 
     .total-display { font-size: 1.8rem; font-weight: 900; color: #198754; text-align: right; padding: 15px; background: #d1e7dd; border: 4px solid #198754; border-radius: 8px; }
 
+
+
     .visor-header { background-color: #0dcaf0; color: #000; padding: 15px; border-bottom: 4px solid #000; font-size: 1.3rem; font-weight: bold; }
+
     .modal-warning-header { background-color: #ffc107; color: #000; border-bottom: 3px solid #000; }
+
     .modal-edit-header { background-color: #6610f2; color: #fff; border-bottom: 3px solid #000; }
 
+
+
     .view-toggle { display: flex; border: 3px solid #000; border-radius: 8px; overflow: hidden; margin-bottom: 20px; background: white; }
+
     .view-toggle .btn-toggle { flex: 1; padding: 15px; font-weight: 900; font-size: 1.1rem; text-transform: uppercase; border: none; background: #e9ecef; color: #6c757d; transition: all 0.2s; }
+
     .view-toggle .btn-toggle.active { background: #0d6efd; color: white; box-shadow: inset 0 0 10px rgba(0,0,0,0.3); }
+
     .view-toggle .btn-toggle:hover:not(.active) { background: #dee2e6; }
 
+
+
     .buscador-wrapper { position: relative; width: 100%; }
+
     .lista-sugerencias { position: absolute; top: 100%; left: 0; width: 100%; background: white; border: 4px solid #000; border-top: none; z-index: 10000; display: none; max-height: 300px; overflow-y: auto; box-shadow: 0px 10px 20px rgba(0,0,0,0.4); }
+
     .item-sugerencia { padding: 15px; cursor: pointer; border-bottom: 2px solid #ccc; font-weight: 800; font-size: 1.1rem; color: #333; }
+
     .item-sugerencia:hover { background-color: #0d6efd; color: white; }
+
     .active-sugerencia { background-color: #0d6efd; color: white; }
+
 </style>
 
+
+
 <div class="container-fluid mt-4">
+
     <h1>GESTIÓN DE PRESENTACIONES</h1>
 
+
+
     <div class="view-toggle">
+
         <button class="btn-toggle active" id="btnModeMandataria" onclick="cambiarModo('Mandataria')">
+
             AGRUPADO POR MANDATARIA 
+
         </button>
+
         <button class="btn-toggle" id="btnModeOS" onclick="cambiarModo('OS')">
+
             AGRUPADO POR OBRA SOCIAL
+
         </button>
+
     </div>
+
+
 
     <div class="card mb-4" style="border: 3px solid #6c757d; background-color: #e2e3e5;">
+
         <div class="card-body">
+
             <h4 class="mb-3 fw-bold">🔍 FILTROS DE BÚSQUEDA</h4>
+
             <div class="row g-3">
+
                 <div class="col-md-3">
+
                     <label class="form-label">Desde</label>
+
                     <input type="date" id="filtroFechaDesde" class="form-control">
+
                 </div>
+
                 <div class="col-md-3">
+
                     <label class="form-label">Hasta</label>
+
                     <input type="date" id="filtroFechaHasta" class="form-control">
+
                 </div>
+
                 <div class="col-md-3">
+
     <label class="form-label">Mandataria</label>
+
     <div class="buscador-wrapper">
+
         <input type="text" id="txtFiltroMandataria" class="form-control" placeholder="Escriba para buscar..." autocomplete="off">
+
         <input type="hidden" id="filtroMandataria" value="0">
+
         <div id="listaFiltroMandataria" class="lista-sugerencias"></div>
+
     </div>
+
 </div>
+
                 <div class="col-md-3">
+
                     <label class="form-label">Obra Social</label>
+
                     <div class="buscador-wrapper">
+
                         <input type="text" id="txtFiltroOS" class="form-control" placeholder="Buscar..." autocomplete="off">
+
                         <input type="hidden" id="filtroOS" value="0">
+
                         <div id="listaFiltroOS" class="lista-sugerencias"></div>
+
                     </div>
+
                 </div>
+
                 
+
                <div class="col-md-12 d-flex justify-content-end gap-2 mt-3">
-    <button class="btn btn-primary btn-super px-5" onclick="buscarLiquidaciones()">🔍 BUSCAR</button>
-    <button class="btn btn-secondary btn-super" onclick="limpiarFiltros()" title="Borrar filtros">🔄</button>
-    <button class="btn btn-dark btn-super fw-bold" onclick="imprimirListadoActual()">🖨️ IMPRIMIR LISTADO</button>
-</div>
+
+                    <button class="btn btn-primary btn-super px-5" onclick="buscarLiquidaciones()">🔍 BUSCAR</button>
+
+                    
+
+                    <button class="btn btn-secondary btn-super" onclick="limpiarFiltros()" title="Borrar filtros">🔄</button>
+
+                    
+
+                    <button id="btnImprimirUnificado" class="btn btn-dark btn-lg fw-bold ps-4 pe-4" onclick="imprimirListadoGeneral()">
+
+                        🖨️ LISTADO MANDATARIAS
+
+                    </button>
+
+                </div>
+
             </div>
+
         </div>
+
     </div>
+
+
 
     <div class="card" style="border: 3px solid #000;">
+
         <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center p-3">
+
             <h3 class="m-0 fw-bold" id="tituloTabla">📋 LISTADO</h3>
+
             <button class="btn btn-success btn-super text-white" onclick="abrirModalNueva()">➕ NUEVA PRESENTACIÓN</button>
+
         </div>
+
         <div class="card-body p-0">
+
             <div class="table-responsive">
+
                 <table class="table table-striped table-hover mb-0" id="tablaResultados">
+
                     <thead id="theadResultados"></thead>
+
                     <tbody id="tbodyResultados">
+
                         <tr><td colspan="6" class="text-center p-4 text-muted fs-4">Cargando...</td></tr>
+
                     </tbody>
+
                 </table>
+
             </div>
+
         </div>
+
     </div>
+
 </div>
+
+
 
 <div class="modal fade" id="modalABM" tabindex="-1" data-bs-backdrop="static" aria-hidden="true">
+
     <div class="modal-dialog modal-xl modal-dialog-scrollable"> 
+
         <div class="modal-content border-4 border-primary">
+
             <div class="modal-header bg-primary text-white">
+
                 <h3 class="modal-title fw-bold" id="tituloModal">NUEVA PRESENTACION</h3>
+
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+
             </div>
+
             <div class="modal-body bg-light">
+
                 <div class="row g-3 mb-4 p-3 border border-2 border-secondary rounded bg-white">
+
                     <input type="hidden" id="liqId" value="0"> 
+
                     <div class="col-md-3"><label class="form-label">📅 FECHA</label><input type="date" id="liqFecha" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")"></div>
+
                     <div class="col-md-5">
+
     <label class="form-label">🏢 MANDATARIA</label>
+
     <div class="buscador-wrapper">
+
         <input type="text" id="txtLiqMandataria" class="form-control fw-bold" placeholder="Escriba nombre de la entidad..." autocomplete="off">
+
         <input type="hidden" id="liqMandataria" value="0">
+
         <div id="listaLiqMandataria" class="lista-sugerencias"></div>
+
     </div>
+
 </div>
+
                     <div class="col-md-4"><label class="form-label">📝 OBS</label><input type="text" id="liqObs" class="form-control"></div>
+
                 </div>
+
                 <div class="card border-info mb-4" style="border: 3px solid #0dcaf0;">
+
                     <div class="card-header bg-info text-dark fw-bold fs-5">➕ AGREGAR ITEMS</div>
+
                     <div class="card-body bg-white">
+
                         <div class="row g-3 align-items-end">
+
                             <div class="col-md-4">
+
                                 <label class="form-label">Obra Social</label>
+
                                 <select id="inputOS" class="form-select" onchange="cargarPlanesDeOS(this.value, 'inputPlan')">
+
                                     <option value="0">-- Seleccione O.S. --</option>
+
                                     @foreach (var os in listaObrasSociales) { <option value="@os.IdObrasSociales">@os.Nombre</option> }
+
                                 </select>
+
                             </div>
+
                             <div class="col-md-4">
+
                                 <label class="form-label">Plan</label>
+
                                 <select id="inputPlan" class="form-select" disabled onchange="recalcularNeto('inputTotal', 'inputPlan', 'inputNeto', 'lblPorcentajeAplicado')">
+
                                     <option value="0">- Primero elija OS -</option>
+
                                 </select>
+
                             </div>
+
                             <div class="col-md-2"><label class="form-label">Recetas</label><input type="number" id="inputRecetas" class="form-control" placeholder = "0"></div>
+
                         </div>
+
                         <div class="row g-3 mt-1 align-items-end">
+
                             <div class="col-md-3">
+
                                 <label class="form-label">Total ($)</label>
+
                                 <input type="text" id="inputTotal" class="form-control" placeholder="0,00" 
+
                                        onfocus="limpiarNumero(this)" onblur="formatearNumero(this)"
+
                                        onkeyup="recalcularNeto('inputTotal', 'inputPlan', 'inputNeto', 'lblPorcentajeAplicado')">
+
                             </div>
+
                             
+
                             <div class="col-md-3">
+
                                 <label class="form-label">Cargo O.S.</label>
+
                                 <input type="text" id="inputCargoOS" class="form-control" placeholder="0,00" 
+
                                        onfocus="limpiarNumero(this)" onblur="formatearNumero(this)">
+
                             </div>
+
                             
+
                             <div class="col-md-3">
+
                                 <label class="form-label text-success">
+
                                     Bonif ($) 
+
                                     <small class="text-muted" id="lblPorcentajeAplicado" style="margin-left: 10px;">Plan: 0%</small>
+
                                 </label>
+
                                 <input type="text" id="inputNeto" class="form-control fw-bold text-success border-success bg-light" readonly value="0,00">
+
                             </div>
+
                             <div class="col-md-3"><button type="button" class="btn btn-success btn-super w-100" id="btnAgregarFila">⬇️ AGREGAR</button></div>
+
                         </div>
+
                     </div>
+
                 </div>
+
                 <div class="table-responsive border border-2 border-dark rounded bg-white" style="min-height: 200px;">
+
                     <table class="table table-bordered mb-0">
+
                         <thead><tr><th>OS</th><th>PLAN</th><th>RECETAS</th><th>TOTAL</th><th>CARGO OS</th><th>BONIF</th><th>ACCION</th></tr></thead>
+
                         <tbody id="tbodyDetalle"></tbody>
+
                     </table>
+
                 </div>
+
                 <div class="row mt-4 justify-content-end">
+
                     <div class="col-md-5"><div class="total-display">TOTAL: $<span id="spanTotalFinal">0.00</span></div></div>
+
                 </div>
+
             </div>
+
             <div class="modal-footer bg-light">
+
                 <button type="button" class="btn btn-secondary btn-super" data-bs-dismiss="modal">❌ CANCELAR</button>
+
                 <button type="button" class="btn btn-primary btn-super" id="btnGuardarTodo">💾 GUARDAR TODO</button>
+
             </div>
+
         </div>
+
     </div>
+
 </div>
+
+
 
 <div class="modal fade" id="modalVerDetalle" tabindex="-1" aria-hidden="true">
+
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
+
         <div class="modal-content border-4 border-info">
+
             <div class="modal-header bg-info text-white">
+
                 <h3 class="modal-title fw-bold text-dark">👁️ CONSULTA Y EDICIÓN</h3>
+
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+
             </div>
+
             <div class="modal-body bg-white p-0">
+
                 <div class="visor-header">
+
                     <div class="row">
+
                         <div class="col-md-2">N°: <span id="verId" class="fw-black text-danger">---</span></div>
+
                         <div class="col-md-3">FECHA: <span id="verFecha" class="fw-normal">---</span></div>
+
                         <div class="col-md-7">MANDATARIA: <span id="verMandataria" class="fw-black text-primary">---</span></div>
+
                     </div>
+
                 </div>
+
                 
+
                 <div class="p-3 bg-light border-bottom border-2 border-dark d-flex justify-content-between align-items-center">
+
                     <div class="d-flex align-items-center gap-2" style="flex: 1;">
+
                         <span class="fs-4">🔍</span>
+
                         <input type="text" id="buscadorDetalles" class="form-control" placeholder="Escriba nombre de Obra Social..." onkeyup="filtrarDetalles()">
+
                     </div>
+
                     <button class="btn btn-success btn-super ms-3" onclick="abrirItemABM(0)">➕ AGREGAR ÍTEM</button>
+
                 </div>
+
+
 
                 <div class="table-responsive p-3">
+
                     <table class="table table-bordered table-striped mb-0">
+
                         <thead class="bg-dark text-white">
+
                             <tr>
+
                                 <th>OBRA SOCIAL</th><th>PLAN</th><th>RECETAS</th><th>TOTAL BRUTO</th><th>CARGO O.S.</th><th>BONIFICACIÓN</th>
+
                                 <th class="text-end">A PAGAR (REAL)</th> <th class="text-end text-danger fw-bold">SALDO PEND</th> <th>ACCIONES</th>
+
                             </tr>
+
                         </thead>
+
                         <tbody id="tbodyVerDetalle"></tbody>
+
                     </table>
+
                 </div>
+
             </div>
+
             <div class="modal-footer bg-light d-flex justify-content-between">
+
                 <button type="button" class="btn btn-primary btn-lg fw-bold" onclick="imprimirReporteGlobal()">
+
                     🖨️ IMPRIMIR REPORTE
+
                 </button>
+
                 <button type="button" class="btn btn-lg btn-dark fw-bold px-5" data-bs-dismiss="modal">CERRAR</button>
+
             </div>
+
         </div>
+
     </div>
+
 </div>
+
+
 
 <div class="modal fade" id="modalVerCobrosLiq" tabindex="-1" style="z-index: 1080;">
+
     <div class="modal-dialog modal-lg">
+
         <div class="modal-content border-success">
+
             <div class="modal-header bg-success text-white">
+
                 <h5 class="modal-title fw-bold">💰 COBROS ASOCIADOS</h5>
+
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+
             </div>
+
             <div class="modal-body bg-light">
+
                 <div class="table-responsive">
+
                     <table class="table table-bordered table-hover bg-white mb-0">
+
                         <thead class="table-secondary">
+
                             <tr>
+
                                 <th>FECHA</th>
+
                                 <th>COMPROBANTE</th>
+
                                 <th class="text-end">IMPORTE</th>
+
                                 <th class="text-end">DÉBITO</th>
+
                                 <th class="text-end">NETO</th>
+
                                 <th>MOTIVO</th>
+
                             </tr>
+
                         </thead>
+
                         <tbody id="tbodyVerCobrosLiq"></tbody>
+
                     </table>
+
                 </div>
+
             </div>
+
         </div>
+
     </div>
+
 </div>
+
+
 
 <div class="modal fade" id="modalItemIndividual" tabindex="-1" data-bs-backdrop="static" aria-hidden="true" style="z-index: 1060;">
+
     <div class="modal-dialog modal-lg">
+
         <div class="modal-content border-3 border-warning">
+
             <div class="modal-header modal-warning-header">
+
                 <h4 class="modal-title fw-bold" id="tituloModalItem">EDITAR ÍTEM</h4>
+
                 <button type="button" class="btn-close" onclick="cerrarModalItem()"></button>
+
             </div>
+
             <div class="modal-body bg-light">
+
                 <input type="hidden" id="item_Id" value="0">
+
                 <input type="hidden" id="item_IdLiquidacionPadre" value="0">
+
                 
+
                 <div class="row g-3">
+
                     <div class="col-md-6">
+
                         <label class="form-label">Obra Social</label>
+
                         <select id="item_IdOS" class="form-select" onchange="cargarPlanesDeOS(this.value, 'item_IdPlan')">
+
                             <option value="0">-- Seleccione --</option>
+
                             @foreach (var os in listaObrasSociales) { <option value="@os.IdObrasSociales">@os.Nombre</option> }
+
                         </select>
+
                     </div>
+
                     <div class="col-md-6">
+
                         <label class="form-label">Plan</label>
+
                         <select id="item_IdPlan" class="form-select" disabled onchange="recalcularNeto('item_Total', 'item_IdPlan', 'item_Neto', 'item_lblPorc')">
+
                             <option value="0">- Primero OS -</option>
+
                         </select>
+
                     </div>
+
                     
+
                     <div class="col-md-3"><label class="form-label">Recetas</label><input type="number" id="item_Recetas" class="form-control" placeholder="0"></div>
+
                     
+
                     <div class="col-md-3">
+
                         <label class="form-label">Total ($)</label>
+
                         <input type="text" id="item_Total" class="form-control fw-bold" placeholder="0,00" 
+
                                onfocus="limpiarNumero(this)" onblur="formatearNumero(this)"
+
                                onkeyup="recalcularNeto('item_Total', 'item_IdPlan', 'item_Neto', 'item_lblPorc')">
+
                     </div>
+
                     
+
                     <div class="col-md-3">
+
                         <label class="form-label">Cargo O.S.</label>
+
                         <input type="text" id="item_CargoOS" class="form-control fw-bold" placeholder="0,00"
+
                                onfocus="limpiarNumero(this)" onblur="formatearNumero(this)">
+
                     </div>
+
                     
+
                     <div class="col-md-3"><label class="form-label text-success">Bonif ($) <small id="item_lblPorc">0%</small></label><input type="text" id="item_Neto" class="form-control fw-bold bg-white" readonly value="0,00"></div>
+
                 </div>
+
             </div>
+
             <div class="modal-footer bg-light">
+
                 <button type="button" class="btn btn-secondary fw-bold" onclick="cerrarModalItem()">CANCELAR</button>
+
                 <button type="button" class="btn btn-warning fw-bold px-4" onclick="guardarItemIndividual()">💾 GUARDAR CAMBIOS</button>
+
             </div>
+
         </div>
+
     </div>
+
 </div>
+
+
 
 <div class="modal fade" id="modalEditarCabecera" tabindex="-1" data-bs-backdrop="static" aria-hidden="true">
+
     <div class="modal-dialog modal-lg">
+
         <div class="modal-content border-3 border-dark">
+
             <div class="modal-header modal-edit-header">
+
                 <h4 class="modal-title fw-bold text-white">✏️ EDITAR DATOS GENERALES</h4>
+
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+
             </div>
+
             <div class="modal-body bg-light">
+
                 <input type="hidden" id="edit_Id" value="0">
+
                 <div class="row g-3">
+
                     <div class="col-md-6"><label class="form-label">📅 FECHA</label><input type="date" id="edit_Fecha" class="form-control"></div>
+
                     <div class="col-md-6">
+
     <label class="form-label">🏢 MANDATARIA</label>
+
     <div class="buscador-wrapper">
+
         <input type="text" id="txtEditMandataria" class="form-control fw-bold" placeholder="Modificar mandataria..." autocomplete="off">
+
         <input type="hidden" id="edit_Mandataria" value="0">
+
         <div id="listaEditMandataria" class="lista-sugerencias"></div>
+
     </div>
+
 </div>
+
                     <div class="col-12"><label class="form-label">📝 OBSERVACIONES</label><input type="text" id="edit_Obs" class="form-control"></div>
+
                 </div>
+
                 <div class="alert alert-info mt-3 fw-bold">
+
                     ℹ️ Para editar los ítems (recetas, montos), utilice el botón "VER" del listado principal.
+
                 </div>
+
             </div>
+
             <div class="modal-footer bg-light">
+
                 <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal">CANCELAR</button>
+
                 <button type="button" class="btn btn-primary fw-bold px-4" onclick="guardarEdicionCabecera()">💾 ACTUALIZAR DATOS</button>
+
             </div>
+
         </div>
+
     </div>
+
 </div>
+
+
 
 @section Scripts {
+
 <script>
+
     const farmaciaInfo = {
+
         nombre: "@Html.Raw(nombreFarmacia)",
+
         domicilio: "@Html.Raw(direccionFarmacia)",
+
         cuit: "@Html.Raw(cuitFarmacia)",
+
         iva: "@Html.Raw(ivaFarmacia)"
+
     };
 
+
+
     let detallesTemporales = []; 
+
     let indiceTemporal = 0;      
+
     const modalABM = new bootstrap.Modal(document.getElementById('modalABM'));
+
     const modalVer = new bootstrap.Modal(document.getElementById('modalVerDetalle'));
+
     const modalItem = new bootstrap.Modal(document.getElementById('modalItemIndividual'));
+
     const modalEditCab = new bootstrap.Modal(document.getElementById('modalEditarCabecera'));
+
     const modalCobros = new bootstrap.Modal(document.getElementById('modalVerCobrosLiq'));
 
+
+
     var datosOS = @Html.Raw(jsonObrasSociales);
+
     var datosMand = @Html.Raw(jsonMandatarias ?? "[]"); 
+
     
+
     var modoActual = 'Mandataria'; 
+
     var currentFocus = -1;
 
+
+
     // Mapa de mandatarias para mostrar nombres en grilla
+
     const mapaMandatarias = {};
+
     if(datosMand) datosMand.forEach(m => mapaMandatarias[m.id] = m.nombre);
 
+
+
     document.addEventListener("DOMContentLoaded", () => {
+
         setupAuto('txtFiltroOS', 'listaFiltroOS', 'filtroOS', datosOS);
+
         setupAuto('txtFiltroMandataria', 'listaFiltroMandataria', 'filtroMandataria', datosMand);
+
 setupAuto('txtLiqMandataria', 'listaLiqMandataria', 'liqMandataria', datosMand);
+
 setupAuto('txtEditMandataria', 'listaEditMandataria', 'edit_Mandataria', datosMand);
+
         
+
         document.getElementById('modalABM').addEventListener('shown.bs.modal', function () { document.getElementById('liqFecha').focus(); });
+
         document.getElementById('modalVerDetalle').addEventListener('shown.bs.modal', function () { document.getElementById('buscadorDetalles').focus(); });
 
+
+
         setupEnterNavigation('inputRecetas', 'inputTotal');
+
         setupEnterNavigation('inputTotal', 'inputCargoOS');
+
         setupEnterNavigation('inputCargoOS', 'inputNeto');
+
         
+
         document.getElementById('inputNeto').addEventListener('keypress', function(e) {
+
             if(e.key === 'Enter') { e.preventDefault(); document.getElementById('btnAgregarFila').click(); }
+
         });
+
         document.getElementById('inputCargoOS').addEventListener('keypress', function(e) {
+
             if(e.key === 'Enter') { e.preventDefault(); document.getElementById('inputNeto').focus(); }
+
         });
+
+
 
         document.getElementById('filtroFechaHasta').addEventListener('keypress', function(e){
+
             if(e.key==='Enter') { e.preventDefault(); buscarLiquidaciones(); }
+
         });
+
 document.getElementById('liqMandataria').addEventListener('change', function() {
+
     filtrarOSPorMandataria(this.value);
+
 });
+
         cambiarModo('Mandataria');
+
     });
+
+
 
     // Helper para mover foco
+
     function setupEnterNavigation(curr, next) {
+
         const el = document.getElementById(curr);
+
         if(el) {
+
             el.addEventListener('keypress', function(e) {
+
                 if(e.key === 'Enter') {
+
                     e.preventDefault();
+
                     const n = document.getElementById(next);
+
                     if(n) { n.focus(); if(n.select) n.select(); }
+
                 }
+
             });
+
         }
+
     }
+
+
 
     function cambiarModo(modo) {
+
         modoActual = modo;
+
+        const btn = document.getElementById('btnImprimirUnificado');
+
         if(modo === 'Mandataria') {
+
             document.getElementById('btnModeMandataria').classList.add('active');
+
             document.getElementById('btnModeOS').classList.remove('active');
+
             document.getElementById('tituloTabla').textContent = "📋 LISTADO POR MANDATARIA";
+
+             btn.innerHTML = "🖨️ LISTADO MANDATARIAS";
+
+               btn.className = "btn btn-dark btn-lg fw-bold ps-4 pe-4"; // Estilo oscuro para cabeceras
+
         } else {
+
             document.getElementById('btnModeMandataria').classList.remove('active');
+
             document.getElementById('btnModeOS').classList.add('active');
+
             document.getElementById('tituloTabla').textContent = "LISTADO POR OBRA SOCIAL";
+
+            btn.innerHTML = "🖨️ LISTADO POR O. SOCIAL";
+
+               btn.className = "btn btn-outline-dark btn-lg fw-bold ps-4 pe-4"; // Estilo outline para detalles
+
         }
+
         const thead = document.getElementById('theadResultados');
+
         if(modo === 'Mandataria') {
+
             thead.innerHTML = `<tr><th>N°</th><th>FECHA</th><th>MANDATARIA</th><th>OBSERVACIONES</th><th class="text-end">TOTAL</th><th class="text-end text-danger">SALDO PEND</th><th class="text-center">ACCIONES</th></tr>`;
+
         } else {
+
             thead.innerHTML = `<tr><th>FECHA</th><th>MANDATARIA</th><th>OBRA SOCIAL</th><th class="text-center">RECETAS</th><th class="text-end">A COBRAR</th><th class="text-end">SALDO PEND.</th><th class="text-center">ACCIONES</th></tr>`;
+
         }
+
+        
+
+          
+
+          
+
         buscarLiquidaciones();
+
     }
+
+
 
     async function buscarLiquidaciones() {
+
         const desde = document.getElementById('filtroFechaDesde').value;
+
         const hasta = document.getElementById('filtroFechaHasta').value;
+
         const mand = document.getElementById('filtroMandataria').value;
+
         const idOS = document.getElementById('filtroOS').value; 
+
 if (idOS !== "0" && idOS !== "" && modoActual === 'Mandataria') {
+
             cambiarModo('OS'); 
+
             return; 
+
         }
+
         
+
         const tbody = document.getElementById('tbodyResultados');
+
         const cols = modoActual === 'Mandataria' ? 7 : 7;
+
         tbody.innerHTML = `<tr><td colspan="${cols}" class="text-center p-4"><div class="spinner-border text-primary"></div></td></tr>`;
 
+
+
         let url = "";
+
         if (modoActual === 'Mandataria') {
+
             url = `@Url.Action("BuscarLiquidacionesAjax", "Home")?desde=${desde}&hasta=${hasta}&mandataria=${mand}`; 
+
         } else {
+
             url = `@Url.Action("BuscarDetallesGlobalesAjax", "Home")?desde=${desde}&hasta=${hasta}&idMandataria=${mand}&idOS=${idOS}`;
+
         }
+
+
 
       // REEMPLAZAR DENTRO DE buscarLiquidaciones()
+
 try {
+
     const r = await fetch(url);
+
     const res = await r.json();
+
     
+
     if (res.success && res.data.length > 0) {
+
         tbody.innerHTML = '';
+
         if (modoActual === 'Mandataria') {
+
             res.data.forEach(l => {
+
                 const f = new Date(l.FechaPresentacion || l.fechaPresentacion).toLocaleDateString('es-AR');
+
                 const nm = l.NombreMandataria || mapaMandatarias[l.IdMandatarias || l.idMandatarias] || "---";
+
                 const idLiq = l.IdLiquidaciones || l.idLiquidaciones;
+
                 
+
                 const total = parseFloat(l.TotalReal || l.totalReal || 0);
+
                 const saldo = parseFloat(l.SaldoPendiente || l.saldoPendiente || 0);
 
+
+
                 // --- LÓGICA DE UX PARA 85 AÑOS ---
+
                 let htmlSaldo = "";
+
                 if (saldo <= 1) { // Tolerancia de $1
+
                     // Si está pagado, mostramos la fecha
+
                     const fechaPago = l.FechaCancelacion ? new Date(l.FechaCancelacion).toLocaleDateString('es-AR') : "SI";
+
                     htmlSaldo = `<span class="badge bg-success text-white fs-6">✅ PAGADO: ${fechaPago}</span>`;
+
                 } else {
+
                     // Si debe, mostramos el rojo furioso
+
                     htmlSaldo = `$${saldo.toLocaleString('es-AR', {minimumFractionDigits:2})}`;
+
                 }
+
+
 
                 tbody.innerHTML += 
+
                 `<tr>
+
                     <td class="fw-bold fs-5">${idLiq}</td>
+
                     <td>${f}</td>
+
                     <td class="fw-bold text-primary">${nm}</td>
+
                     <td>${l.Observaciones || l.observaciones || '-'}</td>
+
                     <td class="text-end fw-bold">$${total.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+
                     
+
                     <td class="text-end fw-black text-danger" style="font-size: 1.1em;">
+
                         ${htmlSaldo}
+
                     </td>
 
+
+
                     <td class="text-center">
+
                         <button class="btn btn-warning btn-sm fw-bold me-1" onclick="editarCabecera(${idLiq})">✏️</button>
+
                         <button class="btn btn-info btn-sm text-white fw-bold me-1" onclick="verLiquidacion(${idLiq}, '${f}', '${nm}', ${l.IdMandatarias || l.idMandatarias})">👁️ VER</button>
+
                         <button class="btn btn-danger btn-sm fw-bold" onclick="eliminarLiquidacion(${idLiq})">🗑️</button>
+
                     </td></tr>`;
+
             });
+
         } else {
+
             // MODO POR OBRA SOCIAL
+
             let contadorVisibles = 0;
+
             res.data.forEach(x => {
+
                 // AQUÍ QUITAMOS EL FILTRO "return if pagado" PARA QUE VEA EL HISTORIAL SI QUIERE
+
                 // O LO DEJAMOS SI SOLO QUIERE VER DEUDAS. ASUMO QUE QUIERE VER CUÁNDO SE PAGÓ.
+
                 // Si quieres ocultar los pagados, descomenta la linea siguiente:
+
                 // if (x.Pagado === true || x.Pagado === 1) return; 
 
+
+
                 contadorVisibles++;
+
                 const f = (x.FechaPresentacion||x.fechaPresentacion||'').split('T')[0];
+
                 const neto = parseFloat(x.TotalBruto||x.totalBruto||0); 
+
                 const saldo = parseFloat(x.SaldoPendiente);
+
                 const visualSaldo = isNaN(saldo) ? neto : saldo; 
+
                 
+
                 const idDet = x.IdLiquidacionDetalle || x.idLiquidacionDetalle;
+
                 const idPadre = x.IdLiquidaciones || x.idLiquidaciones;
 
+
+
                 // --- LÓGICA DE UX PARA ÍTEMS ---
+
                 let htmlSaldoItem = "";
+
                 if (visualSaldo <= 1) {
+
                      const fechaPago = x.FechaCancelacion ? new Date(x.FechaCancelacion).toLocaleDateString('es-AR') : "SI";
+
                      htmlSaldoItem = `<span class="badge bg-success text-white">✅ ${fechaPago}</span>`;
+
                 } else {
+
                      htmlSaldoItem = `$${visualSaldo.toLocaleString('es-AR', {minimumFractionDigits:2})}`;
+
                 }
+
+
 
                 // Datos para imprimir (JSON safe)
+
                 const datosPrint = JSON.stringify({
+
                     os: x.NombreObraSocial || x.nombreObraSocial,
+
                     periodo: x.Periodo || x.periodo,
+
                     plan: x.NombrePlan || "---",
+
                     recetas: x.CantidadRecetas || 0,
+
                     bruto: parseFloat(x.BrutoOriginal || 0), 
+
                     cargo: parseFloat(x.MontoCargoOS || 0),
+
                     bonif: parseFloat(x.MontoBonificacion || 0),
+
                     neto: neto,
+
                     deuda: visualSaldo
+
                 }).replace(/"/g, '&quot;');
 
+
+
                 tbody.innerHTML += `<tr>
+
                     <td class="text-center small">${f}</td>
+
                     <td class="small text-muted">${x.NombreMandataria||x.nombreMandataria}</td>
+
                     <td class="fw-bold text-primary fs-5">${x.NombreObraSocial||x.nombreObraSocial}</td>
+
                     <td class="text-center fw-bold">${x.CantidadRecetas||x.cantidadRecetas}</td>
+
                     <td class="text-end text-muted">$${neto.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+
                     
+
                     <td class="text-end fw-black text-danger">
+
                         ${htmlSaldoItem}
+
                     </td>
 
+
+
                     <td class="text-center">
+
                         <button class="btn btn-sm btn-info text-white me-1" onclick="verCobrosDeLiquidacion(${idDet})" title="Ver Cobros">👁️</button>
+
                         <button class="btn btn-sm btn-warning me-1" onclick="abrirItemABM(${idDet}, ${idPadre})">✏️</button>
+
                         <button class="btn btn-sm btn-danger me-1" onclick="eliminarItemIndividual(${idDet})">🗑️</button>
+
                         <button class="btn btn-sm btn-primary" onclick="imprimirItemIndividual(${datosPrint})">🖨️</button>
+
                     </td>
+
                 </tr>`;
+
             });
+
+
 
             if(contadorVisibles === 0) {
+
                 tbody.innerHTML = `<tr><td colspan="${cols}" class="text-center p-4 fs-4 text-success fw-bold">👏 ¡No hay datos para mostrar!</td></tr>`;
+
             }
+
         }
+
     } else { tbody.innerHTML = `<tr><td colspan="${cols}" class="text-center p-4 fs-4 text-muted">Sin resultados.</td></tr>`; }
+
 } catch (e) { 
+
     console.error(e);
+
     tbody.innerHTML = `<tr><td colspan="${cols}" class="text-danger text-center">Error de conexión.</td></tr>`; 
+
 }
+
     }
+
+
 
     function limpiarFiltros() {
+
         document.getElementById('filtroFechaDesde').value = "";
+
         document.getElementById('filtroFechaHasta').value = "";
+
         document.getElementById('filtroMandataria').value = "0";
+
         document.getElementById('txtFiltroOS').value = ""; document.getElementById('filtroOS').value = "0";
+
         document.getElementById('txtFiltroMandataria').value = "";
+
         buscarLiquidaciones(); 
+
     }
+
+
 
     // --- AUTOCOMPLETADO (Flechas + Enter) ---
+
     function setupAuto(inpId, listId, hidId, fuenteDatos) {
+
         const inp = document.getElementById(inpId);
+
         const list = document.getElementById(listId);
+
         const hid = document.getElementById(hidId);
+
         
+
         inp.addEventListener("input", function() {
+
             const t = this.value.toLowerCase();
+
             list.innerHTML = '';
+
             currentFocus = -1;
+
             if (t.length < 1) { list.style.display = 'none'; hid.value="0"; return; }
+
             
+
             const f = fuenteDatos.filter(x => x.nombre.toLowerCase().includes(t)).slice(0, 50); // LIMITAMOS
+
             if (f.length === 0) { list.innerHTML = '<div class="item-sugerencia text-muted">🚫 NO EXISTE</div>'; list.style.display = 'block'; return; }
+
             
+
             f.forEach(x => {
+
                 const item = document.createElement('div');
+
                 item.className = 'item-sugerencia'; 
+
                 item.textContent = x.nombre;
+
                 item.dataset.id = x.id; item.dataset.nombre = x.nombre;
+
                 item.addEventListener("click", function() {
+
     inp.value = this.dataset.nombre;
+
     hid.value = this.dataset.id;
+
     list.style.display = 'none';
+
     
+
     hid.dispatchEvent(new Event('change'));
+
 });
+
                 list.appendChild(item);
+
             });
+
             list.style.display = 'block';
+
         });
+
+
 
         inp.addEventListener("keydown", function(e) {
+
             let x = list.getElementsByTagName("div");
+
             if (e.key === "ArrowDown") {
+
                 currentFocus++;
+
                 addActive(x);
+
             } else if (e.key === "ArrowUp") {
+
                 currentFocus--;
+
                 addActive(x);
+
             } else if (e.key === "Enter") {
+
                 e.preventDefault();
+
                 if (currentFocus > -1) {
+
                     if (x) x[currentFocus].click();
+
                 } else if (list.style.display === "block" && x.length > 0) {
+
                      x[0].click();
+
                 } else {
+
                     if(inpId === 'txtFiltroOS') buscarLiquidaciones();
+
                 }
+
             }
+
         });
+
+
 
         inp.addEventListener("blur", function() { setTimeout(() => { list.style.display = 'none'; }, 200); });
+
     }
+
+
 
     function addActive(x) {
+
         if (!x) return false;
+
         removeActive(x);
+
         if (currentFocus >= x.length) currentFocus = 0;
+
         if (currentFocus < 0) currentFocus = (x.length - 1);
+
         x[currentFocus].classList.add("active-sugerencia");
+
         x[currentFocus].scrollIntoView({ block: "nearest" });
+
     }
+
     function removeActive(x) {
+
         for (let i = 0; i < x.length; i++) x[i].classList.remove("active-sugerencia");
+
     }
+
+
 
     async function cargarPlanesDeOS(idOS, idSelectDestino) {
+
         const selectPlan = document.getElementById(idSelectDestino);
+
         selectPlan.innerHTML = '<option value="0">Cargando...</option>'; selectPlan.disabled = true;
+
         if (idOS == "0") { selectPlan.innerHTML = '<option value="0">- Primero OS -</option>'; return; }
+
         try {
+
             const r = await fetch(`@Url.Action("ObtenerPlanesPorObrasSociales", "Home")?idObraSocial=${idOS}`);
+
             const d = await r.json();
+
             selectPlan.innerHTML = '<option value="0">-- Seleccione Plan --</option>';
+
             if (d.success && d.data.length > 0) {
+
                 d.data.forEach(p => {
+
                     const opt = document.createElement('option');
+
                     opt.value = p.idPlanBonificacion; opt.text = p.nombrePlan; 
+
                     opt.setAttribute('data-bonif', p.bonificacion); selectPlan.appendChild(opt);
+
                 });
+
                 selectPlan.disabled = false;
+
             } else { selectPlan.innerHTML = '<option value="0">Sin planes</option>'; }
+
         } catch (e) { alert("Error cargando planes."); }
+
     }
+
+
 
     function recalcularNeto(idInTot, idSel, idInNet, idLbl) {
+
         // --- ADAPTADO PARA LEER INPUT CON PUNTOS ---
+
         const totalStr = document.getElementById(idInTot).value.replace(/\./g, '').replace(',', '.');
+
         const total = parseFloat(totalStr) || 0;
+
         
+
         const sel = document.getElementById(idSel);
+
         let porc = (sel.selectedIndex > 0) ? parseFloat(sel.options[sel.selectedIndex].getAttribute('data-bonif')) : 0;
+
         if(document.getElementById(idLbl)) document.getElementById(idLbl).textContent = `Plan: ${porc}%`;
+
         
+
         const neto = total * (porc / 100.0);
+
         // El neto es ReadOnly, lo mostramos formateado lindo tambien
+
         document.getElementById(idInNet).value = neto.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
     }
+
+
 
     document.getElementById('btnAgregarFila').addEventListener('click', function() {
+
         const os = document.getElementById('inputOS'); const plan = document.getElementById('inputPlan');
+
         if (os.value == "0" || plan.value == "0") { alert("⚠️ Faltan datos."); return; }
+
         const idOsNuevo = parseInt(os.value);
+
         const idPlanNuevo = parseInt(plan.value);
 
+
+
         // Buscamos si ya existe esa combinación en el array 'detallesTemporales'
+
         const existe = detallesTemporales.some(d => d.IdObrasSociales === idOsNuevo && d.IdPlanBonificacion === idPlanNuevo);
 
+
+
         if (existe) {
+
             alert("⛔ ALTO: Ya cargaste esta Obra Social con este Plan en la lista.\nNo se pueden repetir.");
+
             return; 
+
         }
+
         
+
         // --- LEER VALORES CON PUNTOS (Limpieza) ---
+
         const vTotal = parseFloat(document.getElementById('inputTotal').value.replace(/\./g, '').replace(',', '.')) || 0;
+
         const vCargo = parseFloat(document.getElementById('inputCargoOS').value.replace(/\./g, '').replace(',', '.')) || 0;
+
         const vNeto  = parseFloat(document.getElementById('inputNeto').value.replace(/\./g, '').replace(',', '.')) || 0;
 
+
+
         const nuevo = {
+
             idTemp: ++indiceTemporal,
+
             IdObrasSociales: parseInt(os.value), IdPlanBonificacion: parseInt(plan.value), 
+
             CantidadRecetas: parseInt(document.getElementById('inputRecetas').value)||0,
+
             TotalBruto: vTotal,
+
             MontoCargoOS: vCargo,
+
             MontoBonificacion: vNeto,
+
             nombreOSVisual: os.options[os.selectedIndex].text,
+
             nombrePlanVisual: plan.options[plan.selectedIndex].text
+
         };
+
         detallesTemporales.push(nuevo); dibujarTablaDetalles();
+
         
+
         document.getElementById('inputRecetas').value="0"; document.getElementById('inputTotal').value=""; // Dejar vacío para placeholder
+
         document.getElementById('inputCargoOS').value=""; document.getElementById('inputNeto').value="0,00";
+
         document.getElementById('inputTotal').focus();
+
     });
+
+
 
     function dibujarTablaDetalles() {
+
         const tbody = document.getElementById('tbodyDetalle'); tbody.innerHTML = '';
+
         let suma = 0;
+
         detallesTemporales.forEach(d => {
+
             suma += d.TotalBruto; 
+
             tbody.innerHTML += `<tr><td>${d.nombreOSVisual}</td><td>${d.nombrePlanVisual}</td><td class="text-center">${d.CantidadRecetas}</td>
+
                 <td class="text-end">$${d.TotalBruto.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+
                 <td class="text-end">$${d.MontoCargoOS.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+
                 <td class="text-end fw-bold text-success">$${d.MontoBonificacion.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+
                 <td class="text-center"><button class="btn btn-sm btn-danger" onclick="quitarDetalle(${d.idTemp})">🗑️</button></td></tr>`;
+
         });
+
         document.getElementById('spanTotalFinal').textContent = suma.toLocaleString('es-AR', {minimumFractionDigits:2});
+
     }
+
     function quitarDetalle(id) { detallesTemporales = detallesTemporales.filter(d => d.idTemp !== id); dibujarTablaDetalles(); }
 
+
+
     document.getElementById('btnGuardarTodo').addEventListener('click', async function() {
+
         const btn = this; const idMand = document.getElementById('liqMandataria').value;
+
         if (idMand == "0") { alert("⚠️ Falta Mandataria."); return; }
+
         if (detallesTemporales.length === 0) { alert("⚠️ Lista vacía."); return; }
+
         if(!confirm("¿Confirmar?")) return;
 
+
+
         btn.disabled = true; btn.innerHTML = "⌛...";
+
         const fd = new FormData();
+
         fd.append("QueToco", "Guardar"); fd.append("IdLiquidacion", "0");
+
         fd.append("IdMandatarias", idMand); fd.append("Fecha", document.getElementById('liqFecha').value);
+
         fd.append("Observaciones", document.getElementById('liqObs').value);
+
         fd.append("DetallesJson", JSON.stringify(detallesTemporales));
 
+
+
         try {
+
             const r = await fetch('@Url.Action("MostrarModificaciones", "Home")', { method: 'POST', body: fd });
+
             const res = await r.json();
+
             if (res.success) { alert("✅ Guardado."); modalABM.hide(); buscarLiquidaciones(); } else { alert("❌ " + res.message); }
+
         } catch (e) { alert("Error."); } finally { btn.disabled = false; btn.innerHTML = "💾 GUARDAR TODO"; }
+
     });
 
+
+
     function abrirModalNueva() {
+
         document.getElementById('tituloModal').textContent = "NUEVA LIQUIDACIÓN";
+
         document.getElementById('liqId').value = "0"; document.getElementById('liqMandataria').value = "0";
+
         document.getElementById('txtLiqMandataria').value = "";
+
         const selectOS = document.getElementById('inputOS');
+
         selectOS.disabled = true; 
+
         selectOS.innerHTML = '<option value="0">Seleccione Mandataria primero </option>'; 
+
         detallesTemporales = []; dibujarTablaDetalles(); modalABM.show();
+
     }
+
+
 
     let idLiquidacionActualVisor = 0; 
+
     let idMandatariaActualVisor = 0; 
 
+
+
 function filtrarOSItemIndividual(idMandataria) {
+
     const selectOS = document.getElementById('item_IdOS');
+
     selectOS.innerHTML = '<option value="0">-- Seleccione O.S. --</option>';
+
     
+
     if (idMandataria == 0) { selectOS.disabled = true; return; }
 
+
+
     const filtradas = datosOS.filter(os => os.idMandataria == idMandataria);
+
     if (filtradas.length > 0) {
+
         filtradas.forEach(os => {
+
             const opt = document.createElement('option');
+
             opt.value = os.id;
+
             opt.textContent = os.nombre;
+
             selectOS.appendChild(opt);
+
         });
+
         selectOS.disabled = false;
+
     } else {
+
         selectOS.innerHTML = '<option value="0">⚠️ Sin O.S. para esta Mandataria</option>';
+
         selectOS.disabled = true;
+
     }
+
     
+
     // Reseteamos el plan también
+
     document.getElementById('item_IdPlan').innerHTML = '<option value="0">- Primero OS -</option>';
+
     document.getElementById('item_IdPlan').disabled = true;
+
 }
+
+
 
   // REEMPLAZAR ESTA FUNCIÓN COMPLETA
+
 async function verLiquidacion(id, f, nm, idMand) {
+
     idLiquidacionActualVisor = id;
+
     idMandatariaActualVisor = idMand; // <--- GUARDAMOS EL DATO AQUÍ
+
     
+
     document.getElementById('verId').textContent = id;
+
     document.getElementById('verFecha').textContent = f;
+
     document.getElementById('verMandataria').textContent = nm;
+
     document.getElementById('buscadorDetalles').value = "";
+
     
+
     modalVer.show(); 
+
     recargarTablaVisor();
+
 }
+
+
 
    // REEMPLAZA TU FUNCIÓN recargarTablaVisor POR ESTA COMPLETA
+
 // EN: Views/Home/MostrarModificaciones.cshtml
 
+
+
 async function recargarTablaVisor(idLiq = null) {
+
     // 1. Obtenemos el ID (ya sea por parámetro o del título del modal)
+
     const id = idLiq || document.getElementById('verId').textContent;
+
     const tbody = document.getElementById('tbodyVerDetalle');
+
     
+
     tbody.innerHTML = '<tr><td colspan="9" class="text-center p-3">Cargando datos...</td></tr>';
+
     
+
     try {
+
         // Llamamos al Controller (que a su vez llama a tu nueva función de BD)
+
         const r = await fetch(`@Url.Action("ObtenerDetallesDeLiquidacion", "Home")?idLiquidacion=${id}`);
+
         const d = await r.json();
 
+
+
         if (d.success) {
+
             tbody.innerHTML = '';
+
             
+
             if(d.data.length === 0) { 
+
                 tbody.innerHTML = '<tr><td colspan="9" class="text-center p-3">Esta liquidación no tiene ítems.</td></tr>';
+
                 return; 
+
             }
+
             
+
             // 2. Iteramos los detalles
+
             d.data.forEach(x => {
+
                 // Manejo de mayúsculas/minúsculas por si JSON serializa distinto
+
                 const totalBruto = x.TotalBruto ?? x.totalBruto ?? 0;
+
                 const cargoOS = x.MontoCargoOS ?? x.montoCargoOS ?? 0;
+
                 const bonif = x.MontoBonificacion ?? x.montoBonificacion ?? 0;
+
                 
+
                 // Calculamos el Neto real
+
                 const aPagarReal = cargoOS - bonif;
+
                 
+
                 // Leemos el Saldo Pendiente
+
                 const saldo = parseFloat(x.SaldoPendiente ?? x.saldoPendiente ?? 0);
+
                 
+
                 // LEEMOS LA NUEVA FECHA (La magia que agregamos en el Backend)
+
                 const fechaRaw = x.FechaCancelacion ?? x.fechaCancelacion;
 
+
+
                 // --- LOGICA VISUAL (UX) ---
+
                 let htmlSaldo = "";
+
                 
+
                 // Usamos tolerancia de $1 por redondeos
+
                 if (saldo <= 1.00) {
+
                     // SI ESTÁ PAGADO -> BADGE VERDE CON FECHA
+
                     let textoFecha = "SI";
+
                     if (fechaRaw) {
+
                         // Convertimos la fecha fea "2023-10-25T00:00:00" a "25/10/2023"
+
                         textoFecha = new Date(fechaRaw).toLocaleDateString('es-AR');
+
                     }
+
                     htmlSaldo = `<span class="badge bg-success text-white" style="font-size: 0.9rem;">✅ PAGADO: ${textoFecha}</span>`;
+
                 } else {
+
                     // SI DEBE PLATA -> TEXTO ROJO
+
                     htmlSaldo = `<span class="text-danger fw-bold">$${saldo.toLocaleString('es-AR', {minimumFractionDigits:2})}</span>`;
+
                 }
+
+
 
                 // Datos de la OS (Nombre plan, nombre OS)
+
                 // Nota: Asegúrate de que 'NombreObraSocial' venga en tu query, o úsalo desde 'datosOS' si lo tienes mapeado
+
                 const nomOS = x.NombreObraSocial ?? x.nombreObraSocial ?? "---";
+
                 const nomPlan = x.NombrePlan ?? x.nombrePlan ?? "---";
 
+
+
                 // 3. Dibujamos la fila
+
                 tbody.innerHTML += `<tr>
+
                     <td class="fw-bold text-primary">${nomOS}</td>
+
                     <td class="text-center small">${nomPlan}</td>
+
                     <td class="text-center">${x.CantidadRecetas ?? x.cantidadRecetas}</td>
+
                     <td class="text-end text-muted">$${totalBruto.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+
                     <td class="text-end">$${cargoOS.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+
                     <td class="text-end">$${bonif.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+
                     <td class="text-end fw-bold text-dark">$${aPagarReal.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+
                     
+
                     <td class="text-end" style="border-left: 2px solid #eee;">
+
                         ${htmlSaldo}
+
                     </td>
+
+
 
                     <td class="text-center">
+
                         <button class="btn btn-sm btn-info text-white me-1" onclick="verCobrosDeLiquidacion(${x.IdLiquidacionDetalle ?? x.idLiquidacionDetalle})" title="Ver Pagos">👁️</button>
+
                         <button class="btn btn-warning btn-sm" onclick="abrirItemABM(${x.IdLiquidacionDetalle ?? x.idLiquidacionDetalle}, ${id})">✏️</button>
+
                         <button class="btn btn-danger btn-sm" onclick="eliminarItemIndividual(${x.IdLiquidacionDetalle ?? x.idLiquidacionDetalle})">🗑️</button>
+
                     </td>
+
                 </tr>`;
+
             });
+
         } else { 
+
             tbody.innerHTML = `<tr><td colspan="9" class="text-danger fw-bold text-center">${d.message}</td></tr>`; 
+
         }
+
     } catch(e) { 
+
         console.error(e);
+
         tbody.innerHTML = '<tr><td colspan="9" class="text-danger text-center">Error al conectar con el servidor.</td></tr>'; 
+
     }
+
 }
+
     async function verCobrosDeLiquidacion(idDet) {
+
         const tbody = document.getElementById('tbodyVerCobrosLiq');
+
         tbody.innerHTML = '<tr><td colspan="6" class="text-center p-3">Cargando...</td></tr>';
+
         modalCobros.show();
+
         
+
         try {
+
             const r = await fetch(`@Url.Action("ObtenerCobrosPorLiquidacionDetalle", "Home")?idDetalle=${idDet}`);
+
             const res = await r.json();
+
             tbody.innerHTML = '';
+
             
+
             if(res.success && res.data.length > 0) {
+
                 res.data.forEach(c => {
+
                     const imp = parseFloat(c.ImporteCobrado||0);
+
                     const deb = parseFloat(c.MontoDebito||0);
+
                     const motivo = c.MotivoDebito || '-';
+
                     const fecha = (c.FechaCobro||'').split('T')[0];
+
                     
+
                     tbody.innerHTML += `<tr>
+
                         <td>${fecha}</td>
+
                         <td>${c.NumeroComprobante}</td>
+
                         <td class="text-end fw-bold">$${imp.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+
                         <td class="text-end text-danger">$${deb.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+
                         <td class="text-end fw-black text-success">$${(imp-deb).toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+
                         <td class="small text-muted fst-italic">${motivo}</td>
+
                     </tr>`;
+
                 });
+
             } else {
+
                 tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted p-3">🚫 Aún no se han registrado cobros para este ítem.</td></tr>';
+
             }
+
         } catch(e) { 
+
             tbody.innerHTML = '<tr><td colspan="6" class="text-danger text-center">Error al conectar con el servidor.</td></tr>'; 
+
         }
+
     }
+
+
 
     async function editarCabecera(id) {
+
         try {
+
             const r = await fetch(`@Url.Action("ObtenerCabeceraLiquidacion", "Home")?id=${id}`);
+
             const res = await r.json();
+
             if (res.success) {
+
                 const d = res.data;
+
                 document.getElementById('edit_Id').value = d.idLiquidaciones;
+
                 document.getElementById('edit_Fecha').value = d.fechaPresentacion.split('T')[0];
+
                 document.getElementById('edit_Mandataria').value = d.idMandatarias;
+
                 document.getElementById('edit_Obs').value = d.observaciones;
+
                 document.getElementById('txtEditMandataria').value = mapaMandatarias[d.idMandatarias] || "";
+
                 modalEditCab.show();
+
             } else { alert(res.message); }
+
         } catch (e) { alert("Error al cargar datos."); }
+
     }
+
+
 
     async function guardarEdicionCabecera() {
+
         const fd = new FormData();
+
         fd.append("IdLiquidacion", document.getElementById('edit_Id').value);
+
         fd.append("Fecha", document.getElementById('edit_Fecha').value);
+
         fd.append("IdMandataria", document.getElementById('edit_Mandataria').value);
+
         fd.append("Observaciones", document.getElementById('edit_Obs').value);
+
         try {
+
             const r = await fetch('@Url.Action("GuardarEdicionCabecera", "Home")', { method: 'POST', body: fd });
+
             const res = await r.json();
+
             if (res.success) { alert("✅ Actualizado."); modalEditCab.hide(); buscarLiquidaciones(); }
+
             else { alert("❌ " + res.message); }
+
         } catch(e) { alert("Error al guardar."); }
+
     }
+
+
 
     function filtrarDetalles() {
+
         const txt = document.getElementById('buscadorDetalles').value.toLowerCase();
+
         document.querySelectorAll('#tbodyVerDetalle tr').forEach(r => {
+
             const c = r.querySelector('.nombre-os');
+
             if(c) r.style.display = c.textContent.toLowerCase().includes(txt) ? '' : 'none';
+
         });
+
     }
+
     
+
     async function eliminarLiquidacion(id) {
+
         if (!confirm(`¿Borrar liquidación N° ${id}?`)) return;
+
         const fd = new FormData(); fd.append("QueToco", "Eliminar"); fd.append("IdLiquidacion", id);
+
         try { const r = await fetch('@Url.Action("MostrarModificaciones", "Home")', { method: 'POST', body: fd }); 
+
         if((await r.json()).success) { alert("Borrado."); buscarLiquidaciones(); } else alert("Error."); } catch(e){}
+
     }
+
     
+
     async function abrirItemABM(idItem, idPadre = 0, idMandatariaExterna = 0) {
+
         document.getElementById('item_Id').value = idItem;
+
         document.getElementById('item_IdLiquidacionPadre').value = (idPadre > 0) ? idPadre : idLiquidacionActualVisor;
+
         document.getElementById('tituloModalItem').textContent = (idItem === 0) ? "NUEVO ÍTEM" : "EDITAR ÍTEM";
+
         
+
         const mandId = idMandatariaExterna > 0 ? idMandatariaExterna : idMandatariaActualVisor;
+
         filtrarOSItemIndividual(mandId);
 
+
+
         document.getElementById('item_IdOS').value = "0"; 
+
         document.getElementById('item_Recetas').ariaPlaceholder = "0.00"; 
+
         document.getElementById('item_Total').ariaPlaceholder = "0.00";
+
         document.getElementById('item_CargoOS').ariaPlaceholder = "0.00"; 
+
         document.getElementById('item_Neto').ariaPlaceholder = "0.00";
+
         
+
         // Limpiar inputs (IMPORTANTE PARA FORMATO)
+
         document.getElementById('item_Total').value = "";
+
         document.getElementById('item_CargoOS').value = "";
+
         document.getElementById('item_Neto').value = "0,00";
 
+
+
         if (idItem > 0) {
+
             try {
+
                 const r = await fetch(`@Url.Action("ObtenerItemPorId", "Home")?idDetalle=${idItem}`);
+
                 const res = await r.json();
+
                 if(res.success) {
+
                     const d = res.data;
+
                     document.getElementById('item_IdOS').value = d.idObrasSociales;
+
                     
+
                     await cargarPlanesDeOS(d.idObrasSociales, 'item_IdPlan');
+
                     document.getElementById('item_IdPlan').value = d.idPlanBonificacion;
+
                     
+
                     document.getElementById('item_Recetas').value = d.cantidadRecetas;
+
                     // Cargamos y formateamos al instante
+
                     document.getElementById('item_Total').value = d.totalBruto.toLocaleString('es-AR', {minimumFractionDigits:2});
+
                     document.getElementById('item_CargoOS').value = d.montoCargoOS.toLocaleString('es-AR', {minimumFractionDigits:2});
+
                     document.getElementById('item_Neto').value = d.montoBonificacion.toLocaleString('es-AR', {minimumFractionDigits:2});
+
                 }
+
             } catch(e) { alert("Error cargando ítem."); return; }
+
         }
+
         modalItem.show();
+
     }
+
+
+
 
 
     function cerrarModalItem() { modalItem.hide(); document.body.classList.add('modal-open'); }
+
     
+
     async function guardarItemIndividual() {
+
         const fd = new FormData();
+
         fd.append("IdLiquidacionPadre", document.getElementById('item_IdLiquidacionPadre').value);
+
         fd.append("IdItem", document.getElementById('item_Id').value);
+
         fd.append("IdOS", document.getElementById('item_IdOS').value);
+
         fd.append("IdPlan", document.getElementById('item_IdPlan').value);
+
         fd.append("Recetas", document.getElementById('item_Recetas').value);
+
         
+
         // LIMPIEZA DE PUNTOS PARA ENVIAR AL SERVER
+
       fd.append("Total", document.getElementById('item_Total').value.replace(/\./g, '')); 
+
     fd.append("CargoOS", document.getElementById('item_CargoOS').value.replace(/\./g, ''));
+
     fd.append("Bonificacion", document.getElementById('item_Neto').value.replace(/\./g, ''));
 
+
+
         try {
+
             const r = await fetch('@Url.Action("GuardarItemIndividual", "Home")', { method: 'POST', body: fd });
+
             if((await r.json()).success) { 
+
                 alert("✅ Guardado."); 
+
                 cerrarModalItem(); 
+
                 if(modoActual === 'OS') buscarLiquidaciones(); 
+
                 else recargarTablaVisor(); 
+
             }
+
             else alert("Error: No se puede agregar esta liquidacion, ya que existe un ítem con la misma Obra Social y Plan.");
+
         } catch(e) { alert("Error."); }
-    }
-    
-    async function eliminarItemIndividual(id) {
-        if(!confirm("¿Borrar ítem?")) return;
-        const fd = new FormData(); fd.append("idItem", id); fd.append("idLiquidacionPadre", 0);
-        try { 
-            if((await (await fetch('@Url.Action("EliminarItemIndividual", "Home")', { method: 'POST', body: fd })).json()).success) {
-                if(modoActual === 'OS') buscarLiquidaciones();
-                else recargarTablaVisor();
-            }
-        } catch(e){}
+
     }
 
     
-   // IMPRESIÓN (AHORA CON TOTALES Y DEUDA)
-   async function imprimirReporteGlobal() {
-    let infoFarmaciaActual = farmaciaInfo; 
-    try {
-        const r = await fetch('@Url.Action("ObtenerDatosFarmaciaAjax", "Home")');
-        const res = await r.json();
-        if (res.success) infoFarmaciaActual = res;
-    } catch (e) { }
+
+    async function eliminarItemIndividual(id) {
+
+        if(!confirm("¿Borrar ítem?")) return;
+
+        const fd = new FormData(); fd.append("idItem", id); fd.append("idLiquidacionPadre", 0);
+
+        try { 
+
+            if((await (await fetch('@Url.Action("EliminarItemIndividual", "Home")', { method: 'POST', body: fd })).json()).success) {
+
+                if(modoActual === 'OS') buscarLiquidaciones();
+
+                else recargarTablaVisor();
+
+            }
+
+        } catch(e){}
+
+    }
+
+
+function filtrarOSPorMandataria(idMandataria) {
+
+    const selectOS = document.getElementById('inputOS');
+
+    selectOS.innerHTML = '<option value="0">-- Seleccione O.S. --</option>';
+
+    
+
+    if (idMandataria == "0") {
+
+        selectOS.disabled = true;
+
+        return;
+
+    }
+
+
+
+    // Filtramos los datos en memoria
+
+    const filtradas = datosOS.filter(os => os.idMandataria == idMandataria);
+
+
+
+    if (filtradas.length > 0) {
+
+        filtradas.forEach(os => {
+
+            const opt = document.createElement('option');
+
+            opt.value = os.id;
+
+            opt.textContent = os.nombre;
+
+            selectOS.appendChild(opt);
+
+        });
+
+        selectOS.disabled = false;
+
+    } else {
+
+        selectOS.innerHTML = '<option value="0">⚠️ Sin O.S. vinculadas</option>';
+
+        selectOS.disabled = true;
+
+    }
+
+    
+
+    // Reseteamos el plan
+
+    document.getElementById('inputPlan').innerHTML = '<option value="0">- Primero elija OS -</option>';
+
+    document.getElementById('inputPlan').disabled = true;
+
+}
+
+
+
+// === FUNCIONES DE FORMATO MONEDA ON-BLUR ===
+
+function limpiarNumero(input) {
+
+    let val = input.value;
+
+    // Si tiene algo escrito, le quitamos los puntos para que quede "crudo"
+
+    if (val) {
+
+        input.value = val.replace(/\./g, '').replace(',', '.');
+
+    }
+
+}
+
+
+
+function formatearNumero(input) {
+
+    let val = parseFloat(input.value.replace(',', '.'));
+
+    if (!isNaN(val)) {
+
+        // Al salir, lo volvemos lindo: 1.500,00
+
+        input.value = val.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    } else {
+
+        input.value = "";
+
+    }
+
+}
+
+
+
+
+
+// =========================================================================
+    // 🖨️ MÓDULO DE IMPRESIÓN (VERSIÓN SIN AVISO ROJO ARRIBA)
+    // =========================================================================
+
+    // Función auxiliar para fecha linda (DD/MM/AAAA)
+    function formatearFechaLinda(fechaRaw) {
+        if (!fechaRaw) return "---";
+        const partes = fechaRaw.split('T')[0].split('-'); 
+        if(partes.length < 3) return fechaRaw;
+        return partes[2] + '/' + partes[1] + '/' + partes[0];
+    }
+
+    // 1. REPORTE DESDE EL MODAL (LO QUE VES EN PANTALLA)
+    async function imprimirReporteGlobal() {
+        let info = farmaciaInfo;
+        try {
+            const r = await fetch('@Url.Action("ObtenerDatosFarmaciaAjax", "Home")');
+            const res = await r.json();
+            if (res.success) info = res;
+        } catch (e) { }
+
         const idLiq = document.getElementById('verId').textContent;
-        const fecha = document.getElementById('verFecha').textContent;
+        const fecha = document.getElementById('verFecha').textContent; 
         const mandataria = document.getElementById('verMandataria').textContent;
         
         let filasHTML = "";
-        // Corrección de sintaxis: se declaran todas las variables juntas
         let tRec = 0, tBruto = 0, tCargo = 0, tBonif = 0, tNeto = 0, tDeuda = 0;
 
-        // Función auxiliar para limpiar moneda de forma segura
         const limpiar = (txt) => {
             if (!txt) return 0;
             return parseFloat(txt.replace(/[$. ]/g, '').replace(',', '.')) || 0;
@@ -1116,244 +2342,276 @@ async function recargarTablaVisor(idLiq = null) {
 
         document.querySelectorAll('#tbodyVerDetalle tr').forEach(tr => {
             const celdas = tr.querySelectorAll('td');
-            // Validamos que sea una fila de datos (tiene más de 6 celdas)
             if(celdas.length > 6) { 
                 const rec = parseInt(celdas[2].textContent) || 0;
-                
-                // Usamos la función limpiar para mayor seguridad
                 const bruto = limpiar(celdas[3].textContent);
                 const cargo = limpiar(celdas[4].textContent);
                 const bonif = limpiar(celdas[5].textContent);
                 const neto  = limpiar(celdas[6].textContent);
-                // La deuda está en la columna 7 (índice 7)
-                const deuda = limpiar(celdas[7].textContent);
+                
+                // Lógica de lectura de la celda visual
+                let txtDeuda = celdas[7].innerText.trim(); 
+                let valDeuda = 0;
+                let displayDeuda = "";
 
-                tRec += rec; 
-                tBruto += bruto; 
-                tCargo += cargo; 
-                tBonif += bonif; 
-                tNeto += neto; 
-                tDeuda += deuda;
+                if (txtDeuda.toUpperCase().includes("PAGADO")) {
+                    valDeuda = 0;
+                    displayDeuda = '<span style="color:green; font-weight:bold; font-size:0.8em;">' + txtDeuda + '</span>';
+                } else {
+                    valDeuda = limpiar(txtDeuda);
+                    tDeuda += valDeuda;
+                    displayDeuda = '<span style="color:red; font-weight:bold;">$' + valDeuda.toLocaleString('es-AR', {minimumFractionDigits:2}) + '</span>';
+                }
 
-                filasHTML += `<tr>
-                    <td style="text-align:left; padding:5px;">${celdas[0].textContent}</td>
-                    <td style="text-align:center;">${celdas[1].textContent}</td>
-                    <td style="text-align:center;">${rec}</td>
-                    <td style="text-align:right;">$${bruto.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
-                    <td style="text-align:right;">$${cargo.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
-                    <td style="text-align:right;">$${bonif.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
-                    <td style="text-align:right; font-weight:bold;">$${neto.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
-                    <td style="text-align:right; color:red; font-weight:bold;">$${deuda.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
-                </tr>`;
+                tRec += rec; tBruto += bruto; tCargo += cargo; tBonif += bonif; tNeto += neto; 
+
+                filasHTML += '<tr>' +
+                    '<td style="text-align:left;">' + celdas[0].textContent + '</td>' +
+                    '<td style="text-align:center;">' + celdas[1].textContent + '</td>' +
+                    '<td style="text-align:center;">' + rec + '</td>' +
+                    '<td style="text-align:right;">$' + bruto.toLocaleString('es-AR', {minimumFractionDigits:2}) + '</td>' +
+                    '<td style="text-align:right;">$' + cargo.toLocaleString('es-AR', {minimumFractionDigits:2}) + '</td>' +
+                    '<td style="text-align:right;">$' + bonif.toLocaleString('es-AR', {minimumFractionDigits:2}) + '</td>' +
+                    '<td style="text-align:right; font-weight:bold;">$' + neto.toLocaleString('es-AR', {minimumFractionDigits:2}) + '</td>' +
+                    '<td style="text-align:right;">' + displayDeuda + '</td>' +
+                '</tr>';
             }
         });
 
-        // Fila de Totales con la columna de Deuda
-        filasHTML += `<tr style="background-color:#000; color:#fff; font-weight:bold;">
-            <td colspan="2" style="text-align:right; padding:8px; color:#000;">TOTALES GENERALES:</td>
-            <td style="text-align:center;color:#000;">${tRec}</td>
-            <td style="text-align:right;color:#000;">$${tBruto.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
-            <td style="text-align:right;color:#000;">$${tCargo.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
-            <td style="text-align:right;color:#000;">$${tBonif.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
-            <td style="text-align:right; font-size:1.1em; color:#000;">$${tNeto.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
-            <td style="text-align:right; font-size:1.1em; color:#ff4d4d;">$${tDeuda.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
-        </tr>`;
+        const htmlTotales = '<tr style="background-color:#eee; font-weight:bold;">' +
+            '<td colspan="2" style="text-align:right;">TOTALES:</td>' +
+            '<td style="text-align:center;">' + tRec + '</td>' +
+            '<td style="text-align:right;">$' + tBruto.toLocaleString('es-AR', {minimumFractionDigits:2}) + '</td>' +
+            '<td style="text-align:right;">$' + tCargo.toLocaleString('es-AR', {minimumFractionDigits:2}) + '</td>' +
+            '<td style="text-align:right;">$' + tBonif.toLocaleString('es-AR', {minimumFractionDigits:2}) + '</td>' +
+            '<td style="text-align:right;">$' + tNeto.toLocaleString('es-AR', {minimumFractionDigits:2}) + '</td>' +
+            '<td style="text-align:right; color:red;">$' + tDeuda.toLocaleString('es-AR', {minimumFractionDigits:2}) + '</td>' +
+        '</tr>';
 
-        abrirVentanaImpresion(idLiq, mandataria, fecha, filasHTML, null, infoFarmaciaActual);
+        const cols = "<th>OBRA SOCIAL</th><th>PLAN</th><th>REC</th><th>BRUTO</th><th>CARGO OS</th><th>BONIF</th><th>A COBRAR</th><th>DEUDA / PAGO</th>";
+        // Pasamos null en saldoPendiente para que no muestre nada arriba
+        abrirVentanaMaestra("LIQUIDACIÓN N° " + idLiq + " - " + mandataria, fecha, cols, filasHTML, htmlTotales, 0, info);
     }
 
-     async function imprimirItemIndividual(datos) {
-        let infoFarmaciaActual = farmaciaInfo; 
-    try {
-        const r = await fetch('@Url.Action("ObtenerDatosFarmaciaAjax", "Home")');
-        const res = await r.json();
-        if (res.success) infoFarmaciaActual = res;
-    } catch (e) { }
-
-        const filasHTML = `<tr>
-            <td style="text-align:left; padding:5px;">${datos.os}</td>
-            <td style="text-align:center;">${datos.plan}</td>
-            <td style="text-align:center;">${datos.recetas}</td>
-            <td style="text-align:right;">$${datos.bruto.toFixed(2)}</td>
-            <td style="text-align:right;">$${datos.cargo.toFixed(2)}</td>
-            <td style="text-align:right;">$${datos.bonif.toFixed(2)}</td>
-            <td style="text-align:right; font-weight:bold;">$${datos.neto.toFixed(2)}</td>
-            <td style="text-align:right; color:red; font-weight:bold;">$${datos.deuda.toFixed(2)}</td>
-        </tr>`;
-        
-      abrirVentanaImpresion(datos.periodo, "IMPRESIÓN INDIVIDUAL", new Date().toLocaleDateString('es-AR'), filasHTML, datos.deuda, infoFarmaciaActual);
-    }
-
-    // REEMPLAZAR TU FUNCIÓN "abrirVentanaImpresion" POR ESTA:
-   function abrirVentanaImpresion(ref, mand, fecha, filas, saldoPendiente = null, datosFarmacia = null) {
-    const info = datosFarmacia || farmaciaInfo;
-        const v = window.open('', '', 'height=800,width=1000');
-        
-        const htmlDeuda = (saldoPendiente !== null && saldoPendiente !== undefined) 
-            ? `<div style="margin-top:20px; border: 3px solid #dc3545; background-color: #f8d7da; color: #842029; padding: 10px; font-weight:bold; font-size:18px; text-align:center; border-radius:8px;">
-                 ⚠️ DEUDA PENDIENTE ACTUAL: $${parseFloat(saldoPendiente).toLocaleString('es-AR', {minimumFractionDigits: 2})}
-               </div>` 
-            : '';
-
-        // Construimos el HTML de forma segura
-        let contenido = `<html><head><title>Impresión Liquidación</title><style>
-            body { font-family: 'Courier New', monospace; font-size: 14px; padding: 20px; }
-            h1 { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 30px; }
-            .header-farmacia { text-align: center; margin-bottom: 30px; font-weight: bold; font-size: 1.2em; line-height: 1.5; }
-            .info-box { border: 2px solid #000; padding: 15px; margin-bottom: 20px; background: #f8f9fa; }
-            .info-line { margin-bottom: 5px; font-size: 16px; }
-            .info-label { font-weight: 900; margin-right: 10px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th { border-bottom: 2px solid #000; padding: 8px; background: #e9ecef; text-align: center; font-size: 12px; font-weight:bold; }
-            td { border-bottom: 1px solid #ccc; padding: 8px; font-size: 13px; }
-            .firma { margin-top: 100px; text-align: right; font-weight: bold; padding-right: 50px; }
-            .footer { text-align:center; margin-top:50px; font-size:10px; color: #666; border-top: 1px solid #ccc; padding-top: 10px;}
-        </style></head><body>
-            <div class="header-farmacia">
-                ${info.nombre}<br>
-                ${info.domicilio}<br>
-                CUIT: ${info.cuit} - Condición IVA: ${info.iva}
-            </div>
-            <h1>DETALLE DE LIQUIDACIÓN</h1>
-            <div class="info-box">
-                <div class="info-line"><span class="info-label">LIQUIDACIÓN N°:</span> ${ref}</div>
-                <div class="info-line"><span class="info-label">MANDATARIA / GRUPO:</span> ${mand}</div>
-                <div class="info-line"><span class="info-label">FECHA IMPRESIÓN:</span> ${fecha}</div>
-                ${htmlDeuda}
-            </div>
-            <table>
-                <thead>
-                    <tr>
-                        <th style="text-align:left;">OBRA SOCIAL</th>
-                        <th>PLAN</th>
-                        <th>RECETAS</th>
-                        <th style="text-align:right;">BRUTO ORIG.</th>
-                        <th style="text-align:right;">CARGO O.S.</th>
-                        <th style="text-align:right;">BONIFICACIÓN</th>
-                        <th style="text-align:right;">NETO A PAGAR</th>
-                        <th style="text-align:right; color:red;">SALDO PEND.</th>
-                    </tr>
-                </thead>
-                <tbody>${filas}</tbody>
-            </table>
-            <div class="firma">_______________________________<br>Firma Responsable</div>
-            <div class="footer">Documento generado el: ${new Date().toLocaleString()}</div>
-        </body></html>`; 
-
-        v.document.write(contenido);
-        v.document.close(); 
-        v.focus(); 
-        setTimeout(() => { v.print(); v.close(); }, 500);
-    }
-
-   
-function filtrarOSPorMandataria(idMandataria) {
-    const selectOS = document.getElementById('inputOS');
-    selectOS.innerHTML = '<option value="0">-- Seleccione O.S. --</option>';
-    
-    if (idMandataria == "0") {
-        selectOS.disabled = true;
-        return;
-    }
-
-    // Filtramos los datos en memoria
-    const filtradas = datosOS.filter(os => os.idMandataria == idMandataria);
-
-    if (filtradas.length > 0) {
-        filtradas.forEach(os => {
-            const opt = document.createElement('option');
-            opt.value = os.id;
-            opt.textContent = os.nombre;
-            selectOS.appendChild(opt);
-        });
-        selectOS.disabled = false;
-    } else {
-        selectOS.innerHTML = '<option value="0">⚠️ Sin O.S. vinculadas</option>';
-        selectOS.disabled = true;
-    }
-    
-    // Reseteamos el plan
-    document.getElementById('inputPlan').innerHTML = '<option value="0">- Primero elija OS -</option>';
-    document.getElementById('inputPlan').disabled = true;
-}
-
-// === FUNCIONES DE FORMATO MONEDA ON-BLUR ===
-function limpiarNumero(input) {
-    let val = input.value;
-    // Si tiene algo escrito, le quitamos los puntos para que quede "crudo"
-    if (val) {
-        input.value = val.replace(/\./g, '').replace(',', '.');
-    }
-}
-
-function formatearNumero(input) {
-    let val = parseFloat(input.value.replace(',', '.'));
-    if (!isNaN(val)) {
-        // Al salir, lo volvemos lindo: 1.500,00
-        input.value = val.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    } else {
-        input.value = "";
-    }
-}
-
-
-
-
-async function imprimirListadoActual() {
+    // 2. REPORTE ÍTEM INDIVIDUAL
+    async function imprimirItemIndividual(datos) {
         let info = farmaciaInfo;
         try {
-            const r = await fetch('@Url.Action("ObtenerDatosFarmaciaAjax", "Home")?t=' + new Date().getTime());
+            const r = await fetch('@Url.Action("ObtenerDatosFarmaciaAjax", "Home")');
             const res = await r.json();
             if (res.success) info = res;
         } catch (e) { }
 
-        if (modoActual === 'Mandataria') {
-            imprimirListadoMandatarias(info);
-        } else {
-            imprimirListadoObrasSociales(info);
+        let displayDeuda = "";
+        if (datos.deuda <= 1) displayDeuda = '<span style="color:green;">✅ PAGADO</span>';
+        else displayDeuda = '<span style="color:red; font-weight:bold;">$' + datos.deuda.toFixed(2) + '</span>';
+
+        const filasHTML = '<tr>' +
+            '<td style="text-align:left;">' + datos.os + '</td>' +
+            '<td style="text-align:center;">' + datos.plan + '</td>' +
+            '<td style="text-align:center;">' + datos.recetas + '</td>' +
+            '<td style="text-align:right;">$' + datos.bruto.toFixed(2) + '</td>' +
+            '<td style="text-align:right;">$' + datos.cargo.toFixed(2) + '</td>' +
+            '<td style="text-align:right;">$' + datos.bonif.toFixed(2) + '</td>' +
+            '<td style="text-align:right; font-weight:bold;">$' + datos.neto.toFixed(2) + '</td>' +
+            '<td style="text-align:right;">' + displayDeuda + '</td>' +
+        '</tr>';
+        
+        const cols = "<th>OS</th><th>PLAN</th><th>REC</th><th>BRUTO</th><th>CARGO</th><th>BONIF</th><th>NETO</th><th>DEUDA</th>";
+        abrirVentanaMaestra("PRESENTACION DE " + datos.os, new Date().toLocaleDateString('es-AR'), cols, filasHTML, "", 0, info);
+    }
+
+    // 3. LISTADOS GENERALES (BOTÓN GRANDE)
+    async function imprimirListadoGeneral() {
+        const desde = document.getElementById('filtroFechaDesde').value;
+        const hasta = document.getElementById('filtroFechaHasta').value;
+        const mand = document.getElementById('filtroMandataria').value;
+        const idOS = document.getElementById('filtroOS').value;
+
+        const btn = document.getElementById('btnImprimirUnificado');
+        const textoOriginal = btn.innerHTML;
+        btn.innerHTML = "⏳ GENERANDO..."; btn.disabled = true;
+
+        try {
+            let url = "";
+            if (modoActual === 'Mandataria') {
+                url = `@Url.Action("BuscarLiquidacionesAjax", "Home")?desde=${desde}&hasta=${hasta}&mandataria=${mand}`;
+            } else {
+                url = `@Url.Action("BuscarDetallesGlobalesAjax", "Home")?desde=${desde}&hasta=${hasta}&idMandataria=${mand}&idOS=${idOS}`;
+            }
+
+            const r = await fetch(url);
+            const res = await r.json();
+
+            if (res.success && res.data && res.data.length > 0) {
+                if (modoActual === 'Mandataria') {
+                    imprimirPDF_Mandatarias(res.data, desde, hasta);
+                } else {
+                    imprimirPDF_ObrasSociales(res.data, desde, hasta);
+                }
+            } else {
+                alert("⚠️ No hay datos para imprimir con estos filtros.");
+            }
+        } catch (e) {
+            console.error(e);
+            alert("❌ Error al generar el listado.");
+        } finally {
+            btn.innerHTML = textoOriginal; btn.disabled = false;
         }
     }
 
-    function imprimirListadoMandatarias(info) {
-        const tabla = document.getElementById('tbodyResultados');
+    // --- GENERADOR LISTADO MANDATARIAS ---
+    function imprimirPDF_Mandatarias(datos, desde, hasta) {
         let filas = "";
-        let tL = 0, tS = 0;
-        const limpiar = (t) => parseFloat(t.replace(/[$. ]/g, '').replace(',', '.')) || 0;
+        let tTotal = 0, tSaldo = 0;
 
-        tabla.querySelectorAll('tr').forEach(tr => {
-            const cols = tr.querySelectorAll('td');
-            if (cols.length > 5) {
-                const total = limpiar(cols[4].textContent);
-                const saldo = cols[5].innerText.includes("PAGADO") ? 0 : limpiar(cols[5].innerText);
-                tL += total; tS += saldo;
-                filas += `<tr><td>${cols[0].textContent}</td><td>${cols[1].textContent}</td><td>${cols[2].textContent}</td><td>${cols[3].textContent}</td><td style="text-align:right">$${total.toLocaleString('es-AR')}</td><td style="text-align:right">$${saldo.toLocaleString('es-AR')}</td></tr>`;
+        datos.forEach(x => {
+            const total = parseFloat(x.TotalReal || x.totalReal || 0);
+            const saldo = parseFloat(x.SaldoPendiente || x.saldoPendiente || 0);
+            tTotal += total; tSaldo += saldo;
+
+            const fec = formatearFechaLinda(x.FechaPresentacion || x.fechaPresentacion);
+            const nom = x.NombreMandataria || mapaMandatarias[x.IdMandatarias || x.idMandatarias] || '---';
+            const numComp = x.IdLiquidaciones || x.idLiquidaciones || '---';
+            
+            let displaySaldo = "";
+            if (saldo <= 1) {
+                const fechaPagoRaw = x.FechaCancelacion || x.fechaCancelacion;
+                const fechaPago = fechaPagoRaw ? formatearFechaLinda(fechaPagoRaw) : "SI";
+                displaySaldo = '<span style="color:green; font-size:0.8em;">✅ PAGADO: ' + fechaPago + '</span>';
+            } else {
+                displaySaldo = '<span style="color:red; font-weight:bold;">$' + saldo.toLocaleString('es-AR', {minimumFractionDigits: 2}) + '</span>';
             }
+
+            filas += '<tr>' +
+                '<td style="text-align:center; white-space:nowrap;">' + fec + '</td>' +
+                '<td>' + nom + '</td>' +
+                '<td style="text-align:center; font-weight:bold;">' + numComp + '</td>' + 
+                '<td style="text-align:right">$' + total.toLocaleString('es-AR', {minimumFractionDigits: 2}) + '</td>' +
+                '<td style="text-align:right;">' + displaySaldo + '</td>' +
+            '</tr>';
         });
-        const totales = `<tr style="background:#eee;font-weight:bold"><td colspan="4" style="text-align:right">TOTALES:</td><td style="text-align:right">$${tL.toLocaleString('es-AR')}</td><td style="text-align:right">$${tS.toLocaleString('es-AR')}</td></tr>`;
-        generarDocumentoImpresion("LISTADO POR MANDATARIAS", info, "<tr><th>N°</th><th>FECHA</th><th>MANDATARIA</th><th>OBS</th><th>TOTAL</th><th>SALDO</th></tr>", filas, totales);
+
+        const htmlTotales = '<tr style="background:#eee; font-weight:bold;">' +
+            '<td colspan="3" style="text-align:right">TOTALES:</td>' +
+            '<td style="text-align:right">$' + tTotal.toLocaleString('es-AR', {minimumFractionDigits: 2}) + '</td>' +
+            '<td style="text-align:right; color:red">$' + tSaldo.toLocaleString('es-AR', {minimumFractionDigits: 2}) + '</td>' +
+        '</tr>';
+
+        const rango = (desde && hasta) ? "Desde " + formatearFechaLinda(desde) + " hasta " + formatearFechaLinda(hasta) : "Histórico";
+        abrirVentanaMaestra("LISTADO POR MANDATARIAS", rango, "<th>FECHA</th><th>MANDATARIA</th><th>N° COMPROBANTE</th><th>TOTAL</th><th>DEUDA / PAGO</th>", filas, htmlTotales, 0);
     }
 
-    function generarDocumentoImpresion(titulo, info, htmlTitulos, htmlFilas, htmlTotales) {
-        const v = window.open('', '', 'height=800,width=1200');
-        let contenido = `<html><head><title>${titulo}</title><style>
-            body { font-family: sans-serif; font-size: 12px; padding: 20px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-            .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; }
-        </style></head><body>
-            <div class="header"><b>${info.nombre}</b><br>${info.domicilio}<br>CUIT: ${info.cuit}</div>
-            <h2 style="text-align:center">${titulo}</h2>
-            <table><thead>${htmlTitulos}</thead><tbody>${htmlFilas}${htmlTotales}</tbody></table>
-        </body></html>`;
-        v.document.write(contenido);
+    // --- GENERADOR LISTADO OBRAS SOCIALES ---
+    function imprimirPDF_ObrasSociales(datos, desde, hasta) {
+        let filas = "";
+        let tRec = 0, tBruto = 0, tCargo = 0, tBonif = 0, tNeto = 0, tDeuda = 0;
+
+        datos.sort((a, b) => {
+            const na = (a.NombreObraSocial || a.nombreObraSocial || '').toLowerCase();
+            const nb = (b.NombreObraSocial || b.nombreObraSocial || '').toLowerCase();
+            return na < nb ? -1 : na > nb ? 1 : 0;
+        });
+
+        datos.forEach(x => {
+            const rec = x.CantidadRecetas || x.cantidadRecetas || 0;
+            const bruto = parseFloat(x.TotalBruto || x.totalBruto || 0);
+            const cargo = parseFloat(x.MontoCargoOS || x.montoCargoOS || 0);
+            const bonif = parseFloat(x.MontoBonificacion || x.montoBonificacion || 0);
+            const neto = cargo - bonif; 
+            const saldo = parseFloat(x.SaldoPendiente || 0);
+
+            tRec += rec; tBruto += bruto; tCargo += cargo; tBonif += bonif; tNeto += neto; tDeuda += saldo;
+
+            // Lógica Deuda vs Fecha
+            let displayDeuda = "";
+            let styleDeuda = "";
+            if (saldo <= 1) {
+                const fechaPagoRaw = x.FechaCancelacion || x.fechaCancelacion;
+                const fechaPago = fechaPagoRaw ? formatearFechaLinda(fechaPagoRaw) : "SI";
+                displayDeuda = '✅ ' + fechaPago;
+                styleDeuda = "color:green; font-size:0.75em;";
+            } else {
+                displayDeuda = '$' + saldo.toLocaleString('es-AR', {minimumFractionDigits: 2});
+                styleDeuda = "color:red; font-weight:bold;";
+            }
+
+            filas += '<tr>' +
+                '<td>' + (x.NombreObraSocial || '---') + '</td>' +
+                '<td>' + (x.NombrePlan || '---') + '</td>' +
+                '<td style="text-align:center">' + rec + '</td>' +
+                '<td style="text-align:right">$' + bruto.toLocaleString('es-AR', {minimumFractionDigits: 2}) + '</td>' +
+                '<td style="text-align:right">$' + cargo.toLocaleString('es-AR', {minimumFractionDigits: 2}) + '</td>' +
+                '<td style="text-align:right">$' + bonif.toLocaleString('es-AR', {minimumFractionDigits: 2}) + '</td>' +
+                '<td style="text-align:right; font-weight:bold">$' + neto.toLocaleString('es-AR', {minimumFractionDigits: 2}) + '</td>' +
+                '<td style="text-align:right; ' + styleDeuda + '">' + displayDeuda + '</td>' +
+            '</tr>';
+        });
+
+        const htmlTotales = '<tr style="background:#eee; font-weight:bold;">' +
+            '<td colspan="2" style="text-align:right">TOTALES:</td>' +
+            '<td style="text-align:center;">' + tRec + '</td>' +
+            '<td style="text-align:right;">$' + tBruto.toLocaleString('es-AR', {minimumFractionDigits: 2}) + '</td>' +
+            '<td style="text-align:right;">$' + tCargo.toLocaleString('es-AR', {minimumFractionDigits: 2}) + '</td>' +
+            '<td style="text-align:right;">$' + tBonif.toLocaleString('es-AR', {minimumFractionDigits: 2}) + '</td>' +
+            '<td style="text-align:right;">$' + tNeto.toLocaleString('es-AR', {minimumFractionDigits: 2}) + '</td>' +
+            '<td style="text-align:right; color:red;">$' + tDeuda.toLocaleString('es-AR', {minimumFractionDigits: 2}) + '</td>' +
+        '</tr>';
+
+        const rango = (desde && hasta) ? "Desde " + formatearFechaLinda(desde) + " hasta " + formatearFechaLinda(hasta) : "Histórico";
+        
+        // Pasamos 0 en deuda para evitar el cartel rojo de arriba
+        abrirVentanaMaestra("DETALLE POR OBRA SOCIAL", rango, "<th>OBRA SOCIAL</th><th>PLAN</th><th>REC</th><th>BRUTO</th><th>CARGO OS</th><th>BONIF</th><th>A COBRAR</th><th>DEUDA / PAGO</th>", filas, htmlTotales, 0);
+    }
+
+    // 4. FUNCIÓN MAESTRA (SIN CARTEL ROJO ARRIBA)
+    function abrirVentanaMaestra(titulo, subtitulo, cols, filas, totales, saldoPendiente, datosFarmacia) {
+        const info = datosFarmacia || farmaciaInfo;
+        const v = window.open('', '', 'height=800,width=1100');
+        
+        // --- ELIMINADO EL CARTEL ROJO SUPERIOR ---
+        // Se borró la lógica de htmlDeuda aquí.
+
+        let html = '<html><head><title>Reporte Farmacia</title><style>';
+        html += 'body { font-family: "Courier New", monospace; font-size: 13px; padding: 20px; color:#000; }';
+        html += '.header-farmacia { text-align: center; margin-bottom: 20px; font-weight: bold; font-size: 1.1em; border-bottom: 2px solid #000; padding-bottom: 10px; }';
+        html += 'h2 { text-align:center; font-size: 18px;  margin: 5px 0; }';
+        html += '.sub { text-align:center; font-weight:bold; margin-bottom:10px; }';
+        html += 'table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 12px; }';
+        html += 'th { border-bottom: 2px solid #000; padding: 6px; background: #eee; text-align: center; text-transform: uppercase; }';
+        html += 'td { border-bottom: 1px solid #ddd; padding: 6px; vertical-align: middle; }';
+        // FIRMA CENTRADA EN LA MITAD DE LA HOJA
+        html += '.firma-box { margin-top: 60px; text-align: center; width: 100%; page-break-inside: avoid; }';
+        html += '.firma-line { display: inline-block; border-top: 1px solid #000; padding-top: 5px; width: 300px; text-align: center; font-weight: bold; }';
+        html += '.footer { margin-top: 30px; font-size: 10px; text-align: center; border-top: 1px solid #ccc; padding-top: 5px; }';
+        html += '</style></head><body>';
+        
+        html += '<div class="header-farmacia">';
+        html += '<div>' + info.nombre + '</div>';
+        html += '<div>' + info.domicilio + '</div>';
+        html += '<div>CUIT: ' + info.cuit + ' - ' + info.iva + '</div>';
+        html += '</div>';
+        
+        html += '<h2>' + titulo + '</h2>';
+      
+        
+        html += '<table>';
+        html += '<thead><tr>' + cols + '</tr></thead>';
+        html += '<tbody>' + filas + (totales || '') + '</tbody>';
+        html += '</table>';
+        
+        // BLOQUE DE FIRMA
+        html += '<div class="firma-box">';
+        html += '<div class="firma-line">Firma Responsable</div>';
+        html += '</div>';
+
+        html += '<div class="footer">Generado el: ' + new Date().toLocaleString() + '</div>';
+        html += '</body></html>';
+
+        v.document.write(html);
         v.document.close();
-        setTimeout(() => { v.print(); v.close(); }, 500);
-    }
-
-    function limpiarNumero(input) { if (input.value) input.value = input.value.replace(/\./g, '').replace(',', '.'); }
-    function formatearNumero(input) { 
-        let val = parseFloat(input.value.replace(',', '.'));
-        input.value = !isNaN(val) ? val.toLocaleString('es-AR', { minimumFractionDigits: 2 }) : "";
+        v.focus();
+        setTimeout(function() { v.print(); }, 500);
     }
 </script>
 }
