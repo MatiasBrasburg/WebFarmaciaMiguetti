@@ -8,9 +8,8 @@
     var listaMandatarias = (ViewBag.Mandatarias as IEnumerable<dynamic>)?.ToList() ?? new List<dynamic>();
     var listaObrasSociales = (ViewBag.ObrasSociales as IEnumerable<dynamic>)?.ToList() ?? new List<dynamic>();
     var listaTiposPago = (ViewBag.TiposPago as List<string>) ?? new List<string> { "Transferencia", "Cheque", "Efectivo", "Depósito" };
-
     var jsonObrasSociales = JsonSerializer.Serialize(listaObrasSociales.Select(x => new { id = x.IdObrasSociales, nombre = x.Nombre, idMandataria = x.IdMandataria }));
-var jsonMandatarias = JsonSerializer.Serialize(listaMandatarias.Select(x => new { id = x.IdMandatarias, nombre = x.RazonSocial })); 
+    var jsonMandatarias = JsonSerializer.Serialize(listaMandatarias.Select(x => new { id = x.IdMandatarias, nombre = x.RazonSocial }));
 
     // --- RECUPERAR DATOS DE LA FARMACIA DESDE SESIÓN ---
     string nombreFarmacia = "FARMACIA";
@@ -51,40 +50,35 @@ var jsonMandatarias = JsonSerializer.Serialize(listaMandatarias.Select(x => new 
         font-size: 1.05rem;
         font-weight: 700;
         display: flex;
-        align-items: center; 
+        align-items: center;
     }
 
     /* Ajustes cosméticos generales */
     .form-control, .form-select { 
-        border: 2px solid #6c757d; 
-        color: #000;
+        border: 2px solid #6c757d; color: #000;
         padding: 5px 10px;
     }
     
     .form-control:focus, .form-select:focus { 
-        border-color: #198754; 
-        box-shadow: 0 0 0 0.25rem rgba(25,135,84, 0.25); 
+        border-color: #198754; box-shadow: 0 0 0 0.25rem rgba(25,135,84, 0.25); 
         background-color: #f0fff4; 
     }
 
     /* El grupo del buscador + botón deuda */
     .input-group .btn {
-        border: 2px solid #0d6efd;
-        z-index: 5;
+        border: 2px solid #0d6efd; z-index: 5;
         padding-left: 15px;
         padding-right: 15px;
     }
     
-    .input-group .form-control {
-        border: 2px solid #6c757d; 
-    }
+    .input-group .form-control { border: 2px solid #6c757d; }
 
     /* BUSCADORES FLOTANTES */
     .buscador-wrapper { position: relative; flex-grow: 1; }
     .lista-sugerencias { 
         position: absolute; top: 100%; left: 0; width: 100%; 
         background: white; border: 3px solid #000; border-top: none; 
-        z-index: 10000; display: none; max-height: 250px; overflow-y: auto; 
+        z-index: 10000; display: none; max-height: 250px; overflow-y: auto;
         box-shadow: 0px 10px 20px rgba(0,0,0,0.4);
     }
     .item-sugerencia { padding: 10px 15px; cursor: pointer; border-bottom: 1px solid #ccc; font-weight: 700; font-size: 1rem; color: #333; }
@@ -104,10 +98,7 @@ var jsonMandatarias = JsonSerializer.Serialize(listaMandatarias.Select(x => new 
     .bg-header-view { background-color: #0d6efd; color: white; border-bottom: 5px solid #0a58ca; }
     .bg-header-edit { background-color: #ffc107; color: #000; border-bottom: 5px solid #000; }
 
-    .active-sugerencia {
-    background-color: #198754 !important;
-    color: white !important;
-}
+    .active-sugerencia { background-color: #198754 !important; color: white !important; }
 </style>
 
 <div class="container-fluid mt-4">
@@ -123,13 +114,13 @@ var jsonMandatarias = JsonSerializer.Serialize(listaMandatarias.Select(x => new 
                 <div class="col-md-2"><label class="form-label">Desde</label><input type="date" id="filtroDesde" class="form-control" data-enter="buscarCobros"></div>
                 <div class="col-md-2"><label class="form-label">Hasta</label><input type="date" id="filtroHasta" class="form-control" data-enter="buscarCobros"></div>
                 <div class="col-md-3">
-                <label class="form-label">Mandataria</label>
-                <div class="buscador-wrapper">
-                    <input type="text" id="txtFiltroMandataria" class="form-control" placeholder="Escriba para buscar..." autocomplete="off">
-                    <input type="hidden" id="filtroMandataria" value="0">
-                    <div id="listaFiltroMandataria" class="lista-sugerencias"></div>
+                    <label class="form-label">Mandataria</label>
+                    <div class="buscador-wrapper">
+                        <input type="text" id="txtFiltroMandataria" class="form-control" placeholder="Escriba para buscar..." autocomplete="off">
+                        <input type="hidden" id="filtroMandataria" value="0">
+                        <div id="listaFiltroMandataria" class="lista-sugerencias"></div>
+                    </div>
                 </div>
-            </div>
                 <div class="col-md-3">
                     <label class="form-label">Obra Social</label>
                     <div class="buscador-wrapper">
@@ -178,14 +169,12 @@ var jsonMandatarias = JsonSerializer.Serialize(listaMandatarias.Select(x => new 
             <div class="modal-body bg-light p-4">
                 <div class="row g-3 mb-4 p-3 border border-3 border-success rounded bg-white shadow-sm">
                     <div class="col-md-4">
-                    <label class="form-label text-success">1. MANDATARIA</label>
-                    <div class="buscador-wrapper">
-                        <input type="text" id="txtN_Mand" class="form-control fw-bold border-success" placeholder="Escriba Mandataria..." autocomplete="off">
-                        
-                        <input type="hidden" id="n_Mand" value="0" onchange="alCambiarMandatariaNuevo()">
-                        
-                        <div id="listaN_Mand" class="lista-sugerencias"></div>
-                    </div>
+                        <label class="form-label text-success">1. MANDATARIA</label>
+                        <div class="buscador-wrapper">
+                            <input type="text" id="txtN_Mand" class="form-control fw-bold border-success" placeholder="Escriba Mandataria..." autocomplete="off">
+                            <input type="hidden" id="n_Mand" value="0" onchange="alCambiarMandatariaNuevo()">
+                            <div id="listaN_Mand" class="lista-sugerencias"></div>
+                        </div>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">N° COMPROBANTE</label>
@@ -214,8 +203,18 @@ var jsonMandatarias = JsonSerializer.Serialize(listaMandatarias.Select(x => new 
                             </div>
                             <div class="col-md-2"><label class="form-label small">FECHA PAGO</label><input type="date" id="n_ItemFecha" class="form-control fw-bold"></div>
                             <div class="col-md-2"><label class="form-label small">TIPO</label><select id="n_ItemTipo" class="form-select fw-bold">@foreach(var t in listaTiposPago){<option value="@t">@t</option>}</select></div>
-                            <div class="col-md-2"><label class="form-label small text-success">IMPORTE</label><input type="number" id="n_Imp" class="form-control text-success fw-bold" placeholder="$" data-enter="aggTemp"></div>
-                            <div class="col-md-1"><label class="form-label small text-danger">DÉB.</label><input type="number" id="n_Deb" class="form-control text-danger fw-bold" value="0" data-enter="aggTemp"></div>
+                            
+                            <div class="col-md-2">
+                                <label class="form-label small text-success">IMPORTE</label>
+                                <input type="text" id="n_Imp" class="form-control text-success fw-bold" placeholder="0,00" 
+                                    onfocus="limpiarNumero(this)" onblur="formatearNumero(this)" data-enter="aggTemp">
+                            </div>
+                            <div class="col-md-1">
+                                <label class="form-label small text-danger">DÉB.</label>
+                                <input type="text" id="n_Deb" class="form-control text-danger fw-bold" placeholder="0,00" 
+                                    onfocus="limpiarNumero(this)" onblur="formatearNumero(this)" data-enter="aggTemp">
+                            </div>
+                            
                             <div class="col-md-1"><button class="btn btn-success w-100 fw-bold" onclick="aggTemp()">⬇️</button></div>
                         </div>
                         <input type="hidden" id="n_IdLiqDetalle" value=""> <small id="lblDeudaSeleccionada" class="text-primary fw-bold ms-1" style="display:none;"></small>
@@ -269,13 +268,15 @@ var jsonMandatarias = JsonSerializer.Serialize(listaMandatarias.Select(x => new 
                             <div class="col-md-2"><label class="form-label small">FECHA PAGO</label><input type="date" id="v_FechaItem" class="form-control form-control-sm"></div>
                             <div class="col-md-2"><label class="form-label small">TIPO</label><select id="v_TipoItem" class="form-select form-select-sm">@foreach(var t in listaTiposPago){<option value="@t">@t</option>}</select></div>
                             <div class="col-md-2">
-    <label class="form-label small text-success">IMPORTE</label>
-    <input type="number" id="v_Imp" class="form-control form-control-sm text-success fw-bold" placeholder="0.00" data-enter="agregarAlLote">
-</div>
-<div class="col-md-2">
-    <label class="form-label small text-danger">DÉBITO</label>
-    <input type="number" id="v_Deb" class="form-control form-control-sm text-danger fw-bold" placeholder="0.00" data-enter="agregarAlLote">
-</div>
+                                <label class="form-label small text-success">IMPORTE</label>
+                                <input type="text" id="v_Imp" class="form-control form-control-sm text-success fw-bold" placeholder="0,00" 
+                                    onfocus="limpiarNumero(this)" onblur="formatearNumero(this)" data-enter="agregarAlLote">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small text-danger">DÉBITO</label>
+                                <input type="text" id="v_Deb" class="form-control form-control-sm text-danger fw-bold" placeholder="0,00" 
+                                    onfocus="limpiarNumero(this)" onblur="formatearNumero(this)" data-enter="agregarAlLote">
+                            </div>
                             <div class="col-md-2"><button class="btn btn-primary fw-bold w-100 btn-sm" onclick="agregarAlLote()">AGREGAR</button></div>
                         </div>
                         <input type="hidden" id="v_IdLiqDetalle" value="">
@@ -357,8 +358,17 @@ var jsonMandatarias = JsonSerializer.Serialize(listaMandatarias.Select(x => new 
                 <div class="row g-2">
                     <div class="col-6"><label>Fecha</label><input type="date" id="ed_Fecha" class="form-control"></div>
                     <div class="col-6"><label>Tipo</label><select id="ed_Tipo" class="form-select">@foreach(var t in listaTiposPago){<option value="@t">@t</option>}</select></div>
-                    <div class="col-6"><label>Importe</label><input type="number" id="ed_Imp" class="form-control fw-bold text-success"></div>
-                    <div class="col-6"><label>Débitos</label><input type="number" id="ed_Deb" class="form-control fw-bold text-danger"></div>
+                    
+                    <div class="col-6">
+                        <label>Importe</label>
+                        <input type="text" id="ed_Imp" class="form-control fw-bold text-success" 
+                            onfocus="limpiarNumero(this)" onblur="formatearNumero(this)">
+                    </div>
+                    <div class="col-6">
+                        <label>Débitos</label>
+                        <input type="text" id="ed_Deb" class="form-control fw-bold text-danger" 
+                            onfocus="limpiarNumero(this)" onblur="formatearNumero(this)">
+                    </div>
                 </div>
             </div>
             <div class="modal-footer py-2"><button class="btn btn-warning fw-bold w-100" onclick="guardarEditDetalle()">GUARDAR</button></div>
@@ -374,15 +384,14 @@ var jsonMandatarias = JsonSerializer.Serialize(listaMandatarias.Select(x => new 
         cuit: "@Html.Raw(cuitFarmacia)",
         iva: "@Html.Raw(ivaFarmacia)"
     };
-
     var datosOS = @Html.Raw(jsonObrasSociales);
     var datosMand = @Html.Raw(jsonMandatarias ?? "[]");
     var datosOS_FiltradosNuevo = [];
-    var itemsTemp = []; 
+    var itemsTemp = [];
     var datosAgrupados = {}; 
     var loteContexto = {}; 
     var mVer, mNuevo, mEdit, mEditDetalle, mDeudas;
-    var origenDeuda = ""; 
+    var origenDeuda = "";
 
     document.addEventListener("DOMContentLoaded", () => {
         mVer = new bootstrap.Modal(document.getElementById('modalVer'));
@@ -402,7 +411,6 @@ var jsonMandatarias = JsonSerializer.Serialize(listaMandatarias.Select(x => new 
         document.getElementById('modalNuevo').addEventListener('shown.bs.modal', function () { document.getElementById('n_Comp').focus(); });
         document.getElementById('modalVer').addEventListener('shown.bs.modal', function () { document.getElementById('txtV_OS').focus(); });
         document.getElementById('modalEditDetalle').addEventListener('shown.bs.modal', function () { document.getElementById('ed_Imp').focus(); });
-
         // 2. Evento Enter Global (Delegado)
         document.addEventListener('keypress', function(e) {
             if(e.key === 'Enter') {
@@ -414,7 +422,6 @@ var jsonMandatarias = JsonSerializer.Serialize(listaMandatarias.Select(x => new 
                 }
             }
         });
-
         buscarCobros(); 
         
         const hoy = new Date().toISOString().substring(0, 10);
@@ -422,19 +429,56 @@ var jsonMandatarias = JsonSerializer.Serialize(listaMandatarias.Select(x => new 
         if(document.getElementById('n_ItemFecha')) document.getElementById('n_ItemFecha').value = hoy;
     });
 
-   // --- FUNCIÓN SETUP AUTO MEJORADA (CON FLECHAS Y TAB) ---
+    // === FUNCIONES DE FORMATO MONEDA (UX) ===
+    
+    // 1. Al ENTRAR (Foco): Quita puntos y decimales .00 para facilitar edición
+    function limpiarNumero(input) {
+        let val = input.value;
+        if (val) {
+            val = val.replace(/\./g, '').replace(',', '.'); // Estandariza a 1500.50
+            if(val.endsWith('.00')) val = val.substring(0, val.length - 3); // Quita el .00 si es entero
+            if(val === '0') val = ''; // Borra el 0 inicial
+            input.value = val;
+        }
+    }
+
+    // 2. Al SALIR (Blur): Agrega puntos y comas (1.500,00)
+    function formatearNumero(input) {
+        let val = parseFloat(input.value.replace(',', '.'));
+        if (!isNaN(val)) {
+            input.value = val.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        } else {
+            input.value = "";
+        }
+    }
+
+    // 3. LECTURA INTELIGENTE (Detecta si el input tiene foco o no para leer bien)
+    function leerMoneda(inputElement) {
+        if (!inputElement.value) return 0;
+        let val = inputElement.value;
+        
+        // Si el usuario está escribiendo (tiene foco), el formato es 1500.50 (JS standard)
+        if (document.activeElement === inputElement) {
+            return parseFloat(val.replace(',', '.')); 
+        } 
+        // Si no tiene foco, el formato es 1.500,50 (Argentino) -> Hay que quitar puntos
+        else {
+            return parseFloat(val.replace(/\./g, '').replace(',', '.'));
+        }
+    }
+    // --- FUNCIÓN SETUP AUTO MEJORADA (CON FLECHAS Y TAB) ---
     function setupAuto(inpId, listId, hidId, fuenteDatos) {
         const inp = document.getElementById(inpId);
         const list = document.getElementById(listId);
         const hid = document.getElementById(hidId);
-        let currentFocus = -1; // Índice para navegar con flechas
+        let currentFocus = -1;
 
         inp.addEventListener("input", function() {
             const t = this.value.toLowerCase();
             list.innerHTML = '';
             currentFocus = -1;
             
-            // Lógica específica de limpieza (Mantenemos tu lógica original)
+            // Lógica específica de limpieza
             if (inpId === 'txtN_OS') { 
                 document.getElementById('n_IdLiqDetalle').value = ""; 
                 document.getElementById('lblDeudaSeleccionada').style.display = 'none';
@@ -452,9 +496,8 @@ var jsonMandatarias = JsonSerializer.Serialize(listaMandatarias.Select(x => new 
 
             // Filtramos y mostramos máximo 50 resultados para rendimiento
             const f = fuenteDatos.filter(x => x.nombre.toLowerCase().includes(t)).slice(0, 50);
-            
             if (f.length === 0) { 
-                list.innerHTML = '<div class="item-sugerencia text-muted">🚫 NO EXISTE</div>'; 
+                list.innerHTML = '<div class="item-sugerencia text-muted">🚫 NO EXISTE</div>';
                 list.style.display = 'block'; 
                 return;
             }
@@ -498,7 +541,6 @@ var jsonMandatarias = JsonSerializer.Serialize(listaMandatarias.Select(x => new 
                     e.preventDefault(); // Evitamos que se vaya el foco antes de seleccionar
                     if (currentFocus > -1) x[currentFocus].click();
                     else x[0].click();
-                    // Opcional: mover el foco manualmente al siguiente campo si es necesario
                 }
             }
         });
@@ -509,23 +551,20 @@ var jsonMandatarias = JsonSerializer.Serialize(listaMandatarias.Select(x => new 
         });
 
         // --- FUNCIONES AUXILIARES INTERNAS ---
-       function seleccionarItem(elemento) {
-    inp.value = elemento.dataset.nombre;
-    hid.value = elemento.dataset.id;
-    list.style.display = 'none';
-    
-    // --- ESTA ES LA LÍNEA QUE FALTABA ---
-    // Le avisa al input oculto que cambió, para que se dispare 'alCambiarMandatariaNuevo'
-    hid.dispatchEvent(new Event('change')); 
-    // ------------------------------------
+        function seleccionarItem(elemento) {
+            inp.value = elemento.dataset.nombre;
+            hid.value = elemento.dataset.id;
+            list.style.display = 'none';
+            
+            // Avisar cambio
+            hid.dispatchEvent(new Event('change'));
 
-    // Foco inteligente según qué buscador sea
-    if (inpId === 'txtN_OS') document.getElementById('n_Imp').focus();
-    if (inpId === 'txtV_OS') document.getElementById('v_Imp').focus();
-    if (inpId === 'txtFiltroMandataria') document.getElementById('txtFiltroOS').focus();
-    // Nuevo: Al elegir mandataria, saltamos al buscador de OS
-    if (inpId === 'txtN_Mand') document.getElementById('txtN_OS').focus();
-}
+            // Foco inteligente según qué buscador sea
+            if (inpId === 'txtN_OS') document.getElementById('n_Imp').focus();
+            if (inpId === 'txtV_OS') document.getElementById('v_Imp').focus();
+            if (inpId === 'txtFiltroMandataria') document.getElementById('txtFiltroOS').focus();
+            if (inpId === 'txtN_Mand') document.getElementById('txtN_OS').focus();
+        }
 
         function addActive(x) {
             if (!x) return false;
@@ -542,27 +581,22 @@ var jsonMandatarias = JsonSerializer.Serialize(listaMandatarias.Select(x => new 
             }
         }
     }
+
     function alCambiarMandatariaNuevo() {
         const idMand = parseInt(document.getElementById('n_Mand').value) || 0;
         
         // 1. Limpiamos los inputs de Obra Social
-        document.getElementById('txtN_OS').value = ''; 
+        document.getElementById('txtN_OS').value = '';
         document.getElementById('valN_OS').value = '0';
         document.getElementById('n_IdLiqDetalle').value = ""; 
         document.getElementById('lblDeudaSeleccionada').style.display = 'none';
 
         // 2. MAGIA: Vaciamos la lista puente (sin romper la referencia)
         datosOS_FiltradosNuevo.length = 0;
-
         // 3. Filtramos los datos originales
-        const filtradas = idMand > 0 
-            ? datosOS.filter(x => x.idMandataria == idMand) 
-            : datosOS;
-
+        const filtradas = idMand > 0 ? datosOS.filter(x => x.idMandataria == idMand) : datosOS;
         // 4. Llenamos la lista puente con los nuevos datos
         datosOS_FiltradosNuevo.push(...filtradas);
-        
-       
     }
     
     function actualizarFechaDefault() {
@@ -580,7 +614,6 @@ var jsonMandatarias = JsonSerializer.Serialize(listaMandatarias.Select(x => new 
             `&IdObraSocial=${document.getElementById('filtroOS').value}` +
             `&desde=${document.getElementById('filtroDesde').value}` +
             `&hasta=${document.getElementById('filtroHasta').value}`;
-        
         try {
             const r = await fetch(url);
             const res = await r.json();
@@ -616,13 +649,15 @@ var jsonMandatarias = JsonSerializer.Serialize(listaMandatarias.Select(x => new 
                     </tr>`;
                 });
             } else tbody.innerHTML = '<tr><td colspan="7" class="text-center p-4 text-muted">Sin datos.</td></tr>';
-        } catch(e) { console.error(e); tbody.innerHTML = '<tr><td colspan="7" class="text-danger">Error de red</td></tr>'; }
+        } catch(e) { console.error(e);
+            tbody.innerHTML = '<tr><td colspan="7" class="text-danger">Error de red</td></tr>'; }
     }
 
     function limpiarFiltros() { 
-        document.getElementById('filtroMandataria').value = 0; document.getElementById('txtFiltroOS').value = ""; 
+        document.getElementById('filtroMandataria').value = 0;
+        document.getElementById('txtFiltroOS').value = ""; 
         document.getElementById('filtroOS').value = 0; document.getElementById('filtroDesde').value = ""; document.getElementById('filtroHasta').value = "";
-        buscarCobros(); 
+        buscarCobros();
     }
 
     // --- IMPRESIÓN MEJORADA ---
@@ -630,7 +665,6 @@ var jsonMandatarias = JsonSerializer.Serialize(listaMandatarias.Select(x => new 
         const tabla = document.getElementById('tbodyResultados');
         let filas = "";
         let tImp = 0; let tNet = 0;
-        
         tabla.querySelectorAll('tr').forEach(tr => {
             const cols = tr.querySelectorAll('td');
             if(cols.length > 5) {
@@ -650,7 +684,6 @@ var jsonMandatarias = JsonSerializer.Serialize(listaMandatarias.Select(x => new 
         });
 
         const totalRow = "<tr style='background:#eee; font-weight:bold;'><td colspan='4' style='text-align:right'>TOTALES:</td><td style='text-align:right'>$" + tImp.toLocaleString('es-AR',{minimumFractionDigits:2}) + "</td><td style='text-align:right'>$" + tNet.toLocaleString('es-AR',{minimumFractionDigits:2}) + "</td></tr>";
-
         const v = window.open('', '', 'height=800,width=1000');
         v.document.write('<html><head><title>Listado</title><style>');
         v.document.write('body { font-family: Courier New, monospace; padding: 20px; }');
@@ -671,10 +704,13 @@ var jsonMandatarias = JsonSerializer.Serialize(listaMandatarias.Select(x => new 
         v.document.write(filas);
         v.document.write(totalRow);
         v.document.write('</tbody></table>');
+        v.document.write('<div class="firma-box"style="text-align:center; margin-top:50px;">_______________________<br> ');
+        v.document.write('<div class="firma-line">Firma Responsable</div>');
+        v.document.write('</div>');
         v.document.write('<div style="text-align:center; margin-top:30px; font-size:10px;">Generado el: ' + new Date().toLocaleString() + '</div>');
-        v.document.write('<' + '/body><' + '/html>'); // Rompemos etiquetas para que no fallen
+        v.document.write('<' + '/body><' + '/html>'); 
         
-        v.document.close(); 
+        v.document.close();
         v.focus(); 
         setTimeout(function() { v.print(); v.close(); }, 500);
     }
@@ -684,7 +720,6 @@ var jsonMandatarias = JsonSerializer.Serialize(listaMandatarias.Select(x => new 
         origenDeuda = origen;
         const idOS = (origen === 'Nuevo') ? document.getElementById('valN_OS').value : document.getElementById('valV_OS').value;
         const nombreOS = (origen === 'Nuevo') ? document.getElementById('txtN_OS').value : document.getElementById('txtV_OS').value;
-
         if(idOS == 0) { alert("⚠️ Seleccione primero una Obra Social."); return; }
 
         document.getElementById('lblTituloDeudas').textContent = "Deudas de: " + nombreOS;
@@ -696,7 +731,6 @@ var jsonMandatarias = JsonSerializer.Serialize(listaMandatarias.Select(x => new 
             const r = await fetch(`@Url.Action("TraerDeudasPendientes", "Home")?idObraSocial=${idOS}`);
             const res = await r.json();
             const b = document.getElementById('tbodyDeudas'); b.innerHTML = '';
-
             if(res.success && res.data.length > 0) {
                 res.data.forEach(d => {
                     const saldo = parseFloat(d.SaldoPendiente);
@@ -717,14 +751,17 @@ var jsonMandatarias = JsonSerializer.Serialize(listaMandatarias.Select(x => new 
 
     function seleccionarDeuda(idLiqDet, saldo, periodo) {
         mDeudas.hide();
+        // Formatear saldo para ponerlo en el input de texto
+        const saldoF = saldo.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        
         if(origenDeuda === 'Nuevo') {
-            document.getElementById('n_Imp').value = saldo;
+            document.getElementById('n_Imp').value = saldoF;
             document.getElementById('n_IdLiqDetalle').value = idLiqDet;
             const lbl = document.getElementById('lblDeudaSeleccionada');
             lbl.style.display = 'inline'; lbl.textContent = `(Paga: ${periodo})`;
             document.getElementById('n_Imp').focus();
         } else {
-            document.getElementById('v_Imp').value = saldo;
+            document.getElementById('v_Imp').value = saldoF;
             document.getElementById('v_IdLiqDetalle').value = idLiqDet;
             const lbl = document.getElementById('lblDeudaSeleccionadaVer');
             lbl.style.display = 'inline'; lbl.textContent = `(Paga: ${periodo})`;
@@ -742,12 +779,12 @@ var jsonMandatarias = JsonSerializer.Serialize(listaMandatarias.Select(x => new 
         document.getElementById('lblTotalLote').textContent="$0.00";
         document.getElementById('n_FechaRef').value = new Date().toISOString().substring(0, 10);
         document.getElementById('n_Mand').value = "0";      
-    document.getElementById('txtN_Mand').value = "";
+        document.getElementById('txtN_Mand').value = "";
         
         document.getElementById('txtN_OS').value = "";
         document.getElementById('valN_OS').value = "0";
         document.getElementById('n_Imp').value = "";
-        document.getElementById('n_Deb').value = "0";
+        document.getElementById('n_Deb').value = "0,00";
         document.getElementById('n_IdLiqDetalle').value = "";
         document.getElementById('lblDeudaSeleccionada').style.display = 'none';
 
@@ -761,8 +798,11 @@ var jsonMandatarias = JsonSerializer.Serialize(listaMandatarias.Select(x => new 
         const nom = document.getElementById('txtN_OS').value;
         const fecha = document.getElementById('n_ItemFecha').value;
         const tipo = document.getElementById('n_ItemTipo').value;
-        const imp = parseFloat(document.getElementById('n_Imp').value)||0;
-        const deb = parseFloat(document.getElementById('n_Deb').value)||0;
+        
+      // LEER CON LEERMONEDA (INTELIGENTE)
+    const imp = leerMoneda(document.getElementById('n_Imp'));
+    const deb = leerMoneda(document.getElementById('n_Deb'));
+        
         const idLiqDet = document.getElementById('n_IdLiqDetalle').value || null;
 
         if(id==0 || imp==0 || fecha=="") { alert("⚠️ Faltan datos (OS, Fecha, Importe)"); return; }
@@ -771,12 +811,11 @@ var jsonMandatarias = JsonSerializer.Serialize(listaMandatarias.Select(x => new 
         dibujarTemp();
         
         document.getElementById('n_Imp').value=""; 
-        document.getElementById('n_Deb').value="0.00";
+        document.getElementById('n_Deb').value="0,00";
         document.getElementById('txtN_OS').value=""; 
         document.getElementById('valN_OS').value="0";
         document.getElementById('n_IdLiqDetalle').value = ""; 
         document.getElementById('lblDeudaSeleccionada').style.display = 'none';
-        
         // FOCO AUTOMÁTICO AL BUSCADOR PARA SEGUIR CARGANDO
         document.getElementById('txtN_OS').focus();
     }
@@ -789,7 +828,8 @@ var jsonMandatarias = JsonSerializer.Serialize(listaMandatarias.Select(x => new 
             const badgeDeuda = x.idLiq ? '<span class="badge bg-info text-dark">Imputado</span>' : '';
             b.innerHTML+=`<tr>
                 <td class="fw-bold small">${x.nom}</td><td class="text-center small">${x.fecha}</td><td class="text-center small">${x.tipo}</td>
-                <td class="text-end text-success">$${x.imp.toFixed(2)}</td><td class="text-end text-danger">$${x.deb.toFixed(2)}</td>
+                <td class="text-end text-success">$${x.imp.toLocaleString('es-AR', {minimumFractionDigits: 2})}</td>
+                <td class="text-end text-danger">$${x.deb.toLocaleString('es-AR', {minimumFractionDigits: 2})}</td>
                 <td class="text-center">${badgeDeuda}</td>
                 <td class="text-center"><button class="btn btn-sm btn-danger py-0" onclick="itemsTemp.splice(${i},1);dibujarTemp()">x</button></td>
             </tr>`;
@@ -804,14 +844,12 @@ var jsonMandatarias = JsonSerializer.Serialize(listaMandatarias.Select(x => new 
 
         if(mandId === 0 || comp === "" || itemsTemp.length === 0) { alert("⚠️ Faltan datos."); return; }
         if(!confirm("¿Confirmar Lote?")) return;
-
         const loteFinal = itemsTemp.map(x => ({
             IdMandatariasMaestro: mandId, FechaCobroMaestro: fechaRef, NumeroComprobanteMaestro: comp,
             IdObrasSociales: parseInt(x.id), FechaCobroDetalle: x.fecha, TipoPago: x.tipo,
             ImporteCobrado: x.imp, MontoDebito: x.deb, MotivoDebito: "",
             IdLiquidacionDetalle: x.idLiq ? parseInt(x.idLiq) : null
         }));
-
         try {
             const r = await fetch('@Url.Action("GuardarLoteCobros", "Home")', { 
                 method:'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(loteFinal)
@@ -861,8 +899,8 @@ var jsonMandatarias = JsonSerializer.Serialize(listaMandatarias.Select(x => new 
                         <td class="fw-bold small">${x.NombreObraSocial}</td>
                         <td class="text-center small">${(x.FechaCobroDetalle||'').split('T')[0]}</td>
                         <td class="text-center small">${x.TipoPago}</td>
-                        <td class="text-end text-success fw-bold">$${imp.toFixed(2)}</td>
-                        <td class="text-end fw-black">$${(imp-deb).toFixed(2)}</td>
+                        <td class="text-end text-success fw-bold">$${imp.toLocaleString('es-AR', {minimumFractionDigits: 2})}</td>
+                        <td class="text-end fw-black">$${(imp-deb).toLocaleString('es-AR', {minimumFractionDigits: 2})}</td>
                         <td class="text-center">
                             <button class="btn btn-warning btn-sm me-1" onclick="abrirEditDetalle(${x.IdCobrosDetalle})">✏️</button>
                             <button class="btn btn-sm btn-danger" onclick="eliminarDelLote(${x.IdCobrosDetalle})">🗑️</button>
@@ -876,11 +914,8 @@ var jsonMandatarias = JsonSerializer.Serialize(listaMandatarias.Select(x => new 
 
     async function agregarAlLote() {
         const idOS = document.getElementById('valV_OS').value;
-        const imp = document.getElementById('v_Imp').value.replace(',', '.');
-        
-        // CORRECCIÓN: Leemos el valor del nuevo ID 'v_Deb'
-        const deb = document.getElementById('v_Deb').value.replace(',', '.') || 0;
-        
+      const imp = leerMoneda(document.getElementById('v_Imp'));
+    const deb = leerMoneda(document.getElementById('v_Deb'));
         const idLiq = document.getElementById('v_IdLiqDetalle').value || null;
 
         if (idOS == 0 || imp == 0) { alert("Datos incompletos."); return; }
@@ -893,19 +928,15 @@ var jsonMandatarias = JsonSerializer.Serialize(listaMandatarias.Select(x => new 
         fd.append("TipoPago", document.getElementById('v_TipoItem').value);
         fd.append("NumeroComprobante", loteContexto.comp);
         fd.append("ImporteCobrado", imp);
-        
-        // CORRECCIÓN: Enviamos la variable 'deb' real
         fd.append("MontoDebitos", deb);
         fd.append("MotivoDebito", "");
-        
         if (idLiq) fd.append("IdLiquidacionDetalle", idLiq);
         
         try {
             await fetch('@Url.Action("GuardarCobro", "Home")', { method: 'POST', body: fd });
-            
             // LIMPIEZA
             document.getElementById('v_Imp').value = "";
-            document.getElementById('v_Deb').value = ""; // Limpiamos el débito también
+            document.getElementById('v_Deb').value = "";
             document.getElementById('txtV_OS').value = "";
             document.getElementById('valV_OS').value = "0";
             document.getElementById('v_IdLiqDetalle').value = "";
@@ -969,8 +1000,9 @@ var jsonMandatarias = JsonSerializer.Serialize(listaMandatarias.Select(x => new 
             document.getElementById('txtED_OS').value = datosOS.find(x=>x.id==d.IdObrasSociales)?.nombre||'---';
             document.getElementById('ed_Fecha').value = (d.FechaCobroDetalle||'').split('T')[0];
             document.getElementById('ed_Tipo').value = d.TipoPago;
-            document.getElementById('ed_Imp').value = d.ImporteCobrado;
-            document.getElementById('ed_Deb').value = d.MontoDebito;
+           // DENTRO DE abrirEditDetalle, REEMPLAZA LAS ASIGNACIONES POR:
+    document.getElementById('ed_Imp').value = d.ImporteCobrado.toLocaleString('es-AR', {minimumFractionDigits: 2});
+    document.getElementById('ed_Deb').value = d.MontoDebito.toLocaleString('es-AR', {minimumFractionDigits: 2});
             mEditDetalle.show();
         }
     }
@@ -982,26 +1014,24 @@ var jsonMandatarias = JsonSerializer.Serialize(listaMandatarias.Select(x => new 
         fd.append("IdCobro", document.getElementById('ed_Id').value);
         const idOS = document.getElementById('valED_OS').value;
         fd.append("IdObraSocial", idOS); fd.append("IdObrasSociales", idOS);
-        
-        // AGREGAMOS ESTO PARA QUE PASE LA VALIDACIÓN DEL CONTROLLER
-        fd.append("IdMandataria", loteContexto.mandatariaId); 
-        
+        fd.append("IdMandataria", loteContexto.mandatariaId);
         fd.append("FechaCobro", document.getElementById('ed_Fecha').value);
         fd.append("TipoPago", document.getElementById('ed_Tipo').value);
-        
-        // MARCA ESPECIAL: "---" indica al Controller que es una edición
-        fd.append("NumeroComprobante", "---"); 
-        
-        fd.append("ImporteCobrado", document.getElementById('ed_Imp').value.replace(',','.'));
-        fd.append("MontoDebitos", document.getElementById('ed_Deb').value.replace(',','.'));
-        fd.append("MotivoDebito", ""); // Campo obligatorio aunque vaya vacío
+        fd.append("NumeroComprobante", "---");
+        // LEER CON LEERMONEDA
+    const imp = leerMoneda(document.getElementById('ed_Imp'));
+    const deb = leerMoneda(document.getElementById('ed_Deb'));
+    
+    fd.append("ImporteCobrado", imp); 
+    fd.append("MontoDebitos", deb);
+        fd.append("MotivoDebito", ""); 
 
         try {
             const r = await fetch('@Url.Action("GuardarCobro", "Home")', { method:'POST', body:fd });
             const res = await r.json();
             
             if(res.success) {
-                mEditDetalle.hide(); 
+                mEditDetalle.hide();
                 buscarCobros(); 
                 traerDetalles(loteContexto.idPadre);
             } else {
