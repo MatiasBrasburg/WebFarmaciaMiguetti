@@ -2154,12 +2154,10 @@ async function recargarTablaVisor(idLiq = null) {
 
         // LIMPIEZA DE PUNTOS PARA ENVIAR AL SERVER
 
-      fd.append("Total", document.getElementById('item_Total').value.replace(/\./g, '')); 
-
-    fd.append("CargoOS", document.getElementById('item_CargoOS').value.replace(/\./g, ''));
-
-    fd.append("Bonificacion", document.getElementById('item_Neto').value.replace(/\./g, ''));
-
+     // LIMPIEZA: Quitamos puntos de mil y CAMBIAMOS la coma por punto decimal
+fd.append("Total", document.getElementById('item_Total').value.replace(/\./g, '').replace(',', '.')); 
+fd.append("CargoOS", document.getElementById('item_CargoOS').value.replace(/\./g, '').replace(',', '.'));
+fd.append("Bonificacion", document.getElementById('item_Neto').value.replace(/\./g, '').replace(',', '.'));
 
 
         try {
