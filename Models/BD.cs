@@ -298,7 +298,8 @@ public static class BD
         List<PlanBonificacion> ObjPlanBoni = null;
         using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
         {
-            string query = "SELECT * FROM \"PlanBonificacion\" where \"IdObrasSociales\" = @pIdOS";
+            // TRUCO: Usamos 'AS IdObraSocial' para que Dapper llene tu propiedad en singular
+            string query = "SELECT *, \"IdObrasSociales\" as IdObraSocial FROM \"PlanBonificacion\" where \"IdObrasSociales\" = @pIdOS";
             ObjPlanBoni = connection.Query<PlanBonificacion>(query, new { pIdOS = IdOS }).ToList();
         }
         return ObjPlanBoni;
@@ -306,8 +307,9 @@ public static class BD
 
     public static void InsertarPlan(PlanBonificacion plan)
     {
+        // CORRECCIÓN: En VALUES usamos @IdObraSocial (Singular) que es lo que tiene tu objeto
         string query = "INSERT INTO \"PlanBonificacion\" (\"IdObrasSociales\", \"NombrePlan\", \"Bonificacion\", \"NumeroBonificacion\") " +
-                       "VALUES (@IdObrasSociales, @NombrePlan, @Bonificacion, @NumeroBonificacion)";
+                       "VALUES (@IdObraSocial, @NombrePlan, @Bonificacion, @NumeroBonificacion)";
 
         using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
         {
@@ -318,15 +320,16 @@ public static class BD
             }
             catch (NpgsqlException ex)
             {
-                throw new Exception("Error al insertar el plan de bonificación en la base de datos.", ex);
+                throw new Exception("Error al insertar el plan. Verifique los datos.", ex);
             }
         }
     }
 
     public static void ActualizarPlan(PlanBonificacion plan)
     {
+        // CORRECCIÓN: SET "IdObrasSociales" = @IdObraSocial (Singular)
         string query = "UPDATE \"PlanBonificacion\" SET " +
-                       "\"IdObrasSociales\" = @IdObrasSociales, " +
+                       "\"IdObrasSociales\" = @IdObraSocial, " +
                        "\"NombrePlan\" = @NombrePlan, " +
                        "\"Bonificacion\" = @Bonificacion, " +
                        "\"NumeroBonificacion\" = @NumeroBonificacion " +
@@ -341,7 +344,7 @@ public static class BD
             }
             catch (NpgsqlException ex)
             {
-                throw new Exception("Error al actualizar el plan de bonificación en la base de datos.", ex);
+                throw new Exception("Error al actualizar el plan.", ex);
             }
         }
     }
