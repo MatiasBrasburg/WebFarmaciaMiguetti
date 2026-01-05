@@ -344,11 +344,11 @@ public class HomeController : Controller
                     Observaciones = Observaciones,
                     TotalPresentado = totalPresentacion,
                     Periodo = (Fecha ?? DateTime.Now).ToString("MM-yyyy"),
-                    IdUsuario = usuarioCompleto.IdUsuario
+                  
                 };
 
                 // 5. GUARDAR EN BD
-                int nuevoId = BD.InsertarLiquidacionCabecera(nuevaLiq);
+                int nuevoId = BD.InsertarLiquidacionCabecera(nuevaLiq, usuarioCompleto.IdUsuario);
 
                 // B) Guardamos cada detalle
                 foreach (var item in listaDetalles)
@@ -360,7 +360,8 @@ public class HomeController : Controller
                         item.CantidadRecetas, 
                         item.TotalBruto, 
                         item.MontoCargoOS, 
-                        item.MontoBonificacion
+                        item.MontoBonificacion,
+                        usuarioCompleto.IdUsuario
                     );
                 }
 
@@ -451,7 +452,7 @@ public class HomeController : Controller
         try
         {
             // Llamamos al nuevo método de BD
-            var lista = BD.BuscarLiquidaciones(id, desde, hasta, mandataria);
+            var lista = BD.BuscarLiquidaciones(id, desde, hasta, mandataria, usuarioCompleto.IdUsuario);
             
             // Retornamos JSON para que JS dibuje la tabla
             return Json(new { success = true, data = lista });
@@ -484,7 +485,7 @@ public class HomeController : Controller
 
         try
         {
-            var item = BD.TraerDetallePorId(idDetalle);
+            var item = BD.TraerDetallePorId(idDetalle, usuarioCompleto.IdUsuario);
             if (item == null) return Json(new { success = false, message = "Ítem no encontrado" });
             return Json(new { success = true, data = item });
         }
@@ -551,13 +552,13 @@ var itemsExistentes = BD.TraerDetallesPorIdLiquidacion(IdLiquidacionPadre, usuar
             if (IdItem == 0)
             {
                 // INSERTAR
-                BD.AgregarItemIndividual(item);
+                BD.AgregarItemIndividual(item, usuarioCompleto.IdUsuario);
                 return Json(new { success = true, message = "Ítem AGREGADO correctamente." });
             }
             else
             {
                 // MODIFICAR
-                BD.ModificarItemIndividual(item);
+                BD.ModificarItemIndividual(item, usuarioCompleto.IdUsuario);
                 return Json(new { success = true, message = "Ítem MODIFICADO correctamente." });
             }
         }
@@ -588,7 +589,7 @@ var itemsExistentes = BD.TraerDetallesPorIdLiquidacion(IdLiquidacionPadre, usuar
 
         try
         {
-            BD.EliminarItemIndividual(idItem, idLiquidacionPadre);
+            BD.EliminarItemIndividual(idItem, idLiquidacionPadre, usuarioCompleto.IdUsuario);
             return Json(new { success = true, message = "Ítem eliminado." });
         }
         catch (Exception ex)
@@ -628,7 +629,7 @@ var itemsExistentes = BD.TraerDetallesPorIdLiquidacion(IdLiquidacionPadre, usuar
 
         try
         {
-            var liq = BD.TraerLiquidacionPorId(id);
+            var liq = BD.TraerLiquidacionPorId(id, usuarioCompleto.IdUsuario);
             if (liq == null) return Json(new { success = false, message = "No encontrada" });
             return Json(new { success = true, data = liq });
         }
@@ -661,7 +662,7 @@ var itemsExistentes = BD.TraerDetallesPorIdLiquidacion(IdLiquidacionPadre, usuar
 
         try
         {
-            BD.ModificarLiquidacionCabecera(IdLiquidacion, IdMandataria, Fecha, Observaciones ?? "");
+            BD.ModificarLiquidacionCabecera(IdLiquidacion, IdMandataria, Fecha, Observaciones ?? "", usuarioCompleto.IdUsuario);
             return Json(new { success = true, message = "Datos de liquidación actualizados." });
         }
         catch (Exception ex)
@@ -690,7 +691,7 @@ public IActionResult BuscarDetallesGlobalesAjax(DateTime? desde, DateTime? hasta
         }
     try
     {
-        var lista = BD.BuscarDetallesGlobales(desde, hasta, idMandataria, idOS);
+        var lista = BD.BuscarDetallesGlobales(desde, hasta, idMandataria, idOS, usuarioCompleto.IdUsuario);
         return Json(new { success = true, data = lista });
     }
     catch (Exception ex)
@@ -798,6 +799,21 @@ public class CobrosDetalleRequest
     [HttpGet]
     public IActionResult TraerObrasSocialesPorMandataria(int idMandataria)
     {
+        string? usuarioJson = HttpContext.Session.GetString("Usuario"); // Crear el usuario session
+        if (string.IsNullOrEmpty(usuarioJson))
+        {
+            return RedirectToAction("Index", "Account");
+        }
+        Usuario userDeSesion = Objeto.StringToObject<Usuario>(usuarioJson);
+       
+     
+        Usuario usuarioCompleto = BD.TraerUsuarioPorId(userDeSesion.IdUsuario);
+
+
+        if (usuarioCompleto == null)
+        {
+            return RedirectToAction("CerrarSesion", "Index");
+        }
         try
         {
             var lista = BD.TraerOSPorIdMandataria(idMandataria);
@@ -812,9 +828,25 @@ public class CobrosDetalleRequest
     [HttpGet]
     public IActionResult TraerLiquidacionesPendientesPorOS(int idObraSocial)
     {
+        string? usuarioJson = HttpContext.Session.GetString("Usuario"); // Crear el usuario session
+        if (string.IsNullOrEmpty(usuarioJson))
+        {
+            return RedirectToAction("Index", "Account");
+        }
+        Usuario userDeSesion = Objeto.StringToObject<Usuario>(usuarioJson);
+       
+     
+        Usuario usuarioCompleto = BD.TraerUsuarioPorId(userDeSesion.IdUsuario);
+
+
+        if (usuarioCompleto == null)
+        {
+            return RedirectToAction("CerrarSesion", "Index");
+        }
+
         try
         {
-            var lista = BD.TraerLiquidacionesPendientesPorOS(idObraSocial);
+            var lista = BD.TraerLiquidacionesPendientesPorOS(idObraSocial, usuarioCompleto.IdUsuario);
             return Json(new { success = true, data = lista });
         }
         catch (Exception ex)
@@ -826,10 +858,26 @@ public class CobrosDetalleRequest
     [HttpGet]
     public IActionResult BuscarCobrosAjax(string? numeroComprobante, DateTime? desde, DateTime? hasta, int? IdObraSocial, int? IdMandataria)
     {
+
+        string? usuarioJson = HttpContext.Session.GetString("Usuario"); // Crear el usuario session
+        if (string.IsNullOrEmpty(usuarioJson))
+        {
+            return RedirectToAction("Index", "Account");
+        }
+        Usuario userDeSesion = Objeto.StringToObject<Usuario>(usuarioJson);
+       
+     
+        Usuario usuarioCompleto = BD.TraerUsuarioPorId(userDeSesion.IdUsuario);
+
+
+        if (usuarioCompleto == null)
+        {
+            return RedirectToAction("CerrarSesion", "Index");
+        }
         try
         {
             // Usamos la búsqueda que agrupa Padre+Hijos y suma totales
-            var lista = BD.BuscarCobros(desde, hasta, IdMandataria, IdObraSocial);
+            var lista = BD.BuscarCobros(desde, hasta, IdMandataria, IdObraSocial, usuarioCompleto.IdUsuario);
             
             // Filtro en memoria opcional por comprobante
             if (!string.IsNullOrEmpty(numeroComprobante))
@@ -848,6 +896,22 @@ public class CobrosDetalleRequest
    [HttpPost]
 public IActionResult GuardarCobro(int IdCobro, int? IdLiquidacion, int? IdObraSocial, int? IdMandataria, DateTime? FechaCobro, decimal ImporteCobrado, string NumeroComprobante, string? TipoPago, decimal MontoDebitos, string? MotivoDebito, int? IdLiquidacionDetalle) // <--- Agregamos este parámetro al final
 {
+
+    string? usuarioJson = HttpContext.Session.GetString("Usuario"); // Crear el usuario session
+        if (string.IsNullOrEmpty(usuarioJson))
+        {
+            return RedirectToAction("Index", "Account");
+        }
+        Usuario userDeSesion = Objeto.StringToObject<Usuario>(usuarioJson);
+       
+     
+        Usuario usuarioCompleto = BD.TraerUsuarioPorId(userDeSesion.IdUsuario);
+
+
+        if (usuarioCompleto == null)
+        {
+            return RedirectToAction("CerrarSesion", "Index");
+        }
     try
     {
         if (IdCobro == 0)
@@ -857,11 +921,11 @@ public IActionResult GuardarCobro(int IdCobro, int? IdLiquidacion, int? IdObraSo
                 return Json(new { success = false, message = "Falta la Mandataria." });
 
             // Buscamos o creamos el padre (Lote)
-            int? idPadre = BD.BuscarIdPadre(NumeroComprobante, IdMandataria.Value);
+            int? idPadre = BD.BuscarIdPadre(NumeroComprobante, IdMandataria.Value, usuarioCompleto.IdUsuario);
 
             if (idPadre == null || idPadre == 0)
             {
-                idPadre = BD.AgregarCobroCabecera(IdMandataria.Value, FechaCobro ?? DateTime.Now, NumeroComprobante, IdLiquidacion);
+                idPadre = BD.AgregarCobroCabecera(IdMandataria.Value, FechaCobro ?? DateTime.Now, NumeroComprobante, IdLiquidacion, usuarioCompleto.IdUsuario);
             }
 
             // AQUI ESTA LA MAGIA: Pasamos IdLiquidacionDetalle a la BD para que impute la deuda
@@ -873,7 +937,8 @@ public IActionResult GuardarCobro(int IdCobro, int? IdLiquidacion, int? IdObraSo
                 TipoPago, 
                 MontoDebitos, 
                 MotivoDebito,
-                IdLiquidacionDetalle // <--- Pasamos el ID de la deuda
+                IdLiquidacionDetalle,// <--- Pasamos el ID de la deuda
+                usuarioCompleto.IdUsuario
             );
 
             return Json(new { success = true, message = "Pago registrado e imputado correctamente." });
@@ -881,7 +946,7 @@ public IActionResult GuardarCobro(int IdCobro, int? IdLiquidacion, int? IdObraSo
         else
         {
             // EDICIÓN (Por ahora no reimputamos deuda al editar para no complicar, solo actualizamos datos básicos)
-            BD.ModificarCobroDetalle(IdCobro, IdObraSocial.Value, FechaCobro ?? DateTime.Now, ImporteCobrado, TipoPago, MontoDebitos, MotivoDebito);
+            BD.ModificarCobroDetalle(IdCobro, IdObraSocial.Value, FechaCobro ?? DateTime.Now, ImporteCobrado, TipoPago, MontoDebitos, MotivoDebito, usuarioCompleto.IdUsuario);
             return Json(new { success = true, message = "Pago modificado." });
         }
     }
@@ -893,10 +958,28 @@ public IActionResult GuardarCobro(int IdCobro, int? IdLiquidacion, int? IdObraSo
     [HttpPost]
     public IActionResult EliminarCobro(int idCobro)
     {
+
+        string? usuarioJson = HttpContext.Session.GetString("Usuario"); // Crear el usuario session
+        if (string.IsNullOrEmpty(usuarioJson))
+        {
+            return RedirectToAction("Index", "Account");
+        }
+        Usuario userDeSesion = Objeto.StringToObject<Usuario>(usuarioJson);
+       
+     
+        Usuario usuarioCompleto = BD.TraerUsuarioPorId(userDeSesion.IdUsuario);
+
+
+        if (usuarioCompleto == null)
+        {
+            return RedirectToAction("CerrarSesion", "Index");
+        }
+
+
         try
         {
             // Recibimos el ID del Detalle
-            BD.EliminarCobroDetalle(idCobro);
+            BD.EliminarCobroDetalle(idCobro, usuarioCompleto.IdUsuario);
             return Json(new { success = true, message = "Cobro eliminado correctamente." });
         }
         catch (Exception ex)
@@ -908,10 +991,27 @@ public IActionResult GuardarCobro(int IdCobro, int? IdLiquidacion, int? IdObraSo
     [HttpGet]
     public IActionResult ObtenerCobroPorId(int idCobro)
     {
+        string? usuarioJson = HttpContext.Session.GetString("Usuario"); // Crear el usuario session
+        if (string.IsNullOrEmpty(usuarioJson))
+        {
+            return RedirectToAction("Index", "Account");
+        }
+        Usuario userDeSesion = Objeto.StringToObject<Usuario>(usuarioJson);
+       
+     
+        Usuario usuarioCompleto = BD.TraerUsuarioPorId(userDeSesion.IdUsuario);
+
+
+        if (usuarioCompleto == null)
+        {
+            return RedirectToAction("CerrarSesion", "Index");
+        }
+
+
         try
         {
             // Buscamos en la tabla Detalle
-            var cobroDetalle = BD.TraerCobroDetallePorId(idCobro);
+            var cobroDetalle = BD.TraerCobroDetallePorId(idCobro, usuarioCompleto.IdUsuario);
             if (cobroDetalle == null) return Json(new { success = false, message = "No encontrado" });
             
             return Json(new { success = true, data = cobroDetalle });
@@ -927,13 +1027,30 @@ public IActionResult GuardarCobro(int IdCobro, int? IdLiquidacion, int? IdObraSo
 [HttpGet]
     public IActionResult TraerCobrosPorIdPadre(int idCobroPadre)
     {
+        string? usuarioJson = HttpContext.Session.GetString("Usuario"); // Crear el usuario session
+        if (string.IsNullOrEmpty(usuarioJson))
+        {
+            return RedirectToAction("Index", "Account");
+        }
+        Usuario userDeSesion = Objeto.StringToObject<Usuario>(usuarioJson);
+       
+     
+        Usuario usuarioCompleto = BD.TraerUsuarioPorId(userDeSesion.IdUsuario);
+
+
+        if (usuarioCompleto == null)
+        {
+            return RedirectToAction("CerrarSesion", "Index");
+        }
+
+
         try
         {
             if (idCobroPadre <= 0) 
                 return Json(new { success = false, message = "ID de Lote inválido" });
 
             // Ahora llamamos a la BD pasando el ID (int), que es único y rápido
-            var lista = BD.TraerCobrosDelMismoLote(idCobroPadre); 
+            var lista = BD.TraerCobrosDelMismoLote(idCobroPadre, usuarioCompleto.IdUsuario); 
             
             return Json(new { success = true, data = lista });
         }
@@ -950,9 +1067,26 @@ public IActionResult GuardarCobro(int IdCobro, int? IdLiquidacion, int? IdObraSo
     [HttpPost]
     public IActionResult EliminarLoteCompleto(int idCobroPadre)
     {
+        string? usuarioJson = HttpContext.Session.GetString("Usuario"); // Crear el usuario session
+        if (string.IsNullOrEmpty(usuarioJson))
+        {
+            return RedirectToAction("Index", "Account");
+        }
+        Usuario userDeSesion = Objeto.StringToObject<Usuario>(usuarioJson);
+       
+     
+        Usuario usuarioCompleto = BD.TraerUsuarioPorId(userDeSesion.IdUsuario);
+
+
+        if (usuarioCompleto == null)
+        {
+            return RedirectToAction("CerrarSesion", "Index");
+        }
+
+
         try
         {
-            BD.EliminarLoteCompleto(idCobroPadre);
+            BD.EliminarLoteCompleto(idCobroPadre, usuarioCompleto.IdUsuario);
             return Json(new { success = true, message = "✅ Lote eliminado correctamente." });
         }
         catch (Exception ex)
@@ -964,9 +1098,26 @@ public IActionResult GuardarCobro(int IdCobro, int? IdLiquidacion, int? IdObraSo
     [HttpPost]
     public IActionResult ModificarCabeceraLote(int IdCobro, int IdMandataria, DateTime Fecha, string Comprobante)
     {
+        string? usuarioJson = HttpContext.Session.GetString("Usuario"); // Crear el usuario session
+        if (string.IsNullOrEmpty(usuarioJson))
+        {
+            return RedirectToAction("Index", "Account");
+        }
+        Usuario userDeSesion = Objeto.StringToObject<Usuario>(usuarioJson);
+       
+     
+        Usuario usuarioCompleto = BD.TraerUsuarioPorId(userDeSesion.IdUsuario);
+
+
+        if (usuarioCompleto == null)
+        {
+            return RedirectToAction("CerrarSesion", "Index");
+        }
+
+
         try
         {
-            BD.ModificarCobroCabecera(IdCobro, IdMandataria, Fecha, Comprobante);
+            BD.ModificarCobroCabecera(IdCobro, IdMandataria, Fecha, Comprobante, usuarioCompleto.IdUsuario);
             return Json(new { success = true, message = "✅ Cabecera actualizada." });
         }
         catch (Exception ex)
@@ -979,6 +1130,24 @@ public IActionResult GuardarCobro(int IdCobro, int? IdLiquidacion, int? IdObraSo
     [HttpPost]
 public IActionResult GuardarLoteCobros([FromBody] List<CobrosDetalleRequest> lote)
 {
+
+    string? usuarioJson = HttpContext.Session.GetString("Usuario"); // Crear el usuario session
+        if (string.IsNullOrEmpty(usuarioJson))
+        {
+            return RedirectToAction("Index", "Account");
+        }
+        Usuario userDeSesion = Objeto.StringToObject<Usuario>(usuarioJson);
+       
+     
+        Usuario usuarioCompleto = BD.TraerUsuarioPorId(userDeSesion.IdUsuario);
+
+
+        if (usuarioCompleto == null)
+        {
+            return RedirectToAction("CerrarSesion", "Index");
+        }
+
+
     if (lote == null || !lote.Any()) return Json(new { success = false, message = "Lista vacía." });
 
     try
@@ -990,7 +1159,8 @@ public IActionResult GuardarLoteCobros([FromBody] List<CobrosDetalleRequest> lot
             primerItem.IdMandatariasMaestro, 
             primerItem.FechaCobroMaestro, 
             primerItem.NumeroComprobanteMaestro, 
-            null
+            null,
+            usuarioCompleto.IdUsuario
         );
 
         int guardados = 0;
@@ -1000,7 +1170,7 @@ public IActionResult GuardarLoteCobros([FromBody] List<CobrosDetalleRequest> lot
         {
             if (item.IdObrasSociales == 0) continue;
 
-            BD.AgregarCobroDetalle(
+            BD.AgregarCobroDetalle( 
                 idPadre, 
                 item.IdObrasSociales, 
                 item.FechaCobroDetalle ?? DateTime.Now, 
@@ -1009,6 +1179,7 @@ public IActionResult GuardarLoteCobros([FromBody] List<CobrosDetalleRequest> lot
                 item.MontoDebito, 
                 item.MotivoDebito,
                 item.IdLiquidacionDetalle // <--- Pasamos la deuda vinculada
+                , usuarioCompleto.IdUsuario
             );
             guardados++;
         }
@@ -1025,9 +1196,26 @@ public IActionResult GuardarLoteCobros([FromBody] List<CobrosDetalleRequest> lot
 [HttpGet]
 public IActionResult TraerDeudasPendientes(int idObraSocial)
 {
+    string? usuarioJson = HttpContext.Session.GetString("Usuario"); // Crear el usuario session
+        if (string.IsNullOrEmpty(usuarioJson))
+        {
+            return RedirectToAction("Index", "Account");
+        }
+        Usuario userDeSesion = Objeto.StringToObject<Usuario>(usuarioJson);
+       
+     
+        Usuario usuarioCompleto = BD.TraerUsuarioPorId(userDeSesion.IdUsuario);
+
+
+        if (usuarioCompleto == null)
+        {
+            return RedirectToAction("CerrarSesion", "Index");
+        }
+
+
     try
     {
-        var lista = BD.TraerDeudasPendientesPorOS(idObraSocial);
+        var lista = BD.TraerDeudasPendientesPorOS(idObraSocial, usuarioCompleto.IdUsuario);
         return Json(new { success = true, data = lista });
     }
     catch (Exception ex)
@@ -1039,9 +1227,26 @@ public IActionResult TraerDeudasPendientes(int idObraSocial)
 [HttpGet]
 public IActionResult ObtenerCobrosPorLiquidacionDetalle(int idDetalle)
 {
+    string? usuarioJson = HttpContext.Session.GetString("Usuario"); // Crear el usuario session
+        if (string.IsNullOrEmpty(usuarioJson))
+        {
+            return RedirectToAction("Index", "Account");
+        }
+        Usuario userDeSesion = Objeto.StringToObject<Usuario>(usuarioJson);
+       
+     
+        Usuario usuarioCompleto = BD.TraerUsuarioPorId(userDeSesion.IdUsuario);
+
+
+        if (usuarioCompleto == null)
+        {
+            return RedirectToAction("CerrarSesion", "Index");
+        }
+
+
     try
     {
-        var data = BD.ObtenerCobrosPorLiquidacionDetalle(idDetalle);
+        var data = BD.ObtenerCobrosPorLiquidacionDetalle(idDetalle, usuarioCompleto.IdUsuario);
         return Json(new { success = true, data = data });
     }
     catch (Exception ex)
@@ -1058,27 +1263,34 @@ public IActionResult ObtenerCobrosPorLiquidacionDetalle(int idDetalle)
 [HttpGet]
 public IActionResult ObtenerDatosFarmaciaAjax()
 {
+    string? usuarioJson = HttpContext.Session.GetString("Usuario"); // Crear el usuario session
+        if (string.IsNullOrEmpty(usuarioJson))
+        {
+            return RedirectToAction("Index", "Account");
+        }
+        Usuario userDeSesion = Objeto.StringToObject<Usuario>(usuarioJson);
+       
+     
+        Usuario usuarioCompleto = BD.TraerUsuarioPorId(userDeSesion.IdUsuario);
+
+
+        if (usuarioCompleto == null)
+        {
+            return RedirectToAction("CerrarSesion", "Index");
+        }
+
+
     try
     {
-        // 1. Buscamos el ID del usuario en sesión
-        var usuarioJson = HttpContext.Session.GetString("Usuario");
-        if (string.IsNullOrEmpty(usuarioJson)) 
-            return Json(new { success = false });
-
-        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-        var userSession = System.Text.Json.JsonSerializer.Deserialize<Usuario>(usuarioJson, options);
-
-        // 2. IMPORTANTE: Vamos a la BD a buscar el dato FRESCO (no el de la sesión vieja)
-        var usuarioReal = BD.TraerUsuarioPorId(userSession.IdUsuario); 
-
-        if (usuarioReal != null)
+        
+        if (usuarioCompleto != null)
         {
             return Json(new { 
                 success = true, 
-                nombre = usuarioReal.RazonSocial ?? "FARMACIA",
-                domicilio = usuarioReal.Domicilio ?? "",
-                cuit = usuarioReal.Cuit.ToString() ?? "",
-                iva = usuarioReal.Iva ?? "Consumidor Final"
+                nombre = usuarioCompleto.RazonSocial ?? "FARMACIA",
+                domicilio = usuarioCompleto.Domicilio ?? "",
+                cuit = usuarioCompleto.Cuit.ToString() ?? "",
+                iva = usuarioCompleto.Iva ?? "Consumidor Final"
             });
         }
         return Json(new { success = false });
