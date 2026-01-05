@@ -1,1426 +1,1269 @@
-using Microsoft.Data.SqlClient;
-using Dapper;
+using System.Data;
 using System.Collections.Generic;
 using System.Linq;
-using System.Data;
-using Microsoft.Identity.Client;
+using Dapper;
+using Npgsql; // Cambio Clave: Usamos el driver de PostgreSQL
+using Microsoft.Extensions.Configuration; // Necesario si usaras config, pero usaremos Environment
+
 namespace WebFarmaciaMiguetti.Models;
+
 public static class BD
 {
-private static string _connectionString = @"Server=.\SQLEXPRESS01;DataBase=FarmaciaNet;Integrated Security=True;TrustServerCertificate=True;";
-
-
-
-//-- Codigo Mandatarias --///
-
-     public static Mandatarias TraerMandatariaPorNombre  (string nombreMandataria)
+    // Método para construir la cadena de conexión leyendo las variables de Railway
+    private static string GetConnectionString()
     {
-     Mandatarias ObjMandataria = null;
-        using (SqlConnection connection = new SqlConnection(_connectionString))
-        {
-            string query = "SELECT * FROM Mandatarias where RazonSocial = @pNombremandataria"; 
-            ObjMandataria = connection.QueryFirstOrDefault<Mandatarias>(query, new {pNombremandataria = nombreMandataria});
-         }
-    
-         return ObjMandataria;
+        var host = Environment.GetEnvironmentVariable("PGHOST");
+        var port = Environment.GetEnvironmentVariable("PGPORT");
+        var user = Environment.GetEnvironmentVariable("PGUSER");
+        var pass = Environment.GetEnvironmentVariable("PGPASSWORD");
+        var db = Environment.GetEnvironmentVariable("PGDATABASE");
+
+        // Si las variables están vacías (entorno local sin configurar), retorna una cadena por defecto o vacía
+        if (string.IsNullOrEmpty(host)) 
+            return "Server=127.0.0.1;Port=5432;Database=FarmaciaNet;User Id=postgres;Password=admin;";
+
+        // Cadena para Railway con SSL obligatorio
+        return $"Host={host};Port={port};Database={db};Username={user};Password={pass};Pooling=true;SSL Mode=Require;Trust Server Certificate=true;";
     }
 
-     public static Mandatarias TraerMandatariaPorId  (int IdMandatarias)
+    //-- Codigo Mandatarias --///
+
+    public static Mandatarias TraerMandatariaPorNombre(string nombreMandataria)
     {
-     Mandatarias ObjMandataria = null;
-        using (SqlConnection connection = new SqlConnection(_connectionString))
+        Mandatarias ObjMandataria = null;
+        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
         {
-            string query = "SELECT * FROM Mandatarias where IdMandatarias = @pIdMandatarias"; 
-            ObjMandataria = connection.QueryFirstOrDefault<Mandatarias>(query, new {pIdMandatarias = IdMandatarias});
-         }
-    
-         return ObjMandataria;
+            // OJO: Comillas dobles en la tabla
+            string query = "SELECT * FROM \"Mandatarias\" where \"RazonSocial\" = @pNombremandataria";
+            ObjMandataria = connection.QueryFirstOrDefault<Mandatarias>(query, new { pNombremandataria = nombreMandataria });
+        }
+
+        return ObjMandataria;
     }
- public static void ModificarMandataria  (int IdMandatarias, string nuevoNombre, long Cuit, string? Descripcion, string? Direccion)
+
+    public static Mandatarias TraerMandatariaPorId(int IdMandatarias)
     {
-     Mandatarias ObjMandataria = null;
-        using (SqlConnection connection = new SqlConnection(_connectionString))
+        Mandatarias ObjMandataria = null;
+        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
         {
-            string query = "UPDATE Mandatarias SET RazonSocial = @pNuevoNombre, Cuit = @pCuit, Descripcion = @pDescripcion, Direccion = @pDireccion where IdMandatarias = @pIdMandatarias"; 
-            connection.Execute(query, new {pIdMandatarias = IdMandatarias, pNuevoNombre = nuevoNombre, pCuit = Cuit, pDescripcion = Descripcion, pDireccion = Direccion});
-         }
-    
+            string query = "SELECT * FROM \"Mandatarias\" where \"IdMandatarias\" = @pIdMandatarias";
+            ObjMandataria = connection.QueryFirstOrDefault<Mandatarias>(query, new { pIdMandatarias = IdMandatarias });
+        }
+
+        return ObjMandataria;
     }
-     public static void AgregarMandataria  (string nuevoNombre, long Cuit, string? Descripcion, string? Direccion)
+
+    public static void ModificarMandataria(int IdMandatarias, string nuevoNombre, long Cuit, string? Descripcion, string? Direccion)
     {
-     Mandatarias ObjMandataria = null;
-        using (SqlConnection connection = new SqlConnection(_connectionString))
+        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
+        {
+            string query = "UPDATE \"Mandatarias\" SET \"RazonSocial\" = @pNuevoNombre, \"Cuit\" = @pCuit, \"Descripcion\" = @pDescripcion, \"Direccion\" = @pDireccion where \"IdMandatarias\" = @pIdMandatarias";
+            connection.Execute(query, new { pIdMandatarias = IdMandatarias, pNuevoNombre = nuevoNombre, pCuit = Cuit, pDescripcion = Descripcion, pDireccion = Direccion });
+        }
+    }
+
+    public static void AgregarMandataria(string nuevoNombre, long Cuit, string? Descripcion, string? Direccion)
+    {
+        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
+        {
+            string query = "INSERT INTO \"Mandatarias\" (\"RazonSocial\", \"Cuit\", \"Descripcion\", \"Direccion\") VALUES (@pNuevoNombre, @pCuit, @pDescripcion, @pDireccion)";
+            connection.Execute(query, new { pNuevoNombre = nuevoNombre, pCuit = Cuit, pDescripcion = Descripcion, pDireccion = Direccion });
+        }
+    }
+
+    // EN: Models/BD.cs
+
+    public static void EliminarMandataria(int IdMandatarias)
+    {
+        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
+        {
+            connection.Open();
+            using (var transaction = connection.BeginTransaction())
+            {
+                try
                 {
-                    string query = "INSERT INTO Mandatarias (RazonSocial, Cuit, Descripcion, Direccion) VALUES (@pNuevoNombre, @pCuit, @pDescripcion, @pDireccion)"; 
-            connection.Execute(query, new {pNuevoNombre = nuevoNombre, pCuit = Cuit, pDescripcion = Descripcion, pDireccion = Direccion});
-         }
-    
-    }
+                    // ==============================================================================
+                    // RAMA 1: LIQUIDACIONES (Relación Directa)
+                    // ==============================================================================
 
-     // EN: Models/BD.cs
+                    // 1.1 Borrar Detalles de Liquidaciones
+                    string sqlLiqDetalles = @"
+                    DELETE FROM ""LiquidacionDetalle"" 
+                    WHERE ""IdLiquidaciones"" IN (SELECT ""IdLiquidaciones"" FROM ""Liquidaciones"" WHERE ""IdMandatarias"" = @pId)";
+                    connection.Execute(sqlLiqDetalles, new { pId = IdMandatarias }, transaction);
 
-public static void EliminarMandataria(int IdMandatarias)
-{
-    using (SqlConnection connection = new SqlConnection(_connectionString))
-    {
-        connection.Open();
-        using (var transaction = connection.BeginTransaction())
-        {
-            try
-            {
-                // ==============================================================================
-                // RAMA 1: LIQUIDACIONES (Relación Directa)
-                // ==============================================================================
+                    // 1.2 Borrar Cabeceras de Liquidaciones
+                    string sqlLiqCabeceras = "DELETE FROM \"Liquidaciones\" WHERE \"IdMandatarias\" = @pId";
+                    connection.Execute(sqlLiqCabeceras, new { pId = IdMandatarias }, transaction);
 
-                // 1.1 Borrar Detalles de Liquidaciones
-                string sqlLiqDetalles = @"
-                    DELETE FROM LiquidacionDetalle 
-                    WHERE IdLiquidaciones IN (SELECT IdLiquidaciones FROM Liquidaciones WHERE IdMandatarias = @pId)";
-                connection.Execute(sqlLiqDetalles, new { pId = IdMandatarias }, transaction);
+                    // ==============================================================================
+                    // RAMA 2: OBRAS SOCIALES Y SUS DEPENDENCIAS
+                    // ==============================================================================
 
-                // 1.2 Borrar Cabeceras de Liquidaciones
-                string sqlLiqCabeceras = "DELETE FROM Liquidaciones WHERE IdMandatarias = @pId";
-                connection.Execute(sqlLiqCabeceras, new { pId = IdMandatarias }, transaction);
-
-                // ==============================================================================
-                // RAMA 2: OBRAS SOCIALES Y SUS DEPENDENCIAS (Aquí estaba el error)
-                // ==============================================================================
-
-                // 2.1 Borrar COBROS DETALLE (Nietos de Obras Sociales)
-                // Borramos los detalles de cobros cuyos padres (Cobros) pertenecen a Obras Sociales de esta Mandataria
-                string sqlCobrosDetalles = @"
-                    DELETE FROM CobrosDetalle 
-                    WHERE IdCobros IN (
-                        SELECT IdCobros 
-                        FROM Cobros 
-                        WHERE IdObrasSociales IN (SELECT IdObrasSociales FROM ObrasSociales WHERE IdMandatarias = @pId)
+                    // 2.1 Borrar COBROS DETALLE
+                    string sqlCobrosDetalles = @"
+                    DELETE FROM ""CobrosDetalle"" 
+                    WHERE ""IdCobros"" IN (
+                        SELECT ""IdCobros"" 
+                        FROM ""Cobros"" 
+                        WHERE ""IdObrasSociales"" IN (SELECT ""IdObrasSociales"" FROM ""ObrasSociales"" WHERE ""IdMandatarias"" = @pId)
                     )";
-                connection.Execute(sqlCobrosDetalles, new { pId = IdMandatarias }, transaction);
+                    connection.Execute(sqlCobrosDetalles, new { pId = IdMandatarias }, transaction);
 
-                // 2.2 Borrar COBROS (Hijos de Obras Sociales)
-                // CORRECCIÓN CRÍTICA: Borramos por IdObrasSociales, no por IdMandatarias directo.
-                // Esto asegura que si el Cobro tiene IdMandataria NULL pero apunta a la OS, se borre igual.
-                string sqlCobrosCabeceras = @"
-                    DELETE FROM Cobros 
-                    WHERE IdObrasSociales IN (SELECT IdObrasSociales FROM ObrasSociales WHERE IdMandatarias = @pId)";
-                connection.Execute(sqlCobrosCabeceras, new { pId = IdMandatarias }, transaction);
+                    // 2.2 Borrar COBROS
+                    string sqlCobrosCabeceras = @"
+                    DELETE FROM ""Cobros"" 
+                    WHERE ""IdObrasSociales"" IN (SELECT ""IdObrasSociales"" FROM ""ObrasSociales"" WHERE ""IdMandatarias"" = @pId)";
+                    connection.Execute(sqlCobrosCabeceras, new { pId = IdMandatarias }, transaction);
 
-                // 2.3 Borrar Planes de Bonificación (Hijos de Obras Sociales)
-                string sqlPlanes = @"
-                    DELETE FROM PlanBonificacion 
-                    WHERE IdObrasSociales IN (SELECT IdObrasSociales FROM ObrasSociales WHERE IdMandatarias = @pId)";
-                connection.Execute(sqlPlanes, new { pId = IdMandatarias }, transaction);
+                    // 2.3 Borrar Planes de Bonificación
+                    string sqlPlanes = @"
+                    DELETE FROM ""PlanBonificacion"" 
+                    WHERE ""IdObrasSociales"" IN (SELECT ""IdObrasSociales"" FROM ""ObrasSociales"" WHERE ""IdMandatarias"" = @pId)";
+                    connection.Execute(sqlPlanes, new { pId = IdMandatarias }, transaction);
 
-                // 2.4 Borrar Facturas Cabecera y Detalle (SI APLICARA)
-                // OJO: Revisando tu esquema, FacturaCabecera también depende de ObraSocial. 
-                // Si hay facturas, esto también fallará. Agrego la limpieza de facturas por seguridad.
-                
-                // Borrar Detalles de Facturas de las OOSS de esta Mandataria
-                string sqlFacturaDetalle = @"
-                    DELETE FROM FacturaDetalle 
-                    WHERE IdFacturaCabecera IN (
-                        SELECT IdFacturaCabecera 
-                        FROM FacturaCabecera 
-                        WHERE IdObrasSociales IN (SELECT IdObrasSociales FROM ObrasSociales WHERE IdMandatarias = @pId)
+                    // 2.4 Borrar Facturas (Si aplica)
+                    string sqlFacturaDetalle = @"
+                    DELETE FROM ""FacturaDetalle"" 
+                    WHERE ""IdFacturaCabecera"" IN (
+                        SELECT ""IdFacturaCabecera"" 
+                        FROM ""FacturaCabecera"" 
+                        WHERE ""IdObrasSociales"" IN (SELECT ""IdObrasSociales"" FROM ""ObrasSociales"" WHERE ""IdMandatarias"" = @pId)
                     )";
-                connection.Execute(sqlFacturaDetalle, new { pId = IdMandatarias }, transaction);
+                    connection.Execute(sqlFacturaDetalle, new { pId = IdMandatarias }, transaction);
 
-                // Borrar Cabeceras de Facturas
-                string sqlFacturaCabecera = @"
-                    DELETE FROM FacturaCabecera 
-                    WHERE IdObrasSociales IN (SELECT IdObrasSociales FROM ObrasSociales WHERE IdMandatarias = @pId)";
-                connection.Execute(sqlFacturaCabecera, new { pId = IdMandatarias }, transaction);
+                    string sqlFacturaCabecera = @"
+                    DELETE FROM ""FacturaCabecera"" 
+                    WHERE ""IdObrasSociales"" IN (SELECT ""IdObrasSociales"" FROM ""ObrasSociales"" WHERE ""IdMandatarias"" = @pId)";
+                    connection.Execute(sqlFacturaCabecera, new { pId = IdMandatarias }, transaction);
 
-                // 2.5 AHORA SÍ: Borrar Obras Sociales (Hijos Directos)
-                string sqlOOSS = "DELETE FROM ObrasSociales WHERE IdMandatarias = @pId";
-                connection.Execute(sqlOOSS, new { pId = IdMandatarias }, transaction);
+                    // 2.5 AHORA SÍ: Borrar Obras Sociales
+                    string sqlOOSS = "DELETE FROM \"ObrasSociales\" WHERE \"IdMandatarias\" = @pId";
+                    connection.Execute(sqlOOSS, new { pId = IdMandatarias }, transaction);
 
-                // ==============================================================================
-                // RAMA 3: EL PADRE
-                // ==============================================================================
+                    // ==============================================================================
+                    // RAMA 3: EL PADRE
+                    // ==============================================================================
 
-                // 3.1 Finalmente borrar la Mandataria
-                string sqlMandataria = "DELETE FROM Mandatarias WHERE IdMandatarias = @pId";
-                connection.Execute(sqlMandataria, new { pId = IdMandatarias }, transaction);
+                    string sqlMandataria = "DELETE FROM \"Mandatarias\" WHERE \"IdMandatarias\" = @pId";
+                    connection.Execute(sqlMandataria, new { pId = IdMandatarias }, transaction);
 
-                transaction.Commit();
-            }
-            catch (Exception ex)
-            {
-                transaction.Rollback();
-                // Tip de Arquitecto: Loguea 'ex' aquí si tienes un logger configurado antes de lanzar.
-                throw; 
+                    transaction.Commit();
+                }
+                catch (Exception ex)
+                {
+                    transaction.Rollback();
+                    throw;
+                }
             }
         }
     }
-}
-     public static List<Mandatarias> TraerListaMandatarias()
+
+    public static List<Mandatarias> TraerListaMandatarias()
     {
         List<Mandatarias> ListMandatarias = new List<Mandatarias>();
-        using (SqlConnection connection = new SqlConnection(_connectionString))
+        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
         {
-            string query = "SELECT * FROM Mandatarias";
+            string query = "SELECT * FROM \"Mandatarias\"";
             ListMandatarias = connection.Query<Mandatarias>(query).ToList();
         }
         return ListMandatarias;
     }
 
-
-
-
-
-//-- Codigo Obras Sociales --///
- public static List<ObrasSociales> TraerListaOS()
-{
-    List<ObrasSociales> ListOS = new List<ObrasSociales>();
-    using (SqlConnection connection = new SqlConnection(_connectionString))
+    //-- Codigo Obras Sociales --///
+    public static List<ObrasSociales> TraerListaOS()
     {
-        string query = "SELECT *, IdMandatarias AS IdMandataria FROM ObrasSociales";
-        ListOS = connection.Query<ObrasSociales>(query).ToList();
-    }
-    return ListOS;
-}
- public static void ModificarOS  (int IdOS, string nuevoNombre, int IdMandatarias, string nombreMandataria, bool? EsPrepaga, bool? Activa)
-    {
-     ObrasSociales ObjOS = null;
-        using (SqlConnection connection = new SqlConnection(_connectionString))
+        List<ObrasSociales> ListOS = new List<ObrasSociales>();
+        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
         {
-            string query = "UPDATE ObrasSociales SET IdMandatarias = @pIdMandatarias, Nombre = @pNuevoNombre, NombreMandataria = @pNombreMandataria, EsPrepaga = @pEsPrepaga, Activa = @pActiva where IdObrasSociales = @pIdOS"; 
-            connection.Execute(query, new {pIdMandatarias = IdMandatarias, pNuevoNombre = nuevoNombre, pNombreMandataria = nombreMandataria, pEsPrepaga = EsPrepaga, pActiva = Activa, pIdOS = IdOS });
-         }
-    
-    }
- public static ObrasSociales TraerOSPorId(int IdOS)
-{
-    ObrasSociales ObjOS = null;
-    using (SqlConnection connection = new SqlConnection(_connectionString))
-    {
-    
-        string query = "SELECT *, IdMandatarias AS IdMandataria FROM ObrasSociales where IdObrasSociales = @pIdOS"; 
-        ObjOS = connection.QueryFirstOrDefault<ObrasSociales>(query, new {pIdOS = IdOS});
+            string query = "SELECT *, \"IdMandatarias\" AS IdMandataria FROM \"ObrasSociales\"";
+            ListOS = connection.Query<ObrasSociales>(query).ToList();
+        }
+        return ListOS;
     }
 
-    return ObjOS;
-}
- public static List<ObrasSociales> TraerOSPorIdMandataria(int IdMandataria)
-{
-    List<ObrasSociales> listaOS = null;
-    using (SqlConnection connection = new SqlConnection(_connectionString))
+    public static void ModificarOS(int IdOS, string nuevoNombre, int IdMandatarias, string nombreMandataria, bool? EsPrepaga, bool? Activa)
     {
-        // CORRECCIÓN: Alias aplicado para asegurar el filtro correcto
-        string query = "SELECT *, IdMandatarias AS IdMandataria FROM ObrasSociales where IdMandatarias = @pIdMandataria"; 
-        listaOS = connection.Query<ObrasSociales>(query, new {pIdMandataria = IdMandataria}).ToList();
+        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
+        {
+            string query = "UPDATE \"ObrasSociales\" SET \"IdMandatarias\" = @pIdMandatarias, \"Nombre\" = @pNuevoNombre, \"NombreMandataria\" = @pNombreMandataria, \"EsPrepaga\" = @pEsPrepaga, \"Activa\" = @pActiva where \"IdObrasSociales\" = @pIdOS";
+            connection.Execute(query, new { pIdMandatarias = IdMandatarias, pNuevoNombre = nuevoNombre, pNombreMandataria = nombreMandataria, pEsPrepaga = EsPrepaga, pActiva = Activa, pIdOS = IdOS });
+        }
     }
 
-    return listaOS;
-}
-  public static void AgregarOS  ( int IdMandataria, string Nombre, string NombreMandataria, bool? EsPrepaga, bool? Activa)
+    public static ObrasSociales TraerOSPorId(int IdOS)
     {
-     ObrasSociales ObjOS = null;
-        using (SqlConnection connection = new SqlConnection(_connectionString))
+        ObrasSociales ObjOS = null;
+        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
+        {
+            string query = "SELECT *, \"IdMandatarias\" AS IdMandataria FROM \"ObrasSociales\" where \"IdObrasSociales\" = @pIdOS";
+            ObjOS = connection.QueryFirstOrDefault<ObrasSociales>(query, new { pIdOS = IdOS });
+        }
+        return ObjOS;
+    }
+
+    public static List<ObrasSociales> TraerOSPorIdMandataria(int IdMandataria)
+    {
+        List<ObrasSociales> listaOS = null;
+        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
+        {
+            string query = "SELECT *, \"IdMandatarias\" AS IdMandataria FROM \"ObrasSociales\" where \"IdMandatarias\" = @pIdMandataria";
+            listaOS = connection.Query<ObrasSociales>(query, new { pIdMandataria = IdMandataria }).ToList();
+        }
+        return listaOS;
+    }
+
+    public static void AgregarOS(int IdMandataria, string Nombre, string NombreMandataria, bool? EsPrepaga, bool? Activa)
+    {
+        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
+        {
+            string query = "INSERT INTO \"ObrasSociales\" ( \"IdMandatarias\", \"Nombre\", \"NombreMandataria\", \"EsPrepaga\", \"Activa\") VALUES (@pIdMandataria, @pNombre, @pNombreMandataria, @pEsPrepaga, @pActiva)";
+            connection.Execute(query, new { pIdMandataria = IdMandataria, pNombre = Nombre, pNombreMandataria = NombreMandataria, pEsPrepaga = EsPrepaga, pActiva = Activa });
+        }
+    }
+
+    public static void EliminarOS(int IdOS)
+    {
+        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
+        {
+            connection.Open();
+            using (var transaction = connection.BeginTransaction())
+            {
+                try
                 {
-                    string query = "INSERT INTO ObrasSociales ( IdMandatarias, Nombre, NombreMandataria, EsPrepaga, Activa) VALUES (@pIdMandataria, @pNombre, @pNombreMandataria, @pEsPrepaga, @pActiva)"; 
-            connection.Execute(query, new {pIdMandataria = IdMandataria, pNombre = Nombre, pNombreMandataria = NombreMandataria, pEsPrepaga = EsPrepaga, pActiva = Activa});
-         }
-    
+                    // 1. Borrar PLANES DE BONIFICACIÓN
+                    string sqlPlanes = "DELETE FROM \"PlanBonificacion\" WHERE \"IdObrasSociales\" = @pId";
+                    connection.Execute(sqlPlanes, new { pId = IdOS }, transaction);
+
+                    // 2. Borrar DETALLES DE LIQUIDACIONES
+                    string sqlLiqDet = "DELETE FROM \"LiquidacionDetalle\" WHERE \"IdObrasSociales\" = @pId";
+                    connection.Execute(sqlLiqDet, new { pId = IdOS }, transaction);
+
+                    // 3. Borrar FACTURACIÓN
+                    string sqlFacturaDet = @"
+                    DELETE FROM ""FacturaDetalle"" 
+                    WHERE ""IdFacturaCabecera"" IN (SELECT ""IdFacturaCabecera"" FROM ""FacturaCabecera"" WHERE ""IdObrasSociales"" = @pId)";
+                    connection.Execute(sqlFacturaDet, new { pId = IdOS }, transaction);
+
+                    string sqlFacturaCab = "DELETE FROM \"FacturaCabecera\" WHERE \"IdObrasSociales\" = @pId";
+                    connection.Execute(sqlFacturaCab, new { pId = IdOS }, transaction);
+
+                    // 4. Borrar COBROS
+                    string sqlCobroDet1 = "DELETE FROM \"CobrosDetalle\" WHERE \"IdObrasSociales\" = @pId";
+                    connection.Execute(sqlCobroDet1, new { pId = IdOS }, transaction);
+
+                    string sqlCobroDet2 = @"
+                    DELETE FROM ""CobrosDetalle"" 
+                    WHERE ""IdCobros"" IN (SELECT ""IdCobros"" FROM ""Cobros"" WHERE ""IdObrasSociales"" = @pId)";
+                    connection.Execute(sqlCobroDet2, new { pId = IdOS }, transaction);
+
+                    string sqlCobros = "DELETE FROM \"Cobros\" WHERE \"IdObrasSociales\" = @pId";
+                    connection.Execute(sqlCobros, new { pId = IdOS }, transaction);
+
+                    // 5. FINALMENTE: Borrar la OBRA SOCIAL PADRE
+                    string sqlOS = "DELETE FROM \"ObrasSociales\" WHERE \"IdObrasSociales\" = @pId";
+                    connection.Execute(sqlOS, new { pId = IdOS }, transaction);
+
+                    transaction.Commit();
+                }
+                catch (Exception)
+                {
+                    transaction.Rollback();
+                    throw;
+                }
+            }
+        }
     }
 
-
-        public static void EliminarOS(int IdOS)
-{
-    using (SqlConnection connection = new SqlConnection(_connectionString))
+    public static void AgregarBonificaciones(int IdOS, string? NombreCodigoBonificacion, int? CodigoBonificacion)
     {
-        connection.Open();
-        // Usamos transacción para que si falla algo, no borre nada a medias.
-        using (var transaction = connection.BeginTransaction())
+        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
+        {
+            string query = "UPDATE \"ObrasSociales\" SET \"NombreCodigoBonificacion\" = @pNombreCodigoBonificacion, \"CodigoBonificacion\" = @pCodigoBonificacion WHERE \"IdObrasSociales\" = @pIdOS";
+            connection.Execute(query, new { pNombreCodigoBonificacion = NombreCodigoBonificacion, pCodigoBonificacion = CodigoBonificacion, pIdOS = IdOS });
+        }
+    }
+
+    public static void ModificarBonificaciones(int IdOS, int? CodigoBonificacion, string? NombreCodigoBonificacion)
+    {
+        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
+        {
+            string query = "UPDATE \"ObrasSociales\" SET \"CodigoBonificacion\" = @pCodigoBonificacion, \"NombreCodigoBonificacion\" = @pNombreCodigoBonificacion where \"IdObrasSociales\" = @pIdOS";
+            connection.Execute(query, new { pIdOS = IdOS, pCodigoBonificacion = CodigoBonificacion, pNombreCodigoBonificacion = NombreCodigoBonificacion });
+        }
+    }
+
+    public static List<PlanBonificacion> TraerPlanBonificacionPorId(int IdOS)
+    {
+        List<PlanBonificacion> ObjPlanBoni = null;
+        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
+        {
+            string query = "SELECT * FROM \"PlanBonificacion\" where \"IdObrasSociales\" = @pIdOS";
+            ObjPlanBoni = connection.Query<PlanBonificacion>(query, new { pIdOS = IdOS }).ToList();
+        }
+        return ObjPlanBoni;
+    }
+
+    public static void InsertarPlan(PlanBonificacion plan)
+    {
+        string query = "INSERT INTO \"PlanBonificacion\" (\"IdObrasSociales\", \"NombrePlan\", \"Bonificacion\", \"NumeroBonificacion\") " +
+                       "VALUES (@IdObrasSociales, @NombrePlan, @Bonificacion, @NumeroBonificacion)";
+
+        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
         {
             try
             {
-                // 1. Borrar PLANES DE BONIFICACIÓN (Hijos directos)
-                string sqlPlanes = "DELETE FROM PlanBonificacion WHERE IdObrasSociales = @pId";
-                connection.Execute(sqlPlanes, new { pId = IdOS }, transaction);
-
-                // 2. Borrar DETALLES DE LIQUIDACIONES (Historial de presentaciones)
-                // Borramos los ítems donde aparece esta Obra Social en liquidaciones
-                string sqlLiqDet = "DELETE FROM LiquidacionDetalle WHERE IdObrasSociales = @pId";
-                connection.Execute(sqlLiqDet, new { pId = IdOS }, transaction);
-
-                // 3. Borrar FACTURACIÓN (Ventas)
-                // Primero borramos el DETALLE de las facturas de esta Obra Social
-                string sqlFacturaDet = @"
-                    DELETE FROM FacturaDetalle 
-                    WHERE IdFacturaCabecera IN (SELECT IdFacturaCabecera FROM FacturaCabecera WHERE IdObrasSociales = @pId)";
-                connection.Execute(sqlFacturaDet, new { pId = IdOS }, transaction);
-
-                // Luego borramos la CABECERA de las facturas
-                string sqlFacturaCab = "DELETE FROM FacturaCabecera WHERE IdObrasSociales = @pId";
-                connection.Execute(sqlFacturaCab, new { pId = IdOS }, transaction);
-
-                // 4. Borrar COBROS (Pagos)
-                // A) Primero: Detalles de cobros que imputan específicamente a esta OS
-                string sqlCobroDet1 = "DELETE FROM CobrosDetalle WHERE IdObrasSociales = @pId";
-                connection.Execute(sqlCobroDet1, new { pId = IdOS }, transaction);
-
-                // B) Segundo: Detalles de cobros donde la CABECERA del cobro pertenece a esta OS
-                // (Por si quedaron huérfanos de la consulta anterior)
-                string sqlCobroDet2 = @"
-                    DELETE FROM CobrosDetalle 
-                    WHERE IdCobros IN (SELECT IdCobros FROM Cobros WHERE IdObrasSociales = @pId)";
-                connection.Execute(sqlCobroDet2, new { pId = IdOS }, transaction);
-
-                // C) Tercero: La Cabecera del Cobro
-                string sqlCobros = "DELETE FROM Cobros WHERE IdObrasSociales = @pId";
-                connection.Execute(sqlCobros, new { pId = IdOS }, transaction);
-
-                // 5. FINALMENTE: Borrar la OBRA SOCIAL PADRE
-                string sqlOS = "DELETE FROM ObrasSociales WHERE IdObrasSociales = @pId";
-                connection.Execute(sqlOS, new { pId = IdOS }, transaction);
-
-                // Si llegamos hasta acá, confirmamos la muerte de los datos
-                transaction.Commit();
+                connection.Open();
+                connection.Execute(query, plan);
             }
-            catch (Exception)
+            catch (NpgsqlException ex)
             {
-                // Si algo explota, deshacemos todo
-                transaction.Rollback();
-                throw; // Re-lanzamos el error para que lo vea el Controller
+                throw new Exception("Error al insertar el plan de bonificación en la base de datos.", ex);
             }
         }
     }
-}
 
- // Models/BD.cs
-
-public static void AgregarBonificaciones(int IdOS, string? NombreCodigoBonificacion, int? CodigoBonificacion)
-{
-  
-    using (SqlConnection connection = new SqlConnection(_connectionString))
+    public static void ActualizarPlan(PlanBonificacion plan)
     {
-       
-        string query = "UPDATE ObrasSociales SET NombreCodigoBonificacion = @pNombreCodigoBonificacion, CodigoBonificacion = @pCodigoBonificacion WHERE IdObrasSociales = @pIdOS"; 
-        
-        connection.Execute(query, new { 
-            pNombreCodigoBonificacion = NombreCodigoBonificacion, 
-            pCodigoBonificacion = CodigoBonificacion, 
-            pIdOS = IdOS 
-        });
+        string query = "UPDATE \"PlanBonificacion\" SET " +
+                       "\"IdObrasSociales\" = @IdObrasSociales, " +
+                       "\"NombrePlan\" = @NombrePlan, " +
+                       "\"Bonificacion\" = @Bonificacion, " +
+                       "\"NumeroBonificacion\" = @NumeroBonificacion " +
+                       "WHERE \"IdPlanBonificacion\" = @IdPlanBonificacion";
+
+        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
+        {
+            try
+            {
+                connection.Open();
+                connection.Execute(query, plan);
+            }
+            catch (NpgsqlException ex)
+            {
+                throw new Exception("Error al actualizar el plan de bonificación en la base de datos.", ex);
+            }
+        }
     }
-}
-     public static void ModificarBonificaciones  (int IdOS, int? CodigoBonificacion, string? NombreCodigoBonificacion)
+
+    public static void EliminarPlan(int idPlan)
     {
-     ObrasSociales ObjOS = null;
-        using (SqlConnection connection = new SqlConnection(_connectionString))
+        string query = "DELETE FROM \"PlanBonificacion\" WHERE \"IdPlanBonificacion\" = @IdPlan";
+        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
         {
-            string query = "UPDATE ObrasSociales SET CodigoBonificacion = @pCodigoBonificacion, NombreCodigoBonificacion = @pNombreCodigoBonificacion where IdObrasSociales = @pIdOS"; 
-            connection.Execute(query, new {pIdOS = IdOS, pCodigoBonificacion = CodigoBonificacion, pNombreCodigoBonificacion = NombreCodigoBonificacion});
-         }
-    
+            try
+            {
+                connection.Open();
+                connection.Execute(query, new { IdPlan = idPlan });
+            }
+            catch (NpgsqlException ex)
+            {
+                throw new Exception("Error al eliminar el plan de bonificación en la base de datos.", ex);
+            }
+        }
     }
 
-public static List<PlanBonificacion> TraerPlanBonificacionPorId  (int IdOS)
-    {
-     List<PlanBonificacion> ObjPlanBoni = null;
-        using (SqlConnection connection = new SqlConnection(_connectionString))
-        {
-            string query = "SELECT * FROM PlanBonificacion where IdObrasSociales = @pIdOS"; 
-            ObjPlanBoni = connection.Query<PlanBonificacion>(query, new {pIdOS = IdOS}).ToList();
-         }
+    //-- Codigo Liquidaciones --///
 
-         return ObjPlanBoni;
-    }
-
-public static void InsertarPlan(PlanBonificacion plan)
-        {
-            // Nivel Técnico: Usamos parámetros (@NombrePlan) para evitar SQL Injection.
-            string query = "INSERT INTO PlanBonificacion (IdObrasSociales, NombrePlan, Bonificacion, NumeroBonificacion) " +
-                           "VALUES (@IdObraSocial, @NombrePlan, @Bonificacion, @NumeroBonificacion)";
-            
-            using (SqlConnection connection = new SqlConnection(_connectionString))
-            {
-                try
-                {
-                    connection.Open();
-                    // Dapper mapea automáticamente las propiedades del objeto 'plan' a los parámetros @
-                    connection.Execute(query, plan); 
-                }
-                catch (SqlException ex)
-                {
-                    // Manejo de error de base de datos. Deberías loggear esto.
-                    throw new Exception("Error al insertar el plan de bonificación en la base de datos.", ex);
-                }
-            }
-        }
-
-                public static void ActualizarPlan(PlanBonificacion plan)
-        {
-            // Nivel Técnico: La cláusula WHERE usa el PK para garantizar que solo se actualice una fila.
-            string query = "UPDATE PlanBonificacion SET " +
-                           "IdObrasSociales = @IdObraSocial, " +
-                           "NombrePlan = @NombrePlan, " +
-                           "Bonificacion = @Bonificacion, " +
-                           "NumeroBonificacion = @NumeroBonificacion " +
-                           "WHERE IdPlanBonificacion = @IdPlanBonificacion";
-
-            using (SqlConnection connection = new SqlConnection(_connectionString))
-            {
-                try
-                {
-                    connection.Open();
-                    // Dapper encuentra las propiedades del objeto 'plan' (incluyendo el PK para el WHERE)
-                    connection.Execute(query, plan); 
-                }
-                catch (SqlException ex)
-                {
-                    throw new Exception("Error al actualizar el plan de bonificación en la base de datos.", ex);
-                }
-            }
-        }
-
-        
-        public static void EliminarPlan(int idPlan)
-        {
-            // Nivel Técnico: Delete simple con parámetro para el Id.
-            string query = "DELETE FROM PlanBonificacion WHERE IdPlanBonificacion = @IdPlan";
-
-            using (SqlConnection connection = new SqlConnection(_connectionString))
-            {
-                try
-                {
-                    connection.Open();
-                    // Pasamos un objeto anónimo para el parámetro @IdPlan
-                    connection.Execute(query, new { IdPlan = idPlan }); 
-                }
-                catch (SqlException ex)
-                {
-                    throw new Exception("Error al eliminar el plan de bonificación en la base de datos.", ex);
-                }
-            }
-        }
-
-
-
-
-
-//-- Codigo Liquidaciones --///
-
-      public static List<Liquidaciones> TraerListaLiquidacionesCompleta(int IdUsuario)
+    public static List<Liquidaciones> TraerListaLiquidacionesCompleta(int IdUsuario)
     {
         List<Liquidaciones> ListLiquidaciones = new List<Liquidaciones>();
-        using (SqlConnection connection = new SqlConnection(_connectionString))
+        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
         {
-            string query = "SELECT * FROM Liquidaciones WHERE IdUsuario = @IdUsuario";
+            string query = "SELECT * FROM \"Liquidaciones\" WHERE \"IdUsuario\" = @IdUsuario";
             ListLiquidaciones = connection.Query<Liquidaciones>(query, new { IdUsuario = IdUsuario }).ToList();
         }
         return ListLiquidaciones;
     }
 
-
-public static int InsertarLiquidacionCabecera(Liquidaciones liq, int idUsuario)
-{
-    using (SqlConnection connection = new SqlConnection(_connectionString))
+    public static int InsertarLiquidacionCabecera(Liquidaciones liq, int idUsuario)
     {
-        // Usamos SCOPE_IDENTITY() para recuperar el ID autogenerado
-        string query = @"
-            INSERT INTO Liquidaciones (IdMandatarias, FechaPresentacion, TotalPresentado, Observaciones, Estado, Periodo, IdUsuario) 
-            VALUES (@IdMandatarias, @FechaPresentacion, @TotalPresentado, @Observaciones, 'PRESENTADA', @Periodo, @IdUsuario);
-            SELECT CAST(SCOPE_IDENTITY() as int);";
-        
-        // CORRECCIÓN: Mapeamos propiedad por propiedad para que Dapper encuentre @IdMandatarias
-        return connection.QuerySingle<int>(query, new { 
-            IdMandatarias = liq.IdMandatarias,
-            FechaPresentacion = liq.FechaPresentacion,
-            TotalPresentado = liq.TotalPresentado,
-            Observaciones = liq.Observaciones,
-            Periodo = liq.Periodo,
-            IdUsuario = idUsuario
-        });
+        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
+        {
+            // CORRECCIÓN POSTGRES: Usamos RETURNING en lugar de SCOPE_IDENTITY()
+            string query = @"
+            INSERT INTO ""Liquidaciones"" (""IdMandatarias"", ""FechaPresentacion"", ""TotalPresentado"", ""Observaciones"", ""Estado"", ""Periodo"", ""IdUsuario"") 
+            VALUES (@IdMandatarias, @FechaPresentacion, @TotalPresentado, @Observaciones, 'PRESENTADA', @Periodo, @IdUsuario)
+            RETURNING ""IdLiquidaciones"";";
+
+            return connection.QuerySingle<int>(query, new
+            {
+                IdMandatarias = liq.IdMandatarias,
+                FechaPresentacion = liq.FechaPresentacion,
+                TotalPresentado = liq.TotalPresentado,
+                Observaciones = liq.Observaciones,
+                Periodo = liq.Periodo,
+                IdUsuario = idUsuario
+            });
+        }
     }
-}
 
-// 2. INSERTAR DETALLE
-// 2. INSERTAR DETALLE (CORREGIDO: Tabla en Singular)
-public static void InsertarLiquidacionDetalle(int idLiquidacion, int idOS, int idPlan, int recetas, decimal bruto, decimal cargoOS, decimal bonificacion, int idUsuario)
-{
-    using (SqlConnection connection = new SqlConnection(_connectionString))
+    public static void InsertarLiquidacionDetalle(int idLiquidacion, int idOS, int idPlan, int recetas, decimal bruto, decimal cargoOS, decimal bonificacion, int idUsuario)
     {
-        // CAMBIO: El SaldoPendiente inicial es (cargoOS - bonificacion)
-        decimal saldoInicial = cargoOS - bonificacion;
+        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
+        {
+            decimal saldoInicial = cargoOS - bonificacion;
 
-        string query = @"INSERT INTO LiquidacionDetalle 
-                        (IdLiquidaciones, IdObrasSociales, IdPlanBonificacion, CantidadRecetas, TotalBruto, MontoCargoOS, MontoBonificacion, SaldoPendiente, Pagado, IdUsuario)
+            string query = @"INSERT INTO ""LiquidacionDetalle"" 
+                        (""IdLiquidaciones"", ""IdObrasSociales"", ""IdPlanBonificacion"", ""CantidadRecetas"", ""TotalBruto"", ""MontoCargoOS"", ""MontoBonificacion"", ""SaldoPendiente"", ""Pagado"", ""IdUsuario"")
                         VALUES 
-                        (@pIdLiq, @pIdOS, @pIdPlan, @pRecetas, @pBruto, @pCargoOS, @pBoni, @pSaldo, 0, @pIdUsuario)";
-        
-        connection.Execute(query, new { 
-            pIdLiq = idLiquidacion, 
-            pIdOS = idOS, 
-            pIdPlan = idPlan, 
-            pRecetas = recetas, 
-            pBruto = bruto, 
-            pCargoOS = cargoOS, 
-            pBoni = bonificacion,
-            pSaldo = saldoInicial, // <--- AQUÍ SE INICIA LA DEUDA REAL
-            pIdUsuario = idUsuario
-        });
-    }
-}
+                        (@pIdLiq, @pIdOS, @pIdPlan, @pRecetas, @pBruto, @pCargoOS, @pBoni, @pSaldo, false, @pIdUsuario)";
+            // Nota: En Postgres el bit se mapea a boolean (false)
 
-// 3. BUSCAR CON FILTROS (MANDATARIA, FECHAS, ID)
-// 3. BUSCAR CON FILTROS (MANDATARIA, FECHAS, ID, USUARIO)
-public static List<dynamic> BuscarLiquidaciones(int? id, DateTime? desde, DateTime? hasta, int? mandataria, int idUsuario)
-{
-    using (SqlConnection connection = new SqlConnection(_connectionString))
+            connection.Execute(query, new
+            {
+                pIdLiq = idLiquidacion,
+                pIdOS = idOS,
+                pIdPlan = idPlan,
+                pRecetas = recetas,
+                pBruto = bruto,
+                pCargoOS = cargoOS,
+                pBoni = bonificacion,
+                pSaldo = saldoInicial,
+                pIdUsuario = idUsuario
+            });
+        }
+    }
+
+    public static List<dynamic> BuscarLiquidaciones(int? id, DateTime? desde, DateTime? hasta, int? mandataria, int idUsuario)
     {
-        string query = @"
+        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
+        {
+            // CORRECCIÓN POSTGRES: COALESCE en vez de ISNULL
+            string query = @"
             SELECT 
-                L.IdLiquidaciones,
-                L.FechaPresentacion,
-                L.Periodo,
-                L.Observaciones,
-                L.IdMandatarias,
-                M.RazonSocial as NombreMandataria,
-                ISNULL(SUM(LD.MontoCargoOS - LD.MontoBonificacion), 0) as TotalReal,
-                ISNULL(SUM(LD.SaldoPendiente), 0) as SaldoPendiente,
+                L.""IdLiquidaciones"",
+                L.""FechaPresentacion"",
+                L.""Periodo"",
+                L.""Observaciones"",
+                L.""IdMandatarias"",
+                M.""RazonSocial"" as ""NombreMandataria"",
+                COALESCE(SUM(LD.""MontoCargoOS"" - LD.""MontoBonificacion""), 0) as ""TotalReal"",
+                COALESCE(SUM(LD.""SaldoPendiente""), 0) as ""SaldoPendiente"",
 
-                -- Buscamos la fecha del último cobro registrado para esta liquidación
-                (SELECT MAX(CD.FechaCobroDetalle) 
-                 FROM CobrosDetalle CD 
-                 INNER JOIN LiquidacionDetalle Det ON CD.IdLiquidacionDetalle = Det.IdLiquidacionDetalle
-                 WHERE Det.IdLiquidaciones = L.IdLiquidaciones
-                ) as FechaCancelacion
+                (SELECT MAX(CD.""FechaCobroDetalle"") 
+                 FROM ""CobrosDetalle"" CD 
+                 INNER JOIN ""LiquidacionDetalle"" Det ON CD.""IdLiquidacionDetalle"" = Det.""IdLiquidacionDetalle""
+                 WHERE Det.""IdLiquidaciones"" = L.""IdLiquidaciones""
+                ) as ""FechaCancelacion""
 
-            FROM Liquidaciones L
-            INNER JOIN Mandatarias M ON L.IdMandatarias = M.IdMandatarias
-            LEFT JOIN LiquidacionDetalle LD ON L.IdLiquidaciones = LD.IdLiquidaciones
+            FROM ""Liquidaciones"" L
+            INNER JOIN ""Mandatarias"" M ON L.""IdMandatarias"" = M.""IdMandatarias""
+            LEFT JOIN ""LiquidacionDetalle"" LD ON L.""IdLiquidaciones"" = LD.""IdLiquidaciones""
             
-            -- FILTRO DE SEGURIDAD: Solo trae las del usuario actual
-            WHERE L.IdUsuario = @pUser ";
+            WHERE L.""IdUsuario"" = @pUser ";
 
-        if (id.HasValue) query += " AND L.IdLiquidaciones = @pId";
-        if (desde.HasValue) query += " AND L.FechaPresentacion >= @pDesde";
-        if (hasta.HasValue) query += " AND L.FechaPresentacion <= @pHasta";
-        if (mandataria.HasValue && mandataria.Value > 0) query += " AND L.IdMandatarias = @pMand";
+            if (id.HasValue) query += " AND L.\"IdLiquidaciones\" = @pId";
+            if (desde.HasValue) query += " AND L.\"FechaPresentacion\" >= @pDesde";
+            if (hasta.HasValue) query += " AND L.\"FechaPresentacion\" <= @pHasta";
+            if (mandataria.HasValue && mandataria.Value > 0) query += " AND L.\"IdMandatarias\" = @pMand";
 
-        query += @" 
-            GROUP BY L.IdLiquidaciones, L.FechaPresentacion, L.Periodo, L.Observaciones, L.IdMandatarias, M.RazonSocial
-            ORDER BY L.FechaPresentacion DESC";
+            query += @" 
+            GROUP BY L.""IdLiquidaciones"", L.""FechaPresentacion"", L.""Periodo"", L.""Observaciones"", L.""IdMandatarias"", M.""RazonSocial""
+            ORDER BY L.""FechaPresentacion"" DESC";
 
-        return connection.Query<dynamic>(query, new { 
-            pId = id, 
-            pDesde = desde, 
-            pHasta = hasta, 
-            pMand = mandataria, 
-            pUser = idUsuario // <--- Pasamos el ID Usuario a Dapper
-        }).ToList();
+            return connection.Query<dynamic>(query, new
+            {
+                pId = id,
+                pDesde = desde,
+                pHasta = hasta,
+                pMand = mandataria,
+                pUser = idUsuario
+            }).ToList();
+        }
     }
-}
-// 4. TRAER DETALLES POR ID LIQUIDACION (CON DATOS ADICIONALES)
-public static List<LiquidacionDetalle> TraerDetallesPorIdLiquidacion(int idLiquidacion, int idUsuario)
-{
-    using (SqlConnection connection = new SqlConnection(_connectionString))
+
+    public static List<LiquidacionDetalle> TraerDetallesPorIdLiquidacion(int idLiquidacion, int idUsuario)
     {
-        string query = @"
+        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
+        {
+            string query = @"
             SELECT 
                 LD.*, 
-                PB.NombrePlan,
-                OS.Nombre AS NombreObraSocial,
-                (SELECT MAX(FechaCobroDetalle) FROM CobrosDetalle WHERE IdLiquidacionDetalle = LD.IdLiquidacionDetalle) as FechaCancelacion
-            FROM LiquidacionDetalle LD
-            -- JOIN OBLIGATORIO PARA SEGURIDAD
-            INNER JOIN Liquidaciones L ON LD.IdLiquidaciones = L.IdLiquidaciones 
-            LEFT JOIN PlanBonificacion PB ON LD.IdPlanBonificacion = PB.IdPlanBonificacion
-            LEFT JOIN ObrasSociales OS ON LD.IdObrasSociales = OS.IdObrasSociales
-            
-            -- FILTRO: ID de la liquidación Y el Usuario dueño de la cabecera
-            WHERE LD.IdLiquidaciones = @pIdLiq AND L.IdUsuario = @pIdUsuario";
-            
-        return connection.Query<LiquidacionDetalle>(query, new { pIdLiq = idLiquidacion, pIdUsuario = idUsuario }).ToList();
+                PB.""NombrePlan"",
+                OS.""Nombre"" AS ""NombreObraSocial"",
+                (SELECT MAX(""FechaCobroDetalle"") FROM ""CobrosDetalle"" WHERE ""IdLiquidacionDetalle"" = LD.""IdLiquidacionDetalle"") as ""FechaCancelacion""
+            FROM ""LiquidacionDetalle"" LD
+            INNER JOIN ""Liquidaciones"" L ON LD.""IdLiquidaciones"" = L.""IdLiquidaciones"" 
+            LEFT JOIN ""PlanBonificacion"" PB ON LD.""IdPlanBonificacion"" = PB.""IdPlanBonificacion""
+            LEFT JOIN ""ObrasSociales"" OS ON LD.""IdObrasSociales"" = OS.""IdObrasSociales""
+            WHERE LD.""IdLiquidaciones"" = @pIdLiq AND L.""IdUsuario"" = @pIdUsuario";
+
+            return connection.Query<LiquidacionDetalle>(query, new { pIdLiq = idLiquidacion, pIdUsuario = idUsuario }).ToList();
+        }
     }
-}
-// B. PARA EL BOTÓN ELIMINAR (Borra todo en orden)
-public static void EliminarLiquidacion(int idLiquidacion, int idUsuario)
-{
-    using (SqlConnection connection = new SqlConnection(_connectionString))
+
+    public static void EliminarLiquidacion(int idLiquidacion, int idUsuario)
     {
-        connection.Open();
-        using (var transaction = connection.BeginTransaction())
+        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
         {
-            try
+            connection.Open();
+            using (var transaction = connection.BeginTransaction())
             {
-                // Objeto para parámetros comunes
-                var parametros = new { Id = idLiquidacion, IdUsuario = idUsuario };
-
-                // ---------------------------------------------------------
-                // PASO 1: Identificar qué Cobros se verán afectados
-                // ---------------------------------------------------------
-                // Agregamos filtro de usuario aquí para solo tocar cobros asociados a MIS liquidaciones
-                string queryGetCobros = @"
-                    SELECT DISTINCT CD.IdCobros 
-                    FROM CobrosDetalle CD
-                    INNER JOIN LiquidacionDetalle LD ON CD.IdLiquidacionDetalle = LD.IdLiquidacionDetalle
-                    WHERE LD.IdLiquidaciones = @Id AND LD.IdUsuario = @IdUsuario"; // <--- FILTRO AQUÍ
-                
-                var listaCobrosAfectados = connection.Query<int>(queryGetCobros, parametros, transaction).ToList();
-
-                // ---------------------------------------------------------
-                // PASO 2: Eliminar el vínculo en CobrosDetalle
-                // ---------------------------------------------------------
-                // Borramos solo si el detalle pertenece a la liquidación Y AL USUARIO
-                string deleteCobrosDet = @"
-                    DELETE FROM CobrosDetalle 
-                    WHERE IdLiquidacionDetalle IN (
-                        SELECT IdLiquidacionDetalle 
-                        FROM LiquidacionDetalle 
-                        WHERE IdLiquidaciones = @Id AND IdUsuario = @IdUsuario -- <--- FILTRO AQUÍ TAMBIÉN POR SEGURIDAD
-                    )";
-                connection.Execute(deleteCobrosDet, parametros, transaction);
-
-                // ---------------------------------------------------------
-                // PASO 3: Recalcular Cabeceras de Cobros
-                // ---------------------------------------------------------
-                foreach (var idCobro in listaCobrosAfectados)
+                try
                 {
-                    // (Lógica de recálculo se mantiene igual, solo depende del IdCobro que ya filtramos arriba)
-                    string queryRecalculo = @"
-                        SELECT ISNULL(SUM(ImporteCobrado), 0) 
-                        FROM CobrosDetalle 
-                        WHERE IdCobros = @IdCobro";
-                    
-                    decimal nuevoTotal = connection.ExecuteScalar<decimal>(queryRecalculo, new { IdCobro = idCobro }, transaction);
-                    
-                    // Si actualizas la cabecera del cobro, hazlo aquí.
+                    var parametros = new { Id = idLiquidacion, IdUsuario = idUsuario };
+
+                    // PASO 1
+                    string queryGetCobros = @"
+                    SELECT DISTINCT CD.""IdCobros"" 
+                    FROM ""CobrosDetalle"" CD
+                    INNER JOIN ""LiquidacionDetalle"" LD ON CD.""IdLiquidacionDetalle"" = LD.""IdLiquidacionDetalle""
+                    WHERE LD.""IdLiquidaciones"" = @Id AND LD.""IdUsuario"" = @IdUsuario";
+
+                    var listaCobrosAfectados = connection.Query<int>(queryGetCobros, parametros, transaction).ToList();
+
+                    // PASO 2
+                    string deleteCobrosDet = @"
+                    DELETE FROM ""CobrosDetalle"" 
+                    WHERE ""IdLiquidacionDetalle"" IN (
+                        SELECT ""IdLiquidacionDetalle"" 
+                        FROM ""LiquidacionDetalle"" 
+                        WHERE ""IdLiquidaciones"" = @Id AND ""IdUsuario"" = @IdUsuario
+                    )";
+                    connection.Execute(deleteCobrosDet, parametros, transaction);
+
+                    // PASO 3
+                    foreach (var idCobro in listaCobrosAfectados)
+                    {
+                        string queryRecalculo = @"
+                        SELECT COALESCE(SUM(""ImporteCobrado""), 0) 
+                        FROM ""CobrosDetalle"" 
+                        WHERE ""IdCobros"" = @IdCobro";
+
+                        decimal nuevoTotal = connection.ExecuteScalar<decimal>(queryRecalculo, new { IdCobro = idCobro }, transaction);
+                    }
+
+                    // PASO 4
+                    string deleteLiqDet = "DELETE FROM \"LiquidacionDetalle\" WHERE \"IdLiquidaciones\" = @Id AND \"IdUsuario\" = @IdUsuario";
+                    connection.Execute(deleteLiqDet, parametros, transaction);
+
+                    // PASO 5
+                    string deleteLiqCab = "DELETE FROM \"Liquidaciones\" WHERE \"IdLiquidaciones\" = @Id AND \"IdUsuario\" = @IdUsuario";
+                    connection.Execute(deleteLiqCab, parametros, transaction);
+
+                    transaction.Commit();
                 }
-
-                // ---------------------------------------------------------
-                // PASO 4: Eliminar LiquidacionDetalle
-                // ---------------------------------------------------------
-                // Agregamos filtro de usuario
-                string deleteLiqDet = "DELETE FROM LiquidacionDetalle WHERE IdLiquidaciones = @Id AND IdUsuario = @IdUsuario";
-                connection.Execute(deleteLiqDet, parametros, transaction);
-
-                // ---------------------------------------------------------
-                // PASO 5: Eliminar Liquidaciones (Padre)
-                // ---------------------------------------------------------
-                // Agregamos filtro de usuario
-                string deleteLiqCab = "DELETE FROM Liquidaciones WHERE IdLiquidaciones = @Id AND IdUsuario = @IdUsuario";
-                connection.Execute(deleteLiqCab, parametros, transaction);
-
-                transaction.Commit();
-            }
-            catch (Exception ex)
-            {
-                transaction.Rollback();
-                throw; 
+                catch (Exception ex)
+                {
+                    transaction.Rollback();
+                    throw;
+                }
             }
         }
     }
-}
 
-// 1. Traer un solo ítem para editarlo
-public static LiquidacionDetalle TraerDetallePorId(int idDetalle, int idUsuario)
-{
-    using (SqlConnection connection = new SqlConnection(_connectionString))
+    public static LiquidacionDetalle TraerDetallePorId(int idDetalle, int idUsuario)
     {
-        string query = @"
-            SELECT LD.* FROM LiquidacionDetalle LD
-            INNER JOIN Liquidaciones L ON LD.IdLiquidaciones = L.IdLiquidaciones
-            WHERE LD.IdLiquidacionDetalle = @pId AND L.IdUsuario = @pUser";
-            
-        return connection.QueryFirstOrDefault<LiquidacionDetalle>(query, new { pId = idDetalle, pUser = idUsuario });
+        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
+        {
+            string query = @"
+            SELECT LD.* FROM ""LiquidacionDetalle"" LD
+            INNER JOIN ""Liquidaciones"" L ON LD.""IdLiquidaciones"" = L.""IdLiquidaciones""
+            WHERE LD.""IdLiquidacionDetalle"" = @pId AND L.""IdUsuario"" = @pUser";
+
+            return connection.QueryFirstOrDefault<LiquidacionDetalle>(query, new { pId = idDetalle, pUser = idUsuario });
+        }
     }
-}
 
-// 2. Agregar ítem suelto (y actualizar total del padre)
-// EN: Models/BD.cs -> Método AgregarItemIndividual
-
-public static void AgregarItemIndividual(LiquidacionDetalle item, int idUsuario)
-{
-    using (SqlConnection connection = new SqlConnection(_connectionString))
+    public static void AgregarItemIndividual(LiquidacionDetalle item, int idUsuario)
     {
-        connection.Open();
-        
-        // 1. SEGURIDAD: Validamos que la cabecera padre sea del usuario antes de insertar
-        // Como LiquidacionDetalle no tiene IdUsuario, validamos contra Liquidaciones
-        int existe = connection.ExecuteScalar<int>(
-            "SELECT COUNT(1) FROM Liquidaciones WHERE IdLiquidaciones = @pLiq AND IdUsuario = @pUser", 
-            new { pLiq = item.IdLiquidaciones, pUser = idUsuario }
-        );
-        
-        if(existe == 0) throw new Exception("No tiene permisos sobre esta liquidación.");
+        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
+        {
+            connection.Open();
 
-        // 2. INSERTAR (Tu lógica original intacta)
-        string query = @"INSERT INTO LiquidacionDetalle (
-                            IdLiquidaciones, IdObrasSociales, IdPlanBonificacion, 
-                            CantidadRecetas, TotalBruto, MontoCargoOS, MontoBonificacion, 
-                            SaldoPendiente, Pagado
+            int existe = connection.ExecuteScalar<int>(
+                "SELECT COUNT(1) FROM \"Liquidaciones\" WHERE \"IdLiquidaciones\" = @pLiq AND \"IdUsuario\" = @pUser",
+                new { pLiq = item.IdLiquidaciones, pUser = idUsuario }
+            );
+
+            if (existe == 0) throw new Exception("No tiene permisos sobre esta liquidación.");
+
+            string query = @"INSERT INTO ""LiquidacionDetalle"" (
+                            ""IdLiquidaciones"", ""IdObrasSociales"", ""IdPlanBonificacion"", 
+                            ""CantidadRecetas"", ""TotalBruto"", ""MontoCargoOS"", ""MontoBonificacion"", 
+                            ""SaldoPendiente"", ""Pagado""
                          )
                          VALUES (
                             @IdLiquidaciones, @IdObrasSociales, @IdPlanBonificacion, 
                             @CantidadRecetas, @TotalBruto, @MontoCargoOS, @MontoBonificacion, 
-                            @SaldoPendiente, 0
+                            @SaldoPendiente, false
                          )";
-        
-        connection.Execute(query, item);
 
-        // 3. Actualizamos total
-        ActualizarTotalCabecera(item.IdLiquidaciones, connection);
-    }
-}
+            connection.Execute(query, item);
 
-// EN: Models/BD.cs
-
-public static void EliminarItemIndividual(int idDetalle, int idLiquidacionPadre, int idUsuario)
-{
-    using (SqlConnection connection = new SqlConnection(_connectionString))
-    {
-        connection.Open();
-        using (var transaction = connection.BeginTransaction())
-        {
-            try
-            {
-                // Parámetros de seguridad
-                var parametros = new { IdDetalle = idDetalle, pUser = idUsuario };
-
-                // 1. Identificar Cobros (Tu lógica original + Seguridad)
-                string queryGetCobros = @"
-                    SELECT DISTINCT CD.IdCobros 
-                    FROM CobrosDetalle CD
-                    INNER JOIN LiquidacionDetalle LD ON CD.IdLiquidacionDetalle = LD.IdLiquidacionDetalle
-                    INNER JOIN Liquidaciones L ON LD.IdLiquidaciones = L.IdLiquidaciones
-                    WHERE LD.IdLiquidacionDetalle = @IdDetalle AND L.IdUsuario = @pUser"; // <--- Seguridad
-                
-                var listaCobrosAfectados = connection.Query<int>(queryGetCobros, parametros, transaction).ToList();
-
-                // 2. Eliminar Pagos (Tu lógica original)
-                // Se borran solo los pagos de este detalle (que ya validamos que es nuestro arriba)
-                string deleteCobros = "DELETE FROM CobrosDetalle WHERE IdLiquidacionDetalle = @IdDetalle";
-                connection.Execute(deleteCobros, parametros, transaction);
-
-                // 3. Eliminar el Ítem de Liquidación (CON SEGURIDAD)
-                string deleteItem = @"
-                    DELETE FROM LiquidacionDetalle 
-                    WHERE IdLiquidacionDetalle = @IdDetalle
-                    AND EXISTS (SELECT 1 FROM Liquidaciones L WHERE L.IdLiquidaciones = LiquidacionDetalle.IdLiquidaciones AND L.IdUsuario = @pUser)";
-                
-                int rows = connection.Execute(deleteItem, parametros, transaction);
-
-                if (rows > 0)
-                {
-                    // 4. Recalcular Total (Tu lógica original)
-                    ActualizarTotalCabecera(idLiquidacionPadre, connection);
-
-                    // 5. Recalcular Cobros (Tu lógica original)
-                    foreach (var idCobro in listaCobrosAfectados)
-                    {
-                        string querySumCobro = "SELECT ISNULL(SUM(ImporteCobrado), 0) FROM CobrosDetalle WHERE IdCobros = @IdCobro";
-                        decimal nuevoTotalCobro = connection.ExecuteScalar<decimal>(querySumCobro, new { IdCobro = idCobro }, transaction);
-                    }
-                }
-
-                transaction.Commit();
-            }
-            catch { transaction.Rollback(); throw; }
+            ActualizarTotalCabecera(item.IdLiquidaciones, connection);
         }
     }
-}
 
-// Helper para actualizar cabecera dentro de la transacción
-private static void ActualizarTotalCabecera(int idLiq, SqlConnection conn)
-{
-    // Actualiza el 'TotalPresentado' sumando (Cargo - Bonif) de todos los hijos
-    string sql = @"
-        UPDATE Liquidaciones 
-        SET TotalPresentado = (
-            SELECT ISNULL(SUM(MontoCargoOS - MontoBonificacion), 0) 
-            FROM LiquidacionDetalle 
-            WHERE IdLiquidaciones = @id
-        )
-        WHERE IdLiquidaciones = @id";
-        
-    conn.Execute(sql, new { id = idLiq });
-}
-// MÉTODO PRIVADO PARA RECALCULAR TOTALES (Evita inconsistencias)
-// Helper privado unificado para recalcular totales
-public static void ModificarItemIndividual(LiquidacionDetalle item, int idUsuario)
-{
-    using (SqlConnection connection = new SqlConnection(_connectionString))
+    public static void EliminarItemIndividual(int idDetalle, int idLiquidacionPadre, int idUsuario)
     {
-        connection.Open();
+        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
+        {
+            connection.Open();
+            using (var transaction = connection.BeginTransaction())
+            {
+                try
+                {
+                    var parametros = new { IdDetalle = idDetalle, pUser = idUsuario };
 
-        // 1. UPDATE DEL ÍTEM CON SEGURIDAD Y RECÁLCULO
-        // Agregamos el "AND EXISTS..." al final para validar que la liquidación padre sea del usuario.
-        string query = @"
-            UPDATE LiquidacionDetalle 
+                    string queryGetCobros = @"
+                    SELECT DISTINCT CD.""IdCobros"" 
+                    FROM ""CobrosDetalle"" CD
+                    INNER JOIN ""LiquidacionDetalle"" LD ON CD.""IdLiquidacionDetalle"" = LD.""IdLiquidacionDetalle""
+                    INNER JOIN ""Liquidaciones"" L ON LD.""IdLiquidaciones"" = L.""IdLiquidaciones""
+                    WHERE LD.""IdLiquidacionDetalle"" = @IdDetalle AND L.""IdUsuario"" = @pUser";
+
+                    var listaCobrosAfectados = connection.Query<int>(queryGetCobros, parametros, transaction).ToList();
+
+                    string deleteCobros = "DELETE FROM \"CobrosDetalle\" WHERE \"IdLiquidacionDetalle\" = @IdDetalle";
+                    connection.Execute(deleteCobros, parametros, transaction);
+
+                    string deleteItem = @"
+                    DELETE FROM ""LiquidacionDetalle"" 
+                    WHERE ""IdLiquidacionDetalle"" = @IdDetalle
+                    AND EXISTS (SELECT 1 FROM ""Liquidaciones"" L WHERE L.""IdLiquidaciones"" = ""LiquidacionDetalle"".""IdLiquidaciones"" AND L.""IdUsuario"" = @pUser)";
+
+                    int rows = connection.Execute(deleteItem, parametros, transaction);
+
+                    if (rows > 0)
+                    {
+                        ActualizarTotalCabecera(idLiquidacionPadre, connection);
+
+                        foreach (var idCobro in listaCobrosAfectados)
+                        {
+                            string querySumCobro = "SELECT COALESCE(SUM(\"ImporteCobrado\"), 0) FROM \"CobrosDetalle\" WHERE \"IdCobros\" = @IdCobro";
+                            decimal nuevoTotalCobro = connection.ExecuteScalar<decimal>(querySumCobro, new { IdCobro = idCobro }, transaction);
+                        }
+                    }
+
+                    transaction.Commit();
+                }
+                catch { transaction.Rollback(); throw; }
+            }
+        }
+    }
+
+    private static void ActualizarTotalCabecera(int idLiq, NpgsqlConnection conn)
+    {
+        string sql = @"
+        UPDATE ""Liquidaciones"" 
+        SET ""TotalPresentado"" = (
+            SELECT COALESCE(SUM(""MontoCargoOS"" - ""MontoBonificacion""), 0) 
+            FROM ""LiquidacionDetalle"" 
+            WHERE ""IdLiquidaciones"" = @id
+        )
+        WHERE ""IdLiquidaciones"" = @id";
+
+        conn.Execute(sql, new { id = idLiq });
+    }
+
+    public static void ModificarItemIndividual(LiquidacionDetalle item, int idUsuario)
+    {
+        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
+        {
+            connection.Open();
+
+            string query = @"
+            UPDATE ""LiquidacionDetalle"" 
             SET 
-                IdObrasSociales = @IdObrasSociales, 
-                IdPlanBonificacion = @IdPlanBonificacion, 
-                CantidadRecetas = @CantidadRecetas, 
-                TotalBruto = @TotalBruto, 
-                MontoCargoOS = @MontoCargoOS, 
-                MontoBonificacion = @MontoBonificacion, 
+                ""IdObrasSociales"" = @IdObrasSociales, 
+                ""IdPlanBonificacion"" = @IdPlanBonificacion, 
+                ""CantidadRecetas"" = @CantidadRecetas, 
+                ""TotalBruto"" = @TotalBruto, 
+                ""MontoCargoOS"" = @MontoCargoOS, 
+                ""MontoBonificacion"" = @MontoBonificacion, 
                 
-                -- RECÁLCULO AUTOMÁTICO DEL SALDO
-                -- Fórmula: (Nuevo Cargo - Nueva Bonif) - (Pagos ya realizados en CobrosDetalle)
-                SaldoPendiente = (@MontoCargoOS - @MontoBonificacion) - ISNULL((
-                    SELECT SUM(ImporteCobrado + MontoDebito) 
-                    FROM CobrosDetalle 
-                    WHERE IdLiquidacionDetalle = @IdLiquidacionDetalle
+                ""SaldoPendiente"" = (@MontoCargoOS - @MontoBonificacion) - COALESCE((
+                    SELECT SUM(""ImporteCobrado"" + ""MontoDebito"") 
+                    FROM ""CobrosDetalle"" 
+                    WHERE ""IdLiquidacionDetalle"" = @IdLiquidacionDetalle
                 ), 0)
 
-            WHERE IdLiquidacionDetalle = @IdLiquidacionDetalle
-            -- VALIDACIÓN DE SEGURIDAD (Sin esto, podrían editar datos ajenos)
+            WHERE ""IdLiquidacionDetalle"" = @IdLiquidacionDetalle
             AND EXISTS (
-                SELECT 1 FROM Liquidaciones L 
-                WHERE L.IdLiquidaciones = LiquidacionDetalle.IdLiquidaciones 
-                AND L.IdUsuario = @pUser
+                SELECT 1 FROM ""Liquidaciones"" L 
+                WHERE L.""IdLiquidaciones"" = ""LiquidacionDetalle"".""IdLiquidaciones"" 
+                AND L.""IdUsuario"" = @pUser
             );
 
-            -- 2. ACTUALIZAR ESTADO 'PAGADO' (Si el nuevo saldo es <= 0)
-            UPDATE LiquidacionDetalle
-            SET Pagado = CASE WHEN SaldoPendiente <= 1.00 THEN 1 ELSE 0 END
-            WHERE IdLiquidacionDetalle = @IdLiquidacionDetalle;
+            UPDATE ""LiquidacionDetalle""
+            SET ""Pagado"" = CASE WHEN ""SaldoPendiente"" <= 1.00 THEN true ELSE false END
+            WHERE ""IdLiquidacionDetalle"" = @IdLiquidacionDetalle;
         ";
-        
-        int filasAfectadas = connection.Execute(query, new { 
-            item.IdLiquidacionDetalle, 
-            item.IdObrasSociales, 
-            item.IdPlanBonificacion, 
-            item.CantidadRecetas, 
-            item.TotalBruto, 
-            item.MontoCargoOS, 
-            item.MontoBonificacion, 
-            pUser = idUsuario // Pasamos el ID Usuario
-        });
 
-        if (filasAfectadas == 0) throw new Exception("No se pudo modificar el ítem (No encontrado o sin permisos).");
+            int filasAfectadas = connection.Execute(query, new
+            {
+                item.IdLiquidacionDetalle,
+                item.IdObrasSociales,
+                item.IdPlanBonificacion,
+                item.CantidadRecetas,
+                item.TotalBruto,
+                item.MontoCargoOS,
+                item.MontoBonificacion,
+                pUser = idUsuario
+            });
 
-        // 3. ACTUALIZAR EL TOTAL DE LA CABECERA (LIQUIDACIÓN PADRE)
-        // Esto es clave: como cambiaste importes, el total de la liquidación cambió.
-        ActualizarTotalCabecera(item.IdLiquidaciones, connection);
+            if (filasAfectadas == 0) throw new Exception("No se pudo modificar el ítem (No encontrado o sin permisos).");
+
+            ActualizarTotalCabecera(item.IdLiquidaciones, connection);
+        }
     }
-}
-public static Liquidaciones TraerLiquidacionPorId(int id, int idUsuario)
-{
-    using (SqlConnection connection = new SqlConnection(_connectionString))
+
+    public static Liquidaciones TraerLiquidacionPorId(int id, int idUsuario)
     {
-        string query = "SELECT * FROM Liquidaciones WHERE IdLiquidaciones = @pId AND IdUsuario = @pUser";
-        return connection.QueryFirstOrDefault<Liquidaciones>(query, new { pId = id, pUser = idUsuario });
-    }
-}
-
-// 2. Guardar cambios de la cabecera (Fecha, Mandataria, Obs)
-public static void ModificarLiquidacionCabecera(int id, int idMandataria, DateTime fecha, string obs, int idUsuario)
-{
-    using (SqlConnection connection = new SqlConnection(_connectionString))
-    {
-        string query = @"
-            UPDATE Liquidaciones 
-            SET IdMandatarias = @pMand, FechaPresentacion = @pFecha, Observaciones = @pObs, Periodo = @pPeriodo
-            WHERE IdLiquidaciones = @pId AND IdUsuario = @pUser"; // <--- Seguridad
-            
-        connection.Execute(query, new { 
-            pId = id, 
-            pMand = idMandataria, 
-            pFecha = fecha, 
-            pObs = obs, 
-            pPeriodo = fecha.ToString("MM-yyyy"),
-            pUser = idUsuario 
-        });
-    }
-}
-// =============================================================================
-// BÚSQUEDA GLOBAL DE DETALLES (Para la vista "Por Obra Social")
-// =============================================================================
-// EN Models/BD.cs
-
-public static List<dynamic> BuscarDetallesGlobales(DateTime? desde, DateTime? hasta, int? idMandataria, int? idOS, int idUsuario)
-{
-    using (SqlConnection connection = new SqlConnection(_connectionString))
-    {
-        string query = @"
-            SELECT LD.IdLiquidacionDetalle, LD.IdLiquidaciones, L.FechaPresentacion, L.Periodo,
-                M.RazonSocial as NombreMandataria, OS.Nombre as NombreObraSocial, PB.NombrePlan,
-                LD.CantidadRecetas, LD.TotalBruto as BrutoOriginal, LD.MontoCargoOS, LD.MontoBonificacion,
-                (LD.MontoCargoOS - LD.MontoBonificacion) as TotalBruto, LD.SaldoPendiente, LD.Pagado,
-                (SELECT MAX(FechaCobroDetalle) FROM CobrosDetalle WHERE IdLiquidacionDetalle = LD.IdLiquidacionDetalle) as FechaCancelacion
-            FROM LiquidacionDetalle LD
-            INNER JOIN Liquidaciones L ON LD.IdLiquidaciones = L.IdLiquidaciones
-            INNER JOIN Mandatarias M ON L.IdMandatarias = M.IdMandatarias
-            INNER JOIN ObrasSociales OS ON LD.IdObrasSociales = OS.IdObrasSociales
-            LEFT JOIN PlanBonificacion PB ON LD.IdPlanBonificacion = PB.IdPlanBonificacion
-            WHERE L.IdUsuario = @pIdUser "; // <--- FILTRO AGREGADO
-
-        if (desde.HasValue) query += " AND L.FechaPresentacion >= @pDesde";
-        if (hasta.HasValue) query += " AND L.FechaPresentacion <= @pHasta";
-        if (idMandataria.HasValue && idMandataria.Value > 0) query += " AND M.IdMandatarias = @pMand";
-        if (idOS.HasValue && idOS.Value > 0) query += " AND OS.IdObrasSociales = @pOS";
-
-        query += " ORDER BY L.FechaPresentacion DESC, M.RazonSocial, OS.Nombre";
-
-        return connection.Query<dynamic>(query, new { pDesde = desde, pHasta = hasta, pMand = idMandataria, pOS = idOS, pIdUser = idUsuario }).ToList();
-    }
-}
-
-public static Usuario TraerUsuarioPorId(int idUsuario)
-    {
-     Usuario ObjUsuario = null;
-        using (SqlConnection connection = new SqlConnection(_connectionString))
+        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
         {
-            string query = "SELECT * FROM Usuario where IdUsuario = @pIdUsuario"; 
-            ObjUsuario = connection.QueryFirstOrDefault<Usuario>(query, new {pIdUsuario = idUsuario});
-         }
-    
-         return ObjUsuario;
+            string query = "SELECT * FROM \"Liquidaciones\" WHERE \"IdLiquidaciones\" = @pId AND \"IdUsuario\" = @pUser";
+            return connection.QueryFirstOrDefault<Liquidaciones>(query, new { pId = id, pUser = idUsuario });
+        }
     }
+
+    public static void ModificarLiquidacionCabecera(int id, int idMandataria, DateTime fecha, string obs, int idUsuario)
+    {
+        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
+        {
+            string query = @"
+            UPDATE ""Liquidaciones"" 
+            SET ""IdMandatarias"" = @pMand, ""FechaPresentacion"" = @pFecha, ""Observaciones"" = @pObs, ""Periodo"" = @pPeriodo
+            WHERE ""IdLiquidaciones"" = @pId AND ""IdUsuario"" = @pUser";
+
+            connection.Execute(query, new
+            {
+                pId = id,
+                pMand = idMandataria,
+                pFecha = fecha,
+                pObs = obs,
+                pPeriodo = fecha.ToString("MM-yyyy"),
+                pUser = idUsuario
+            });
+        }
+    }
+
+    // =============================================================================
+    // BÚSQUEDA GLOBAL DE DETALLES
+    // =============================================================================
+
+    public static List<dynamic> BuscarDetallesGlobales(DateTime? desde, DateTime? hasta, int? idMandataria, int? idOS, int idUsuario)
+    {
+        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
+        {
+            string query = @"
+            SELECT LD.""IdLiquidacionDetalle"", LD.""IdLiquidaciones"", L.""FechaPresentacion"", L.""Periodo"",
+                M.""RazonSocial"" as ""NombreMandataria"", OS.""Nombre"" as ""NombreObraSocial"", PB.""NombrePlan"",
+                LD.""CantidadRecetas"", LD.""TotalBruto"" as ""BrutoOriginal"", LD.""MontoCargoOS"", LD.""MontoBonificacion"",
+                (LD.""MontoCargoOS"" - LD.""MontoBonificacion"") as ""TotalBruto"", LD.""SaldoPendiente"", LD.""Pagado"",
+                (SELECT MAX(""FechaCobroDetalle"") FROM ""CobrosDetalle"" WHERE ""IdLiquidacionDetalle"" = LD.""IdLiquidacionDetalle"") as ""FechaCancelacion""
+            FROM ""LiquidacionDetalle"" LD
+            INNER JOIN ""Liquidaciones"" L ON LD.""IdLiquidaciones"" = L.""IdLiquidaciones""
+            INNER JOIN ""Mandatarias"" M ON L.""IdMandatarias"" = M.""IdMandatarias""
+            INNER JOIN ""ObrasSociales"" OS ON LD.""IdObrasSociales"" = OS.""IdObrasSociales""
+            LEFT JOIN ""PlanBonificacion"" PB ON LD.""IdPlanBonificacion"" = PB.""IdPlanBonificacion""
+            WHERE L.""IdUsuario"" = @pIdUser ";
+
+            if (desde.HasValue) query += " AND L.\"FechaPresentacion\" >= @pDesde";
+            if (hasta.HasValue) query += " AND L.\"FechaPresentacion\" <= @pHasta";
+            if (idMandataria.HasValue && idMandataria.Value > 0) query += " AND M.\"IdMandatarias\" = @pMand";
+            if (idOS.HasValue && idOS.Value > 0) query += " AND OS.\"IdObrasSociales\" = @pOS";
+
+            query += " ORDER BY L.\"FechaPresentacion\" DESC, M.\"RazonSocial\", OS.\"Nombre\"";
+
+            return connection.Query<dynamic>(query, new { pDesde = desde, pHasta = hasta, pMand = idMandataria, pOS = idOS, pIdUser = idUsuario }).ToList();
+        }
+    }
+
+    public static Usuario TraerUsuarioPorId(int idUsuario)
+    {
+        Usuario ObjUsuario = null;
+        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
+        {
+            string query = "SELECT * FROM \"Usuario\" where \"IdUsuario\" = @pIdUsuario";
+            ObjUsuario = connection.QueryFirstOrDefault<Usuario>(query, new { pIdUsuario = idUsuario });
+        }
+        return ObjUsuario;
+    }
+
     public static Usuario TraerUsuarioPorContraseña(string contraseña)
     {
-     Usuario ObjUsuario = null;
-        using (SqlConnection connection = new SqlConnection(_connectionString))
+        Usuario ObjUsuario = null;
+        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
         {
-            string query = "SELECT * FROM Usuario where Contraseña = @pContraseña"; 
-            ObjUsuario = connection.QueryFirstOrDefault<Usuario>(query, new {pContraseña = contraseña});
-         }
-    
-         return ObjUsuario;
+            string query = "SELECT * FROM \"Usuario\" where \"Contraseña\" = @pContraseña";
+            ObjUsuario = connection.QueryFirstOrDefault<Usuario>(query, new { pContraseña = contraseña });
+        }
+        return ObjUsuario;
     }
 
-
-   public static void ModificarUsuario(int IdUsuario, string? Contraseña, string? RazonSocial, string? Domicilio, long? Cuit, string? Iva)
+    public static void ModificarUsuario(int IdUsuario, string? Contraseña, string? RazonSocial, string? Domicilio, long? Cuit, string? Iva)
     {
-     Usuario ObjUsuario = null;
-        using (SqlConnection connection = new SqlConnection(_connectionString))
+        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
         {
-            string query = "UPDATE Usuario SET Contraseña = @pContraseña, RazonSocial = @pRazonSocial, Domicilio = @pDomicilio, Cuit = @pCuit, Iva = @pIva where IdUsuario = @pIdUsuario"; 
-            connection.Execute(query, new {pIdUsuario = IdUsuario, pContraseña = Contraseña, pRazonSocial = RazonSocial, pDomicilio = Domicilio, pCuit = Cuit, pIva = Iva});
-         }
-    
+            string query = "UPDATE \"Usuario\" SET \"Contraseña\" = @pContraseña, \"RazonSocial\" = @pRazonSocial, \"Domicilio\" = @pDomicilio, \"Cuit\" = @pCuit, \"Iva\" = @pIva where \"IdUsuario\" = @pIdUsuario";
+            connection.Execute(query, new { pIdUsuario = IdUsuario, pContraseña = Contraseña, pRazonSocial = RazonSocial, pDomicilio = Domicilio, pCuit = Cuit, pIva = Iva });
+        }
     }
 
-  // =============================================================================
-// SECCIÓN COBROS (FALTABA TODO ESTO)
-// =============================================================================
-
-// =============================================================================
-    // TRAER DEUDAS (Con lógica de Fallback para datos viejos)
     // =============================================================================
-  public static List<dynamic> TraerDeudasPendientesPorOS(int idObraSocial, int idUsuario)
-{
-    using (SqlConnection connection = new SqlConnection(_connectionString))
-    {
-        string query = @"
-            SELECT 
-                LD.IdLiquidacionDetalle, L.Periodo, L.FechaPresentacion, 
-                LD.TotalBruto as ImporteOriginal,
-                ISNULL(LD.SaldoPendiente, LD.TotalBruto) as SaldoPendiente
-            FROM LiquidacionDetalle LD
-            INNER JOIN Liquidaciones L ON LD.IdLiquidaciones = L.IdLiquidaciones
-            WHERE LD.IdObrasSociales = @pIdOS 
-              AND L.IdUsuario = @pUser -- <--- FILTRO AGREGADO
-              AND (LD.Pagado = 0 OR LD.Pagado IS NULL) 
-              AND ISNULL(LD.SaldoPendiente, LD.TotalBruto) > 0.05
-            ORDER BY L.FechaPresentacion ASC";
+    // SECCIÓN COBROS
+    // =============================================================================
 
-        return connection.Query<dynamic>(query, new { pIdOS = idObraSocial, pUser = idUsuario }).ToList();
-    }
-}
-// 2. Traer Liquidaciones donde participa esa Obra Social (Para imputar pagos)
-public static List<Liquidaciones> TraerLiquidacionesPendientesPorOS(int idObraSocial, int idUsuario)
-{
-    using (SqlConnection connection = new SqlConnection(_connectionString))
+    public static List<dynamic> TraerDeudasPendientesPorOS(int idObraSocial, int idUsuario)
     {
-        string query = @"
-            SELECT DISTINCT L.IdLiquidaciones, L.FechaPresentacion, L.TotalPresentado, L.Periodo
-            FROM Liquidaciones L
-            INNER JOIN LiquidacionDetalle LD ON L.IdLiquidaciones = LD.IdLiquidaciones
-            WHERE LD.IdObrasSociales = @pIdOS AND L.IdUsuario = @pUser
-            ORDER BY L.FechaPresentacion DESC";
-            
-        return connection.Query<Liquidaciones>(query, new { pIdOS = idObraSocial, pUser = idUsuario }).ToList();
-    }
-}
-// 3. Buscar Cobros (El motor del buscador principal)
-// EN Models/BD.cs
-
-// CAMBIO: Devolvemos 'dynamic' para poder incluir columnas extra (NombreMandataria)
-public static List<dynamic> BuscarCobros(DateTime? desde, DateTime? hasta, int? idMandataria, int? idObraSocial, int idUsuario)
-{
-    using (SqlConnection connection = new SqlConnection(_connectionString))
-    {
-        string query = @"
-            SELECT 
-                C.IdCobros, C.NumeroComprobante, CAST(C.FechaCobro AS DATE) as FechaCobro,
-                M.RazonSocial as NombreMandataria, M.IdMandatarias,
-                COUNT(CD.IdCobrosDetalle) as CantidadItems,
-                COALESCE(SUM(CD.ImporteCobrado), 0) as TotalImporte,
-                COALESCE(SUM(CD.MontoDebito), 0) as TotalDebitos
-            FROM Cobros C
-            INNER JOIN Mandatarias M ON C.IdMandatarias = M.IdMandatarias
-            LEFT JOIN CobrosDetalle CD ON C.IdCobros = CD.IdCobros
-            WHERE C.IdUsuario = @pUser "; // <--- Seguridad
-
-        if (desde.HasValue) query += " AND C.FechaCobro >= @pDesde";
-        if (hasta.HasValue) query += " AND C.FechaCobro <= @pHasta";
-        if (idMandataria.HasValue && idMandataria.Value > 0) query += " AND M.IdMandatarias = @pIdMand";
-        
-        if (idObraSocial.HasValue && idObraSocial.Value > 0) 
+        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
         {
-            query += " AND EXISTS (SELECT 1 FROM CobrosDetalle sub WHERE sub.IdCobros = C.IdCobros AND sub.IdObrasSociales = @pIdOS)";
+            string query = @"
+            SELECT 
+                LD.""IdLiquidacionDetalle"", L.""Periodo"", L.""FechaPresentacion"", 
+                LD.""TotalBruto"" as ""ImporteOriginal"",
+                COALESCE(LD.""SaldoPendiente"", LD.""TotalBruto"") as ""SaldoPendiente""
+            FROM ""LiquidacionDetalle"" LD
+            INNER JOIN ""Liquidaciones"" L ON LD.""IdLiquidaciones"" = L.""IdLiquidaciones""
+            WHERE LD.""IdObrasSociales"" = @pIdOS 
+              AND L.""IdUsuario"" = @pUser 
+              AND (LD.""Pagado"" = false OR LD.""Pagado"" IS NULL) 
+              AND COALESCE(LD.""SaldoPendiente"", LD.""TotalBruto"") > 0.05
+            ORDER BY L.""FechaPresentacion"" ASC";
+
+            return connection.Query<dynamic>(query, new { pIdOS = idObraSocial, pUser = idUsuario }).ToList();
         }
-
-        query += @" 
-            GROUP BY C.IdCobros, C.NumeroComprobante, CAST(C.FechaCobro AS DATE), M.RazonSocial, M.IdMandatarias
-            ORDER BY C.FechaCobro DESC";
-
-        return connection.Query<dynamic>(query, new { pDesde = desde, pHasta = hasta, pIdMand = idMandataria, pIdOS = idObraSocial, pUser = idUsuario }).ToList();
     }
-}
-// -----------------------------------------------------------------------------------
-// 2. GUARDAR CABECERA (PADRE) - Retorna el ID generado
-// -----------------------------------------------------------------------------------
-public static int AgregarCobroCabecera(int idMandataria, DateTime fecha, string comprobante, int? idLiquidacion, int idUsuario)
-{
-    using (SqlConnection connection = new SqlConnection(_connectionString))
-    {
-        string query = @"
-            INSERT INTO Cobros (IdMandatarias, FechaCobro, NumeroComprobante, IdLiquidaciones, IdUsuario)
-            OUTPUT INSERTED.IdCobros
-            VALUES (@pMand, @pFecha, @pComp, @pLiq, @pUser)"; // <--- Insertamos Usuario
 
-        return connection.QuerySingle<int>(query, new {
-            pMand = idMandataria,
-            pFecha = fecha,
-            pComp = comprobante,
-            pLiq = idLiquidacion,
-            pUser = idUsuario
-        });
-    }
-}
-public static void EliminarLoteCompleto(int idCobroPadre, int idUsuario)
-{
-    using (SqlConnection connection = new SqlConnection(_connectionString))
+    public static List<Liquidaciones> TraerLiquidacionesPendientesPorOS(int idObraSocial, int idUsuario)
     {
-        connection.Open();
-        using (var transaction = connection.BeginTransaction())
+        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
         {
-            try
+            string query = @"
+            SELECT DISTINCT L.""IdLiquidaciones"", L.""FechaPresentacion"", L.""TotalPresentado"", L.""Periodo""
+            FROM ""Liquidaciones"" L
+            INNER JOIN ""LiquidacionDetalle"" LD ON L.""IdLiquidaciones"" = LD.""IdLiquidaciones""
+            WHERE LD.""IdObrasSociales"" = @pIdOS AND L.""IdUsuario"" = @pUser
+            ORDER BY L.""FechaPresentacion"" DESC";
+
+            return connection.Query<Liquidaciones>(query, new { pIdOS = idObraSocial, pUser = idUsuario }).ToList();
+        }
+    }
+
+    public static List<dynamic> BuscarCobros(DateTime? desde, DateTime? hasta, int? idMandataria, int? idObraSocial, int idUsuario)
+    {
+        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
+        {
+            string query = @"
+            SELECT 
+                C.""IdCobros"", C.""NumeroComprobante"", CAST(C.""FechaCobro"" AS DATE) as ""FechaCobro"",
+                M.""RazonSocial"" as ""NombreMandataria"", M.""IdMandatarias"",
+                COUNT(CD.""IdCobrosDetalle"") as ""CantidadItems"",
+                COALESCE(SUM(CD.""ImporteCobrado""), 0) as ""TotalImporte"",
+                COALESCE(SUM(CD.""MontoDebito""), 0) as ""TotalDebitos""
+            FROM ""Cobros"" C
+            INNER JOIN ""Mandatarias"" M ON C.""IdMandatarias"" = M.""IdMandatarias""
+            LEFT JOIN ""CobrosDetalle"" CD ON C.""IdCobros"" = CD.""IdCobros""
+            WHERE C.""IdUsuario"" = @pUser ";
+
+            if (desde.HasValue) query += " AND C.\"FechaCobro\" >= @pDesde";
+            if (hasta.HasValue) query += " AND C.\"FechaCobro\" <= @pHasta";
+            if (idMandataria.HasValue && idMandataria.Value > 0) query += " AND M.\"IdMandatarias\" = @pIdMand";
+
+            if (idObraSocial.HasValue && idObraSocial.Value > 0)
             {
-                // 1. SEGURIDAD: Validar que el lote sea mío
-                int esMio = connection.ExecuteScalar<int>(
-                    "SELECT COUNT(1) FROM Cobros WHERE IdCobros = @id AND IdUsuario = @user", 
-                    new { id = idCobroPadre, user = idUsuario }, 
-                    transaction
-                );
-                
-                if (esMio == 0) throw new Exception("No tiene permisos para eliminar este lote.");
-
-                // 2. RESTAURAR DEUDA MASIVAMENTE (Corrección Matemática)
-                string sqlRestaurarMasivo = @"
-                    UPDATE L
-                    SET L.SaldoPendiente = L.SaldoPendiente + (C.ImporteCobrado + C.MontoDebito), -- <--- CORREGIDO: SUMA AMBOS
-                        L.Pagado = 0
-                    FROM LiquidacionDetalle L
-                    INNER JOIN CobrosDetalle C ON L.IdLiquidacionDetalle = C.IdLiquidacionDetalle
-                    WHERE C.IdCobros = @pIdPadre";
-
-                connection.Execute(sqlRestaurarMasivo, new { pIdPadre = idCobroPadre }, transaction);
-
-                // 3. BORRAR DETALLES
-                connection.Execute("DELETE FROM CobrosDetalle WHERE IdCobros = @pId", new { pId = idCobroPadre }, transaction);
-
-                // 4. BORRAR CABECERA
-                connection.Execute("DELETE FROM Cobros WHERE IdCobros = @pId", new { pId = idCobroPadre }, transaction);
-
-                transaction.Commit();
+                query += " AND EXISTS (SELECT 1 FROM \"CobrosDetalle\" sub WHERE sub.\"IdCobros\" = C.\"IdCobros\" AND sub.\"IdObrasSociales\" = @pIdOS)";
             }
-            catch { transaction.Rollback(); throw; }
+
+            query += @" 
+            GROUP BY C.""IdCobros"", C.""NumeroComprobante"", CAST(C.""FechaCobro"" AS DATE), M.""RazonSocial"", M.""IdMandatarias""
+            ORDER BY C.""FechaCobro"" DESC";
+
+            return connection.Query<dynamic>(query, new { pDesde = desde, pHasta = hasta, pIdMand = idMandataria, pIdOS = idObraSocial, pUser = idUsuario }).ToList();
         }
     }
-}
 
-public static void ModificarCobroCabecera(int idCobro, int idMandataria, DateTime fecha, string comprobante, int idUsuario)
-{
-    using (SqlConnection connection = new SqlConnection(_connectionString))
+    public static int AgregarCobroCabecera(int idMandataria, DateTime fecha, string comprobante, int? idLiquidacion, int idUsuario)
     {
-        string query = @"
-            UPDATE Cobros 
-            SET IdMandatarias = @pMand, 
-                FechaCobro = @pFecha, 
-                NumeroComprobante = @pComp
-        WHERE IdCobros = @pId AND IdUsuario = @pUser"; // <--- Seguridad
-
-        connection.Execute(query, new { 
-            pId = idCobro, 
-            pMand = idMandataria, 
-            pFecha = fecha, 
-            pComp = comprobante,
-            pUser = idUsuario
-        });
-    }
-}
-// -----------------------------------------------------------------------------------
-// 3. AGREGAR DETALLE (HIJO)
-// -----------------------------------------------------------------------------------
-public static void AgregarCobroDetalle(int idCobroPadre, int idObraSocial, DateTime fecha, decimal importe, string tipo, decimal debito, string motivo, int? idLiquidacionDetalle, int idUsuario)
-{
-    using (SqlConnection connection = new SqlConnection(_connectionString))
-    {
-        connection.Open();
-        
-        // 1. SEGURIDAD: Validamos que el Lote Padre sea mío
-        int esMio = connection.ExecuteScalar<int>(
-            "SELECT COUNT(1) FROM Cobros WHERE IdCobros = @pId AND IdUsuario = @pUser", 
-            new { pId = idCobroPadre, pUser = idUsuario }
-        );
-        
-        if(esMio == 0) throw new Exception("No tiene permisos sobre este lote de cobros.");
-
-        // 2. INSERTAR (Tu lógica original)
-        using (var transaction = connection.BeginTransaction())
+        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
         {
-            try 
+            // CORRECCIÓN POSTGRES: RETURNING en vez de OUTPUT INSERTED
+            string query = @"
+            INSERT INTO ""Cobros"" (""IdMandatarias"", ""FechaCobro"", ""NumeroComprobante"", ""IdLiquidaciones"", ""IdUsuario"")
+            VALUES (@pMand, @pFecha, @pComp, @pLiq, @pUser)
+            RETURNING ""IdCobros""";
+
+            return connection.QuerySingle<int>(query, new
             {
-                string sqlInsert = @"INSERT INTO CobrosDetalle 
-                                   (IdCobros, IdObrasSociales, FechaCobroDetalle, ImporteCobrado, TipoPago, MontoDebito, MotivoDebito, IdLiquidacionDetalle)
+                pMand = idMandataria,
+                pFecha = fecha,
+                pComp = comprobante,
+                pLiq = idLiquidacion,
+                pUser = idUsuario
+            });
+        }
+    }
+
+    public static void EliminarLoteCompleto(int idCobroPadre, int idUsuario)
+    {
+        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
+        {
+            connection.Open();
+            using (var transaction = connection.BeginTransaction())
+            {
+                try
+                {
+                    int esMio = connection.ExecuteScalar<int>(
+                        "SELECT COUNT(1) FROM \"Cobros\" WHERE \"IdCobros\" = @id AND \"IdUsuario\" = @user",
+                        new { id = idCobroPadre, user = idUsuario },
+                        transaction
+                    );
+
+                    if (esMio == 0) throw new Exception("No tiene permisos para eliminar este lote.");
+
+                    // CORRECCIÓN SQL: Postgres usa sintaxis distinta para UPDATE ... FROM
+                    string sqlRestaurarMasivo = @"
+                    UPDATE ""LiquidacionDetalle"" AS L
+                    SET ""SaldoPendiente"" = L.""SaldoPendiente"" + (C.""ImporteCobrado"" + C.""MontoDebito""), 
+                        ""Pagado"" = false
+                    FROM ""CobrosDetalle"" AS C
+                    WHERE L.""IdLiquidacionDetalle"" = C.""IdLiquidacionDetalle""
+                    AND C.""IdCobros"" = @pIdPadre";
+
+                    connection.Execute(sqlRestaurarMasivo, new { pIdPadre = idCobroPadre }, transaction);
+
+                    connection.Execute("DELETE FROM \"CobrosDetalle\" WHERE \"IdCobros\" = @pId", new { pId = idCobroPadre }, transaction);
+                    connection.Execute("DELETE FROM \"Cobros\" WHERE \"IdCobros\" = @pId", new { pId = idCobroPadre }, transaction);
+
+                    transaction.Commit();
+                }
+                catch { transaction.Rollback(); throw; }
+            }
+        }
+    }
+
+    public static void ModificarCobroCabecera(int idCobro, int idMandataria, DateTime fecha, string comprobante, int idUsuario)
+    {
+        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
+        {
+            string query = @"
+            UPDATE ""Cobros"" 
+            SET ""IdMandatarias"" = @pMand, 
+                ""FechaCobro"" = @pFecha, 
+                ""NumeroComprobante"" = @pComp
+        WHERE ""IdCobros"" = @pId AND ""IdUsuario"" = @pUser";
+
+            connection.Execute(query, new
+            {
+                pId = idCobro,
+                pMand = idMandataria,
+                pFecha = fecha,
+                pComp = comprobante,
+                pUser = idUsuario
+            });
+        }
+    }
+
+    public static void AgregarCobroDetalle(int idCobroPadre, int idObraSocial, DateTime fecha, decimal importe, string tipo, decimal debito, string motivo, int? idLiquidacionDetalle, int idUsuario)
+    {
+        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
+        {
+            connection.Open();
+
+            int esMio = connection.ExecuteScalar<int>(
+                "SELECT COUNT(1) FROM \"Cobros\" WHERE \"IdCobros\" = @pId AND \"IdUsuario\" = @pUser",
+                new { pId = idCobroPadre, pUser = idUsuario }
+            );
+
+            if (esMio == 0) throw new Exception("No tiene permisos sobre este lote de cobros.");
+
+            using (var transaction = connection.BeginTransaction())
+            {
+                try
+                {
+                    string sqlInsert = @"INSERT INTO ""CobrosDetalle"" 
+                                   (""IdCobros"", ""IdObrasSociales"", ""FechaCobroDetalle"", ""ImporteCobrado"", ""TipoPago"", ""MontoDebito"", ""MotivoDebito"", ""IdLiquidacionDetalle"")
                                    VALUES 
                                    (@pIdPadre, @pOS, @pFecha, @pImporte, @pTipo, @pDebito, @pMotivo, @pIdLiqDet)";
-                
-                connection.Execute(sqlInsert, new { 
-                    pIdPadre = idCobroPadre, 
-                    pOS = idObraSocial, 
-                    pFecha = fecha, 
-                    pImporte = importe, 
-                    pTipo = tipo, 
-                    pDebito = debito, 
-                    pMotivo = motivo ?? "",
-                    pIdLiqDet = idLiquidacionDetalle 
-                }, transaction);
 
-                // 3. ACTUALIZAR DEUDA (Tu lógica original)
-                if (idLiquidacionDetalle.HasValue && idLiquidacionDetalle.Value > 0)
-                {
-                    // Nota: Aquí no hace falta validar usuario de nuevo porque el idLiquidacionDetalle
-                    // vino del front, pero si la cabecera del cobro es mía, asumo responsabilidad del pago.
-                    // Si quieres ser paranoico, podrías validar que la liquidación también sea mía.
-                    
-                    string sqlUpdateLiq = @"UPDATE LiquidacionDetalle 
-                                            SET SaldoPendiente = SaldoPendiente - (@pPago + @pDeb)
-                                            WHERE IdLiquidacionDetalle = @pIdLiqDet";
-                    
-                    connection.Execute(sqlUpdateLiq, new { 
-                        pPago = importe, 
-                        pDeb = debito, 
-                        pIdLiqDet = idLiquidacionDetalle 
+                    connection.Execute(sqlInsert, new
+                    {
+                        pIdPadre = idCobroPadre,
+                        pOS = idObraSocial,
+                        pFecha = fecha,
+                        pImporte = importe,
+                        pTipo = tipo,
+                        pDebito = debito,
+                        pMotivo = motivo ?? "",
+                        pIdLiqDet = idLiquidacionDetalle
                     }, transaction);
 
-                    string sqlCheckPagado = @"UPDATE LiquidacionDetalle 
-                                              SET Pagado = 1 
-                                              WHERE IdLiquidacionDetalle = @pIdLiqDet AND SaldoPendiente <= 0.05";
-                    
-                    connection.Execute(sqlCheckPagado, new { pIdLiqDet = idLiquidacionDetalle }, transaction);
-                }
+                    if (idLiquidacionDetalle.HasValue && idLiquidacionDetalle.Value > 0)
+                    {
+                        string sqlUpdateLiq = @"UPDATE ""LiquidacionDetalle"" 
+                                            SET ""SaldoPendiente"" = ""SaldoPendiente"" - (@pPago + @pDeb)
+                                            WHERE ""IdLiquidacionDetalle"" = @pIdLiqDet";
 
-                transaction.Commit();
+                        connection.Execute(sqlUpdateLiq, new
+                        {
+                            pPago = importe,
+                            pDeb = debito,
+                            pIdLiqDet = idLiquidacionDetalle
+                        }, transaction);
+
+                        string sqlCheckPagado = @"UPDATE ""LiquidacionDetalle"" 
+                                              SET ""Pagado"" = true
+                                              WHERE ""IdLiquidacionDetalle"" = @pIdLiqDet AND ""SaldoPendiente"" <= 0.05";
+
+                        connection.Execute(sqlCheckPagado, new { pIdLiqDet = idLiquidacionDetalle }, transaction);
+                    }
+
+                    transaction.Commit();
+                }
+                catch { transaction.Rollback(); throw; }
             }
-            catch { transaction.Rollback(); throw; }
         }
     }
-}
-// -----------------------------------------------------------------------------------
-// 4. MODIFICAR DETALLE (Solo editamos el hijo, el padre raramente se toca desde aquí)
-// -----------------------------------------------------------------------------------
-public static void ModificarCobroDetalle(int idCobroDetalle, int idObraSocial, DateTime fecha, decimal importe, string tipo, decimal debitos, string motivo, int idUsuario)
-{
-    using (SqlConnection connection = new SqlConnection(_connectionString))
+
+    public static void ModificarCobroDetalle(int idCobroDetalle, int idObraSocial, DateTime fecha, decimal importe, string tipo, decimal debitos, string motivo, int idUsuario)
     {
-        connection.Open();
-        using (var transaction = connection.BeginTransaction())
+        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
         {
-            try
+            connection.Open();
+            using (var transaction = connection.BeginTransaction())
             {
-                // 0. SEGURIDAD: Validar que el cobro pertenezca al usuario
-                int esMio = connection.ExecuteScalar<int>(
-                    @"SELECT COUNT(1) 
-                      FROM CobrosDetalle CD 
-                      INNER JOIN Cobros C ON CD.IdCobros = C.IdCobros 
-                      WHERE CD.IdCobrosDetalle = @pId AND C.IdUsuario = @pUser",
-                    new { pId = idCobroDetalle, pUser = idUsuario },
-                    transaction
-                );
+                try
+                {
+                    int esMio = connection.ExecuteScalar<int>(
+                        @"SELECT COUNT(1) 
+                      FROM ""CobrosDetalle"" CD 
+                      INNER JOIN ""Cobros"" C ON CD.""IdCobros"" = C.""IdCobros"" 
+                      WHERE CD.""IdCobrosDetalle"" = @pId AND C.""IdUsuario"" = @pUser",
+                        new { pId = idCobroDetalle, pUser = idUsuario },
+                        transaction
+                    );
+
+                    if (esMio == 0) throw new Exception("⛔ No tiene permisos para modificar este cobro (o no existe).");
+
+                    var anterior = connection.QueryFirstOrDefault<dynamic>(
+                        "SELECT \"ImporteCobrado\", \"MontoDebito\", \"IdLiquidacionDetalle\" FROM \"CobrosDetalle\" WHERE \"IdCobrosDetalle\" = @id",
+                        new { id = idCobroDetalle },
+                        transaction
+                    );
+
+                    if (anterior != null && anterior.IdLiquidacionDetalle != null)
+                    {
+                        string sqlRevertir = @"
+                        UPDATE ""LiquidacionDetalle"" 
+                        SET ""SaldoPendiente"" = ""SaldoPendiente"" + (@imp + @deb), 
+                            ""Pagado"" = false
+                        WHERE ""IdLiquidacionDetalle"" = @idLiq";
+
+                        connection.Execute(sqlRevertir, new
+                        {
+                            imp = anterior.ImporteCobrado,
+                            deb = anterior.MontoDebito,
+                            idLiq = anterior.IdLiquidacionDetalle
+                        }, transaction);
+                    }
+
+                    string sqlUpdate = @"UPDATE ""CobrosDetalle"" SET 
+                        ""IdObrasSociales"" = @idOS, 
+                        ""FechaCobroDetalle"" = @fecha, 
+                        ""ImporteCobrado"" = @imp, 
+                        ""TipoPago"" = @tipo, 
+                        ""MontoDebito"" = @deb, 
+                        ""MotivoDebito"" = @mot 
+                        WHERE ""IdCobrosDetalle"" = @id";
+
+                    connection.Execute(sqlUpdate, new
+                    {
+                        id = idCobroDetalle,
+                        idOS = idObraSocial,
+                        fecha = fecha,
+                        imp = importe,
+                        tipo = tipo,
+                        deb = debitos,
+                        mot = motivo ?? ""
+                    }, transaction);
+
+                    if (anterior != null && anterior.IdLiquidacionDetalle != null)
+                    {
+                        string sqlAplicar = @"
+                        UPDATE ""LiquidacionDetalle"" 
+                        SET ""SaldoPendiente"" = ""SaldoPendiente"" - (@imp + @deb)
+                        WHERE ""IdLiquidacionDetalle"" = @idLiq";
+
+                        connection.Execute(sqlAplicar, new
+                        {
+                            imp = importe,
+                            deb = debitos,
+                            idLiq = anterior.IdLiquidacionDetalle
+                        }, transaction);
+
+                        string sqlCheck = @"
+                        UPDATE ""LiquidacionDetalle"" 
+                        SET ""Pagado"" = true
+                        WHERE ""IdLiquidacionDetalle"" = @idLiq AND ""SaldoPendiente"" <= 1.00";
+
+                        connection.Execute(sqlCheck, new { idLiq = anterior.IdLiquidacionDetalle }, transaction);
+                    }
+
+                    transaction.Commit();
+                }
+                catch { transaction.Rollback(); throw; }
+            }
+        }
+    }
+
+    public static void EliminarCobroDetalle(int idCobroDetalle, int idUsuario)
+    {
+        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
+        {
+            connection.Open();
+            using (var transaction = connection.BeginTransaction())
+            {
+                try
+                {
+                    var info = connection.QueryFirstOrDefault<dynamic>(
+                        @"SELECT CD.""ImporteCobrado"", CD.""MontoDebito"", CD.""IdLiquidacionDetalle"" 
+                      FROM ""CobrosDetalle"" CD
+                      INNER JOIN ""Cobros"" C ON CD.""IdCobros"" = C.""IdCobros""
+                      WHERE CD.""IdCobrosDetalle"" = @id AND C.""IdUsuario"" = @user",
+                        new { id = idCobroDetalle, user = idUsuario },
+                        transaction
+                    );
+
+                    if (info == null) throw new Exception("Cobro no encontrado o sin permisos.");
+
+                    if (info.IdLiquidacionDetalle != null)
+                    {
+                        string sqlRestaurar = @"
+                        UPDATE ""LiquidacionDetalle"" 
+                        SET ""SaldoPendiente"" = ""SaldoPendiente"" + (@imp + @deb), 
+                            ""Pagado"" = false
+                        WHERE ""IdLiquidacionDetalle"" = @idLiq";
+
+                        connection.Execute(sqlRestaurar, new
+                        {
+                            imp = info.ImporteCobrado,
+                            deb = info.MontoDebito,
+                            idLiq = info.IdLiquidacionDetalle
+                        }, transaction);
+                    }
+
+                    connection.Execute("DELETE FROM \"CobrosDetalle\" WHERE \"IdCobrosDetalle\" = @id", new { id = idCobroDetalle }, transaction);
+
+                    transaction.Commit();
+                }
+                catch { transaction.Rollback(); throw; }
+            }
+        }
+    }
+
+    public static List<dynamic> TraerCobrosDelMismoLote(int idCobroPadre, int idUsuario)
+    {
+        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
+        {
+            string query = @"
+            SELECT CD.*, OS.""Nombre"" as ""NombreObraSocial""
+            FROM ""CobrosDetalle"" CD
+            INNER JOIN ""ObrasSociales"" OS ON CD.""IdObrasSociales"" = OS.""IdObrasSociales""
+            INNER JOIN ""Cobros"" C ON CD.""IdCobros"" = C.""IdCobros"" 
+            WHERE CD.""IdCobros"" = @pId AND C.""IdUsuario"" = @pUser 
+            ORDER BY CD.""IdCobrosDetalle"" DESC";
+
+            return connection.Query<dynamic>(query, new { pId = idCobroPadre, pUser = idUsuario }).ToList();
+        }
+    }
+
+    public static dynamic TraerCobroDetallePorId(int idCobroDetalle, int idUsuario)
+    {
+        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
+        {
+            string query = @"
+            SELECT CD.* FROM ""CobrosDetalle"" CD
+            INNER JOIN ""Cobros"" C ON CD.""IdCobros"" = C.""IdCobros""
+            WHERE CD.""IdCobrosDetalle"" = @pId AND C.""IdUsuario"" = @pUser";
+
+            return connection.QueryFirstOrDefault<dynamic>(query, new { pId = idCobroDetalle, pUser = idUsuario });
+        }
+    }
+
+    public static int? BuscarIdPadre(string comprobante, int idMandataria, int idUsuario)
+    {
+        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
+        {
+            string query = "SELECT \"IdCobros\" FROM \"Cobros\" WHERE \"NumeroComprobante\" = @pComp AND \"IdMandatarias\" = @pMand AND \"IdUsuario\" = @pUser";
+            return connection.QueryFirstOrDefault<int?>(query, new { pComp = comprobante, pMand = idMandataria, pUser = idUsuario });
+        }
+    }
+
+    public static List<dynamic> ObtenerCobrosPorLiquidacionDetalle(int idLiquidacionDetalle, int idUsuario)
+    {
+        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
+        {
+            string query = @"
+            SELECT C.""FechaCobro"", C.""NumeroComprobante"", CD.""ImporteCobrado"", CD.""MontoDebito"", CD.""MotivoDebito""
+            FROM ""CobrosDetalle"" CD
+            INNER JOIN ""Cobros"" C ON CD.""IdCobros"" = C.""IdCobros""
+            WHERE CD.""IdLiquidacionDetalle"" = @pId AND C.""IdUsuario"" = @pUser
+            ORDER BY C.""FechaCobro"" DESC";
+
+            return connection.Query<dynamic>(query, new { pId = idLiquidacionDetalle, pUser = idUsuario }).ToList();
+        }
+    }
+
+    public static void GuardarCobroDetalle(int idCobroDetalle, int idCobroPadre, int idOS, DateTime fecha, string tipo, decimal importe, decimal debito, string motivo, int? idLiqDetalle, int idUsuario)
+    {
+        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
+        {
+            connection.Open();
+
+            string query;
+
+            if (idCobroDetalle > 0)
+            {
+                // CASO EDICIÓN (UPDATE)
+                string sqlCheckOwner = @"
+                SELECT COUNT(1) 
+                FROM ""CobrosDetalle"" CD 
+                INNER JOIN ""Cobros"" C ON CD.""IdCobros"" = C.""IdCobros"" 
+                WHERE CD.""IdCobrosDetalle"" = @pId AND C.""IdUsuario"" = @pUser";
+
+                int esMio = connection.ExecuteScalar<int>(sqlCheckOwner, new { pId = idCobroDetalle, pUser = idUsuario });
 
                 if (esMio == 0) throw new Exception("⛔ No tiene permisos para modificar este cobro (o no existe).");
 
-                // 1. OBTENER ESTADO ANTERIOR (Tu lógica original)
-                var anterior = connection.QueryFirstOrDefault<dynamic>(
-                    "SELECT ImporteCobrado, MontoDebito, IdLiquidacionDetalle FROM CobrosDetalle WHERE IdCobrosDetalle = @id",
-                    new { id = idCobroDetalle },
-                    transaction
-                );
-
-                // 2. REVERTIR IMPACTO EN LA DEUDA (Tu lógica original)
-                if (anterior != null && anterior.IdLiquidacionDetalle != null)
-                {
-                    string sqlRevertir = @"
-                        UPDATE LiquidacionDetalle 
-                        SET SaldoPendiente = SaldoPendiente + (@imp + @deb), 
-                            Pagado = 0 
-                        WHERE IdLiquidacionDetalle = @idLiq";
-                    
-                    connection.Execute(sqlRevertir, new { 
-                        imp = anterior.ImporteCobrado, 
-                        deb = anterior.MontoDebito, 
-                        idLiq = anterior.IdLiquidacionDetalle 
-                    }, transaction);
-                }
-
-                // 3. ACTUALIZAR EL COBRO (Tu lógica original)
-                string sqlUpdate = @"UPDATE CobrosDetalle SET 
-                        IdObrasSociales = @idOS, 
-                        FechaCobroDetalle = @fecha, 
-                        ImporteCobrado = @imp, 
-                        TipoPago = @tipo, 
-                        MontoDebito = @deb, 
-                        MotivoDebito = @mot 
-                        WHERE IdCobrosDetalle = @id";
-                        
-                connection.Execute(sqlUpdate, new { 
-                    id = idCobroDetalle, 
-                    idOS = idObraSocial, 
-                    fecha = fecha, 
-                    imp = importe, 
-                    tipo = tipo, 
-                    deb = debitos, 
-                    mot = motivo ?? "" 
-                }, transaction);
-
-                // 4. APLICAR NUEVO IMPACTO A LA DEUDA (Tu lógica original)
-                if (anterior != null && anterior.IdLiquidacionDetalle != null)
-                {
-                    string sqlAplicar = @"
-                        UPDATE LiquidacionDetalle 
-                        SET SaldoPendiente = SaldoPendiente - (@imp + @deb)
-                        WHERE IdLiquidacionDetalle = @idLiq";
-
-                    connection.Execute(sqlAplicar, new { 
-                        imp = importe, 
-                        deb = debitos, 
-                        idLiq = anterior.IdLiquidacionDetalle 
-                    }, transaction);
-
-                    // Chequeo de Pagado
-                    string sqlCheck = @"
-                        UPDATE LiquidacionDetalle 
-                        SET Pagado = 1 
-                        WHERE IdLiquidacionDetalle = @idLiq AND SaldoPendiente <= 1.00";
-                    
-                    connection.Execute(sqlCheck, new { idLiq = anterior.IdLiquidacionDetalle }, transaction);
-                }
-
-                transaction.Commit();
+                query = @"UPDATE ""CobrosDetalle"" SET 
+                        ""IdObrasSociales"" = @pOS,
+                        ""FechaCobroDetalle"" = @pFecha,
+                        ""TipoPago"" = @pTipo,
+                        ""ImporteCobrado"" = @pImp,
+                        ""MontoDebito"" = @pDeb,
+                        ""MotivoDebito"" = @pMot
+                      WHERE ""IdCobrosDetalle"" = @pId";
             }
-            catch { transaction.Rollback(); throw; }
-        }
-    }
-}
-// -----------------------------------------------------------------------------------
-// 5. ELIMINAR DETALLE (Y limpiar Padre si queda vacío)
-// -----------------------------------------------------------------------------------
-public static void EliminarCobroDetalle(int idCobroDetalle, int idUsuario)
-{
-    using (SqlConnection connection = new SqlConnection(_connectionString))
-    {
-        connection.Open();
-        using (var transaction = connection.BeginTransaction())
-        {
-            try
+            else
             {
-                // 1. SEGURIDAD: Obtener datos y validar dueño en una sola consulta
-                var info = connection.QueryFirstOrDefault<dynamic>(
-                    @"SELECT CD.ImporteCobrado, CD.MontoDebito, CD.IdLiquidacionDetalle 
-                      FROM CobrosDetalle CD
-                      INNER JOIN Cobros C ON CD.IdCobros = C.IdCobros
-                      WHERE CD.IdCobrosDetalle = @id AND C.IdUsuario = @user", 
-                    new { id = idCobroDetalle, user = idUsuario }, 
-                    transaction
-                );
+                // CASO NUEVO (INSERT)
+                string sqlCheckPadre = "SELECT COUNT(1) FROM \"Cobros\" WHERE \"IdCobros\" = @pId AND \"IdUsuario\" = @pUser";
 
-                if (info == null) throw new Exception("Cobro no encontrado o sin permisos.");
+                int esMio = connection.ExecuteScalar<int>(sqlCheckPadre, new { pId = idCobroPadre, pUser = idUsuario });
 
-                // 2. RESTAURAR DEUDA (Importe + Débito)
-                if (info.IdLiquidacionDetalle != null)
-                {
-                    string sqlRestaurar = @"
-                        UPDATE LiquidacionDetalle 
-                        SET SaldoPendiente = SaldoPendiente + (@imp + @deb), -- <--- AQUÍ SE RECUPERA EL DÉBITO TAMBIÉN
-                            Pagado = 0 
-                        WHERE IdLiquidacionDetalle = @idLiq";
-                    
-                    connection.Execute(sqlRestaurar, new { 
-                        imp = info.ImporteCobrado, 
-                        deb = info.MontoDebito, 
-                        idLiq = info.IdLiquidacionDetalle 
-                    }, transaction);
-                }
+                if (esMio == 0) throw new Exception("⛔ No tiene permisos sobre el Lote de Cobros seleccionado.");
 
-                // 3. BORRAR EL COBRO
-                connection.Execute("DELETE FROM CobrosDetalle WHERE IdCobrosDetalle = @id", new { id = idCobroDetalle }, transaction);
-
-                transaction.Commit();
-            }
-            catch { transaction.Rollback(); throw; }
-        }
-    }
-}
-
-// -----------------------------------------------------------------------------------
-// 6. TRAER HIJOS DE UN LOTE (Por Comprobante) - Para el Modal VER
-// -----------------------------------------------------------------------------------
-public static List<dynamic> TraerCobrosDelMismoLote(int idCobroPadre, int idUsuario)
-{
-    using (SqlConnection connection = new SqlConnection(_connectionString))
-    {
-        string query = @"
-            SELECT CD.*, OS.Nombre as NombreObraSocial
-            FROM CobrosDetalle CD
-            INNER JOIN ObrasSociales OS ON CD.IdObrasSociales = OS.IdObrasSociales
-            INNER JOIN Cobros C ON CD.IdCobros = C.IdCobros -- <--- JOIN CON EL PADRE
-            WHERE CD.IdCobros = @pId AND C.IdUsuario = @pUser -- <--- FILTRO
-            ORDER BY CD.IdCobrosDetalle DESC";
-            
-        return connection.Query<dynamic>(query, new { pId = idCobroPadre, pUser = idUsuario }).ToList();
-    }
-}
-// 7. Traer un Detalle por ID (Para editar)
-public static dynamic TraerCobroDetallePorId(int idCobroDetalle, int idUsuario)
-{
-    using (SqlConnection connection = new SqlConnection(_connectionString))
-    {
-        string query = @"
-            SELECT CD.* FROM CobrosDetalle CD
-            INNER JOIN Cobros C ON CD.IdCobros = C.IdCobros
-            WHERE CD.IdCobrosDetalle = @pId AND C.IdUsuario = @pUser";
-            
-        return connection.QueryFirstOrDefault<dynamic>(query, new { pId = idCobroDetalle, pUser = idUsuario });
-    }
-}
-
-// 8. Buscar si existe un Padre (Para agregar un pago a un lote existente)
-public static int? BuscarIdPadre(string comprobante, int idMandataria, int idUsuario)
-{
-    using (SqlConnection connection = new SqlConnection(_connectionString))
-    {
-        // Asumimos que Comprobante + Mandataria definen un único Lote
-        string query = "SELECT IdCobros FROM Cobros WHERE NumeroComprobante = @pComp AND IdMandatarias = @pMand AND IdUsuario = @pUser";
-        return connection.QueryFirstOrDefault<int?>(query, new { pComp = comprobante, pMand = idMandataria, pUser = idUsuario });
-    }
-}
-
-
-// TRAER LOS COBROS ASOCIADOS A UN ÍTEM DE LIQUIDACIÓN
-public static List<dynamic> ObtenerCobrosPorLiquidacionDetalle(int idLiquidacionDetalle, int idUsuario)
-{
-    using (SqlConnection connection = new SqlConnection(_connectionString))
-    {
-        string query = @"
-            SELECT C.FechaCobro, C.NumeroComprobante, CD.ImporteCobrado, CD.MontoDebito, CD.MotivoDebito
-            FROM CobrosDetalle CD
-            INNER JOIN Cobros C ON CD.IdCobros = C.IdCobros
-            WHERE CD.IdLiquidacionDetalle = @pId AND C.IdUsuario = @pUser
-            ORDER BY C.FechaCobro DESC";
-
-        return connection.Query<dynamic>(query, new { pId = idLiquidacionDetalle, pUser = idUsuario }).ToList();
-    }
-}
-
-
-// Modifica o inserta un cobro detalle dependiendo si viene con ID
-public static void GuardarCobroDetalle(int idCobroDetalle, int idCobroPadre, int idOS, DateTime fecha, string tipo, decimal importe, decimal debito, string motivo, int? idLiqDetalle, int idUsuario)
-{
-    using (SqlConnection connection = new SqlConnection(_connectionString))
-    {
-        connection.Open(); // <--- IMPORTANTE: Abrir conexión explícitamente para las validaciones
-
-        string query;
-
-        if (idCobroDetalle > 0)
-        {
-            // --- CASO EDICIÓN (UPDATE) ---
-            
-            // 1. VALIDACIÓN DE SEGURIDAD: ¿Este detalle pertenece a un lote de mi usuario?
-            string sqlCheckOwner = @"
-                SELECT COUNT(1) 
-                FROM CobrosDetalle CD 
-                INNER JOIN Cobros C ON CD.IdCobros = C.IdCobros 
-                WHERE CD.IdCobrosDetalle = @pId AND C.IdUsuario = @pUser";
-
-            int esMio = connection.ExecuteScalar<int>(sqlCheckOwner, new { pId = idCobroDetalle, pUser = idUsuario });
-            
-            if (esMio == 0) throw new Exception("⛔ No tiene permisos para modificar este cobro (o no existe).");
-
-            // 2. QUERY UPDATE
-            query = @"UPDATE CobrosDetalle SET 
-                        IdObrasSociales = @pOS,
-                        FechaCobroDetalle = @pFecha,
-                        TipoPago = @pTipo,
-                        ImporteCobrado = @pImp,
-                        MontoDebito = @pDeb,
-                        MotivoDebito = @pMot
-                      WHERE IdCobrosDetalle = @pId";
-        }
-        else
-        {
-            // --- CASO NUEVO (INSERT) ---
-
-            // 1. VALIDACIÓN DE SEGURIDAD: ¿El lote padre donde quiero insertar es mío?
-            string sqlCheckPadre = "SELECT COUNT(1) FROM Cobros WHERE IdCobros = @pId AND IdUsuario = @pUser";
-            
-            int esMio = connection.ExecuteScalar<int>(sqlCheckPadre, new { pId = idCobroPadre, pUser = idUsuario });
-            
-            if (esMio == 0) throw new Exception("⛔ No tiene permisos sobre el Lote de Cobros seleccionado.");
-
-            // 2. QUERY INSERT
-            query = @"INSERT INTO CobrosDetalle 
-                      (IdCobros, IdObrasSociales, FechaCobroDetalle, TipoPago, ImporteCobrado, MontoDebito, MotivoDebito, IdLiquidacionDetalle)
+                query = @"INSERT INTO ""CobrosDetalle"" 
+                      (""IdCobros"", ""IdObrasSociales"", ""FechaCobroDetalle"", ""TipoPago"", ""ImporteCobrado"", ""MontoDebito"", ""MotivoDebito"", ""IdLiquidacionDetalle"")
                       VALUES 
                       (@pPadre, @pOS, @pFecha, @pTipo, @pImp, @pDeb, @pMot, @pLiq)";
+            }
+
+            connection.Execute(query, new
+            {
+                pId = idCobroDetalle,
+                pPadre = idCobroPadre,
+                pOS = idOS,
+                pFecha = fecha,
+                pTipo = tipo,
+                pImp = importe,
+                pDeb = debito,
+                pMot = motivo ?? "",
+                pLiq = idLiqDetalle
+            });
         }
-
-        // EJECUCIÓN FINAL
-        connection.Execute(query, new { 
-            pId = idCobroDetalle, 
-            pPadre = idCobroPadre, 
-            pOS = idOS, 
-            pFecha = fecha, 
-            pTipo = tipo, 
-            pImp = importe, 
-            pDeb = debito, 
-            pMot = motivo ?? "",
-            pLiq = idLiqDetalle
-        });
     }
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 }
