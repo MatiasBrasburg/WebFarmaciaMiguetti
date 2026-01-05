@@ -73,7 +73,7 @@ public static class BD
 
     // EN: Models/BD.cs
 
-    public static void EliminarMandataria(int IdMandatarias)
+ public static void EliminarMandataria(int IdMandatarias)
     {
         using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
         {
@@ -83,66 +83,57 @@ public static class BD
                 try
                 {
                     // ==============================================================================
-                    // RAMA 1: LIQUIDACIONES (Relación Directa)
+                    // 1. LIMPIEZA DE LIQUIDACIONES (Hijos y Padres)
                     // ==============================================================================
-
-                    // 1.1 Borrar Detalles de Liquidaciones
-                    string sqlLiqDetalles = @"
-                    DELETE FROM ""LiquidacionDetalle"" 
-                    WHERE ""IdLiquidaciones"" IN (SELECT ""IdLiquidaciones"" FROM ""Liquidaciones"" WHERE ""IdMandatarias"" = @pId)";
+                    
+                    // 1.1 Detalles de liquidaciones
+                    string sqlLiqDetalles = @"DELETE FROM ""LiquidacionDetalle"" 
+                                            WHERE ""IdLiquidaciones"" IN (SELECT ""IdLiquidaciones"" FROM ""Liquidaciones"" WHERE ""IdMandatarias"" = @pId)";
                     connection.Execute(sqlLiqDetalles, new { pId = IdMandatarias }, transaction);
 
-                    // 1.2 Borrar Cabeceras de Liquidaciones
+                    // 1.2 Cabeceras de liquidaciones
                     string sqlLiqCabeceras = "DELETE FROM \"Liquidaciones\" WHERE \"IdMandatarias\" = @pId";
                     connection.Execute(sqlLiqCabeceras, new { pId = IdMandatarias }, transaction);
 
                     // ==============================================================================
-                    // RAMA 2: OBRAS SOCIALES Y SUS DEPENDENCIAS
+                    // 2. LIMPIEZA DE COBROS (Lo más complejo: Directos y por Obras Sociales)
                     // ==============================================================================
 
-                    // 2.1 Borrar COBROS DETALLE
+                    // 2.1 Borrar Detalles de Cobros (Todos los que toquen a esta Mandataria directa o indirectamente)
                     string sqlCobrosDetalles = @"
                     DELETE FROM ""CobrosDetalle"" 
                     WHERE ""IdCobros"" IN (
-                        SELECT ""IdCobros"" 
-                        FROM ""Cobros"" 
-                        WHERE ""IdObrasSociales"" IN (SELECT ""IdObrasSociales"" FROM ""ObrasSociales"" WHERE ""IdMandatarias"" = @pId)
+                        SELECT ""IdCobros"" FROM ""Cobros"" WHERE ""IdMandatarias"" = @pId
+                        UNION
+                        SELECT ""IdCobros"" FROM ""Cobros"" WHERE ""IdObrasSociales"" IN (SELECT ""IdObrasSociales"" FROM ""ObrasSociales"" WHERE ""IdMandatarias"" = @pId)
                     )";
                     connection.Execute(sqlCobrosDetalles, new { pId = IdMandatarias }, transaction);
 
-                    // 2.2 Borrar COBROS
-                    string sqlCobrosCabeceras = @"
-                    DELETE FROM ""Cobros"" 
-                    WHERE ""IdObrasSociales"" IN (SELECT ""IdObrasSociales"" FROM ""ObrasSociales"" WHERE ""IdMandatarias"" = @pId)";
-                    connection.Execute(sqlCobrosCabeceras, new { pId = IdMandatarias }, transaction);
+                    // 2.2 Borrar Cobros DIRECTOS de la Mandataria (ESTO FALTABA Y HACÍA EXPLOTAR LA BD)
+                    connection.Execute("DELETE FROM \"Cobros\" WHERE \"IdMandatarias\" = @pId", new { pId = IdMandatarias }, transaction);
 
-                    // 2.3 Borrar Planes de Bonificación
-                    string sqlPlanes = @"
-                    DELETE FROM ""PlanBonificacion"" 
-                    WHERE ""IdObrasSociales"" IN (SELECT ""IdObrasSociales"" FROM ""ObrasSociales"" WHERE ""IdMandatarias"" = @pId)";
+                    // 2.3 Borrar Cobros asociados a sus Obras Sociales
+                    string sqlCobrosPorOS = @"DELETE FROM ""Cobros"" 
+                                            WHERE ""IdObrasSociales"" IN (SELECT ""IdObrasSociales"" FROM ""ObrasSociales"" WHERE ""IdMandatarias"" = @pId)";
+                    connection.Execute(sqlCobrosPorOS, new { pId = IdMandatarias }, transaction);
+
+                    // ==============================================================================
+                    // 3. LIMPIEZA DE OBRAS SOCIALES
+                    // ==============================================================================
+
+                    // 3.1 Planes de Bonificación
+                    string sqlPlanes = @"DELETE FROM ""PlanBonificacion"" 
+                                       WHERE ""IdObrasSociales"" IN (SELECT ""IdObrasSociales"" FROM ""ObrasSociales"" WHERE ""IdMandatarias"" = @pId)";
                     connection.Execute(sqlPlanes, new { pId = IdMandatarias }, transaction);
 
-                    // 2.4 Borrar Facturas (Si aplica)
-                    string sqlFacturaDetalle = @"
-                    DELETE FROM ""FacturaDetalle"" 
-                    WHERE ""IdFacturaCabecera"" IN (
-                        SELECT ""IdFacturaCabecera"" 
-                        FROM ""FacturaCabecera"" 
-                        WHERE ""IdObrasSociales"" IN (SELECT ""IdObrasSociales"" FROM ""ObrasSociales"" WHERE ""IdMandatarias"" = @pId)
-                    )";
-                    connection.Execute(sqlFacturaDetalle, new { pId = IdMandatarias }, transaction);
+                    // (Aquí borramos las Facturas porque esas tablas no existen en tu script y daban error)
 
-                    string sqlFacturaCabecera = @"
-                    DELETE FROM ""FacturaCabecera"" 
-                    WHERE ""IdObrasSociales"" IN (SELECT ""IdObrasSociales"" FROM ""ObrasSociales"" WHERE ""IdMandatarias"" = @pId)";
-                    connection.Execute(sqlFacturaCabecera, new { pId = IdMandatarias }, transaction);
-
-                    // 2.5 AHORA SÍ: Borrar Obras Sociales
+                    // 3.2 Borrar Obras Sociales
                     string sqlOOSS = "DELETE FROM \"ObrasSociales\" WHERE \"IdMandatarias\" = @pId";
                     connection.Execute(sqlOOSS, new { pId = IdMandatarias }, transaction);
 
                     // ==============================================================================
-                    // RAMA 3: EL PADRE
+                    // 4. FINALMENTE: ELIMINAR LA MANDATARIA
                     // ==============================================================================
 
                     string sqlMandataria = "DELETE FROM \"Mandatarias\" WHERE \"IdMandatarias\" = @pId";
@@ -153,7 +144,7 @@ public static class BD
                 catch (Exception ex)
                 {
                     transaction.Rollback();
-                    throw;
+                    throw; // Esto hará que veas el error real en los logs si sigue fallando
                 }
             }
         }
