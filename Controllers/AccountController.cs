@@ -24,8 +24,8 @@ public class AccountController : Controller
 
     public IActionResult LogIn2(string Contraseña)
     {
-        Usuario ObjUsuario = BD.TraerUsuarioPorId(2);
-        if (Contraseña == ObjUsuario.Contraseña)
+        Usuario ObjUsuario = BD.TraerUsuarioPorContraseña(Contraseña);
+        if (ObjUsuario != null)
         {
             HttpContext.Session.SetString("Usuario", JsonSerializer.Serialize(ObjUsuario));
             return RedirectToAction("Home", "Home"); 

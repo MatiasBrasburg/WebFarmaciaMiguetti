@@ -257,9 +257,25 @@ public class HomeController : Controller
 
     public IActionResult IrAMostrarModificaciones()
     {
+ string? usuarioJson = HttpContext.Session.GetString("Usuario"); // Crear el usuario session
+        if (string.IsNullOrEmpty(usuarioJson))
+        {
+            return RedirectToAction("Index", "Account");
+        }
+        Usuario userDeSesion = Objeto.StringToObject<Usuario>(usuarioJson);
+       
+     
+        Usuario usuarioCompleto = BD.TraerUsuarioPorId(userDeSesion.IdUsuario);
+
+
+        if (usuarioCompleto == null)
+        {
+            return RedirectToAction("CerrarSesion", "Index");
+        }
+
         ViewBag.Mandatarias = BD.TraerListaMandatarias();
         ViewBag.ObrasSociales = BD.TraerListaOS();
-        ViewBag.ListaLiquidaciones = BD.TraerListaLiquidacionesCompleta();
+        ViewBag.ListaLiquidaciones = BD.TraerListaLiquidacionesCompleta(usuarioCompleto.IdUsuario);
         return View("MostrarModificaciones");
     }
 
@@ -277,6 +293,23 @@ public class HomeController : Controller
         string? DetallesJson 
     )
     {
+
+ string? usuarioJson = HttpContext.Session.GetString("Usuario"); // Crear el usuario session
+        if (string.IsNullOrEmpty(usuarioJson))
+        {
+            return RedirectToAction("Index", "Account");
+        }
+        Usuario userDeSesion = Objeto.StringToObject<Usuario>(usuarioJson);
+       
+     
+        Usuario usuarioCompleto = BD.TraerUsuarioPorId(userDeSesion.IdUsuario);
+
+
+        if (usuarioCompleto == null)
+        {
+            return RedirectToAction("CerrarSesion", "Index");
+        }
+
         try 
         {
             // -----------------------------------------------------------------
@@ -310,7 +343,8 @@ public class HomeController : Controller
                     FechaPresentacion = Fecha ?? DateTime.Now,
                     Observaciones = Observaciones,
                     TotalPresentado = totalPresentacion,
-                    Periodo = (Fecha ?? DateTime.Now).ToString("MM-yyyy")
+                    Periodo = (Fecha ?? DateTime.Now).ToString("MM-yyyy"),
+                    IdUsuario = usuarioCompleto.IdUsuario
                 };
 
                 // 5. GUARDAR EN BD
@@ -341,7 +375,7 @@ public class HomeController : Controller
                 if (IdLiquidacion.HasValue && IdLiquidacion.Value > 0)
                 {
                     // Llamamos a la BD para borrar hijos y padre
-                    BD.EliminarLiquidacion(IdLiquidacion.Value);
+                    BD.EliminarLiquidacion(IdLiquidacion.Value, usuarioCompleto.IdUsuario);
                     return Json(new { success = true, message = "Liquidación eliminada correctamente." });
                 }
                 else
@@ -365,10 +399,26 @@ public class HomeController : Controller
     [HttpGet]
     public IActionResult ObtenerDetallesDeLiquidacion(int idLiquidacion)
     {
+ string? usuarioJson = HttpContext.Session.GetString("Usuario"); // Crear el usuario session
+        if (string.IsNullOrEmpty(usuarioJson))
+        {
+            return RedirectToAction("Index", "Account");
+        }
+        Usuario userDeSesion = Objeto.StringToObject<Usuario>(usuarioJson);
+       
+     
+        Usuario usuarioCompleto = BD.TraerUsuarioPorId(userDeSesion.IdUsuario);
+
+
+        if (usuarioCompleto == null)
+        {
+            return RedirectToAction("CerrarSesion", "Index");
+        }
+
         try
         {
             // Busca todos los items de esa liquidación
-            List<LiquidacionDetalle> detalles = BD.TraerDetallesPorIdLiquidacion(idLiquidacion);
+            List<LiquidacionDetalle> detalles = BD.TraerDetallesPorIdLiquidacion(idLiquidacion, usuarioCompleto.IdUsuario);
             return Json(new { success = true, data = detalles });
         }
         catch (Exception ex)
@@ -382,6 +432,22 @@ public class HomeController : Controller
     [HttpGet]
     public IActionResult BuscarLiquidacionesAjax(int? id, DateTime? desde, DateTime? hasta, int? mandataria)
     {
+ string? usuarioJson = HttpContext.Session.GetString("Usuario"); // Crear el usuario session
+        if (string.IsNullOrEmpty(usuarioJson))
+        {
+            return RedirectToAction("Index", "Account");
+        }
+        Usuario userDeSesion = Objeto.StringToObject<Usuario>(usuarioJson);
+       
+     
+        Usuario usuarioCompleto = BD.TraerUsuarioPorId(userDeSesion.IdUsuario);
+
+
+        if (usuarioCompleto == null)
+        {
+            return RedirectToAction("CerrarSesion", "Index");
+        }
+
         try
         {
             // Llamamos al nuevo método de BD
@@ -400,6 +466,22 @@ public class HomeController : Controller
 [HttpGet]
     public IActionResult ObtenerItemPorId(int idDetalle)
     {
+ string? usuarioJson = HttpContext.Session.GetString("Usuario"); // Crear el usuario session
+        if (string.IsNullOrEmpty(usuarioJson))
+        {
+            return RedirectToAction("Index", "Account");
+        }
+        Usuario userDeSesion = Objeto.StringToObject<Usuario>(usuarioJson);
+       
+     
+        Usuario usuarioCompleto = BD.TraerUsuarioPorId(userDeSesion.IdUsuario);
+
+
+        if (usuarioCompleto == null)
+        {
+            return RedirectToAction("CerrarSesion", "Index");
+        }
+
         try
         {
             var item = BD.TraerDetallePorId(idDetalle);
@@ -415,13 +497,30 @@ public class HomeController : Controller
     [HttpPost]
     public IActionResult GuardarItemIndividual(int IdLiquidacionPadre, int IdItem, int IdOS, int IdPlan, int Recetas, decimal Total, decimal CargoOS, decimal Bonificacion)
     {
-        
+
+ string? usuarioJson = HttpContext.Session.GetString("Usuario"); // Crear el usuario session
+        if (string.IsNullOrEmpty(usuarioJson))
+        {
+            return RedirectToAction("Index", "Account");
+        }
+        Usuario userDeSesion = Objeto.StringToObject<Usuario>(usuarioJson);
+       
+     
+        Usuario usuarioCompleto = BD.TraerUsuarioPorId(userDeSesion.IdUsuario);
+
+
+        if (usuarioCompleto == null)
+        {
+            return RedirectToAction("CerrarSesion", "Index");
+        }
+
+
         try
         {
             // Validaciones básicas
             if (IdOS == 0) return Json(new { success = false, message = "Debe elegir Obra Social" });
             if (Total <= 0) return Json(new { success = false, message = "El total debe ser mayor a 0" });
-var itemsExistentes = BD.TraerDetallesPorIdLiquidacion(IdLiquidacionPadre);
+var itemsExistentes = BD.TraerDetallesPorIdLiquidacion(IdLiquidacionPadre, usuarioCompleto.IdUsuario);
 
             // 2. Buscamos si hay otro ítem con la misma OS y Plan (excluyendo el que estamos editando si es edición)
             bool esDuplicado = itemsExistentes.Any(x => 
@@ -471,6 +570,22 @@ var itemsExistentes = BD.TraerDetallesPorIdLiquidacion(IdLiquidacionPadre);
     [HttpPost]
     public IActionResult EliminarItemIndividual(int idItem, int idLiquidacionPadre)
     {
+ string? usuarioJson = HttpContext.Session.GetString("Usuario"); // Crear el usuario session
+        if (string.IsNullOrEmpty(usuarioJson))
+        {
+            return RedirectToAction("Index", "Account");
+        }
+        Usuario userDeSesion = Objeto.StringToObject<Usuario>(usuarioJson);
+       
+     
+        Usuario usuarioCompleto = BD.TraerUsuarioPorId(userDeSesion.IdUsuario);
+
+
+        if (usuarioCompleto == null)
+        {
+            return RedirectToAction("CerrarSesion", "Index");
+        }
+
         try
         {
             BD.EliminarItemIndividual(idItem, idLiquidacionPadre);
@@ -495,6 +610,22 @@ var itemsExistentes = BD.TraerDetallesPorIdLiquidacion(IdLiquidacionPadre);
     [HttpGet]
     public IActionResult ObtenerCabeceraLiquidacion(int id)
     {
+ string? usuarioJson = HttpContext.Session.GetString("Usuario"); // Crear el usuario session
+        if (string.IsNullOrEmpty(usuarioJson))
+        {
+            return RedirectToAction("Index", "Account");
+        }
+        Usuario userDeSesion = Objeto.StringToObject<Usuario>(usuarioJson);
+       
+     
+        Usuario usuarioCompleto = BD.TraerUsuarioPorId(userDeSesion.IdUsuario);
+
+
+        if (usuarioCompleto == null)
+        {
+            return RedirectToAction("CerrarSesion", "Index");
+        }
+
         try
         {
             var liq = BD.TraerLiquidacionPorId(id);
@@ -510,6 +641,24 @@ var itemsExistentes = BD.TraerDetallesPorIdLiquidacion(IdLiquidacionPadre);
     [HttpPost]
     public IActionResult GuardarEdicionCabecera(int IdLiquidacion, int IdMandataria, DateTime Fecha, string Observaciones)
     {
+
+         string? usuarioJson = HttpContext.Session.GetString("Usuario"); // Crear el usuario session
+        if (string.IsNullOrEmpty(usuarioJson))
+        {
+            return RedirectToAction("Index", "Account");
+        }
+        Usuario userDeSesion = Objeto.StringToObject<Usuario>(usuarioJson);
+       
+     
+        Usuario usuarioCompleto = BD.TraerUsuarioPorId(userDeSesion.IdUsuario);
+
+
+        if (usuarioCompleto == null)
+        {
+            return RedirectToAction("CerrarSesion", "Index");
+        }
+
+
         try
         {
             BD.ModificarLiquidacionCabecera(IdLiquidacion, IdMandataria, Fecha, Observaciones ?? "");
@@ -524,6 +673,21 @@ var itemsExistentes = BD.TraerDetallesPorIdLiquidacion(IdLiquidacionPadre);
     [HttpGet]
 public IActionResult BuscarDetallesGlobalesAjax(DateTime? desde, DateTime? hasta, int? idMandataria, int? idOS)
 {
+     string? usuarioJson = HttpContext.Session.GetString("Usuario"); // Crear el usuario session
+        if (string.IsNullOrEmpty(usuarioJson))
+        {
+            return RedirectToAction("Index", "Account");
+        }
+        Usuario userDeSesion = Objeto.StringToObject<Usuario>(usuarioJson);
+       
+     
+        Usuario usuarioCompleto = BD.TraerUsuarioPorId(userDeSesion.IdUsuario);
+
+
+        if (usuarioCompleto == null)
+        {
+            return RedirectToAction("CerrarSesion", "Index");
+        }
     try
     {
         var lista = BD.BuscarDetallesGlobales(desde, hasta, idMandataria, idOS);

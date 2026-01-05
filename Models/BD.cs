@@ -403,13 +403,13 @@ public static void InsertarPlan(PlanBonificacion plan)
 
 //-- Codigo Liquidaciones --///
 
-      public static List<Liquidaciones> TraerListaLiquidacionesCompleta()
+      public static List<Liquidaciones> TraerListaLiquidacionesCompleta(int IdUsuario)
     {
         List<Liquidaciones> ListLiquidaciones = new List<Liquidaciones>();
         using (SqlConnection connection = new SqlConnection(_connectionString))
         {
-            string query = "SELECT * FROM Liquidaciones";
-            ListLiquidaciones = connection.Query<Liquidaciones>(query).ToList();
+            string query = "SELECT * FROM Liquidaciones WHERE IdUsuario = @IdUsuario";
+            ListLiquidaciones = connection.Query<Liquidaciones>(query, new { IdUsuario = IdUsuario }).ToList();
         }
         return ListLiquidaciones;
     }
@@ -421,8 +421,8 @@ public static int InsertarLiquidacionCabecera(Liquidaciones liq)
     {
         // Usamos SCOPE_IDENTITY() para recuperar el ID autogenerado
         string query = @"
-            INSERT INTO Liquidaciones (IdMandatarias, FechaPresentacion, TotalPresentado, Observaciones, Estado, Periodo) 
-            VALUES (@IdMandatarias, @FechaPresentacion, @TotalPresentado, @Observaciones, 'PRESENTADA', @Periodo);
+            INSERT INTO Liquidaciones (IdMandatarias, FechaPresentacion, TotalPresentado, Observaciones, Estado, Periodo, IdUsuario) 
+            VALUES (@IdMandatarias, @FechaPresentacion, @TotalPresentado, @Observaciones, 'PRESENTADA', @Periodo, @IdUsuario);
             SELECT CAST(SCOPE_IDENTITY() as int);";
         
         return connection.QuerySingle<int>(query, liq);
@@ -507,7 +507,7 @@ public static List<dynamic> BuscarLiquidaciones(int? id, DateTime? desde, DateTi
 
 // CAMBIO: Devolvemos List<dynamic> para poder traer la columna extra 'FechaCancelacion'
 // Vuelve a ser List<LiquidacionDetalle> (Tipado Fuerte)
-public static List<LiquidacionDetalle> TraerDetallesPorIdLiquidacion(int idLiquidacion)
+public static List<LiquidacionDetalle> TraerDetallesPorIdLiquidacion(int idLiquidacion, int idUsuario)
 {
     using (SqlConnection connection = new SqlConnection(_connectionString))
     {
@@ -532,14 +532,14 @@ public static List<LiquidacionDetalle> TraerDetallesPorIdLiquidacion(int idLiqui
             LEFT JOIN PlanBonificacion PB ON LD.IdPlanBonificacion = PB.IdPlanBonificacion
             LEFT JOIN ObrasSociales OS ON LD.IdObrasSociales = OS.IdObrasSociales
             
-            WHERE LD.IdLiquidaciones = @pIdLiq";
+            WHERE LD.IdLiquidaciones = @pIdLiq AND LD.IdUsuario = @pIdUsuario";
             
         // Mapeo directo y limpio
-        return connection.Query<LiquidacionDetalle>(query, new { pIdLiq = idLiquidacion }).ToList();
+        return connection.Query<LiquidacionDetalle>(query, new { pIdLiq = idLiquidacion, pIdUsuario = idUsuario }).ToList();
     }
 }
 // B. PARA EL BOTÓN ELIMINAR (Borra todo en orden)
-public static void EliminarLiquidacion(int idLiquidacion)
+public static void EliminarLiquidacion(int idLiquidacion, int idUsuario)
 {
     using (SqlConnection connection = new SqlConnection(_connectionString))
     {
@@ -559,7 +559,7 @@ public static void EliminarLiquidacion(int idLiquidacion)
                     SELECT DISTINCT CD.IdCobros 
                     FROM CobrosDetalle CD
                     INNER JOIN LiquidacionDetalle LD ON CD.IdLiquidacionDetalle = LD.IdLiquidacionDetalle
-                    WHERE LD.IdLiquidaciones = @Id";
+                    WHERE LD.IdLiquidaciones = @Id AND CD.IdUsuario = @IdUsuario";
                 
                 var listaCobrosAfectados = connection.Query<int>(queryGetCobros, pId, transaction).ToList();
 
@@ -609,8 +609,8 @@ public static void EliminarLiquidacion(int idLiquidacion)
                 // ---------------------------------------------------------
                 // PASO 5: Eliminar Liquidaciones (Padre propio)
                 // ---------------------------------------------------------
-                string deleteLiqCab = "DELETE FROM Liquidaciones WHERE IdLiquidaciones = @Id";
-                connection.Execute(deleteLiqCab, pId, transaction);
+                string deleteLiqCab = "DELETE FROM Liquidaciones WHERE IdLiquidaciones = @Id AND IdUsuario = @IdUsuario";
+                connection.Execute(deleteLiqCab, new { Id = pId, IdUsuario = idUsuario }, transaction);
 
                 transaction.Commit();
             }
@@ -868,7 +868,17 @@ public static Usuario TraerUsuarioPorId(int idUsuario)
     
          return ObjUsuario;
     }
+    public static Usuario TraerUsuarioPorContraseña(string contraseña)
+    {
+     Usuario ObjUsuario = null;
+        using (SqlConnection connection = new SqlConnection(_connectionString))
+        {
+            string query = "SELECT * FROM Usuario where Contraseña = @pContraseña"; 
+            ObjUsuario = connection.QueryFirstOrDefault<Usuario>(query, new {pContraseña = contraseña});
+         }
     
+         return ObjUsuario;
+    }
 
 
    public static void ModificarUsuario(int IdUsuario, string? Contraseña, string? RazonSocial, string? Domicilio, long? Cuit, string? Iva)

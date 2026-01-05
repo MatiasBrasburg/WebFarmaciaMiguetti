@@ -21,6 +21,8 @@ public class Cobros
     
 [JsonProperty]
     public int? IdMandatarias { get; set; }
+    [JsonProperty]
+    public int? IdUsuario { get; set; }
     public Cobros()
     {
         

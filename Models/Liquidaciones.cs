@@ -32,7 +32,8 @@ namespace WebFarmaciaMiguetti.Models
 
            [JsonProperty]
         public string? Observaciones { get; set; }
-        
+        [JsonProperty]
+        public int? IdUsuario { get; set; }
         public Liquidaciones() { }
     }
 }
