@@ -90,6 +90,15 @@ Usuario usuarioActual = null;
                                     <i class="bi bi-grid-fill"></i> MENÚ
                                 </a>
                             </li>
+                             <li class="nav-item ms-3">
+    <button type="button" 
+            class="btn btn-danger btn-lg px-4 fw-bold rounded-pill shadow-sm" 
+            data-bs-toggle="modal" 
+            data-bs-target="#modalConfirmarSalida"
+            style="border: 2px solid white;">
+        <i class="bi bi-box-arrow-right"></i> SALIR DEL SISTEMA
+    </button>
+</li>
                          
                         </ul>
                     </div>
@@ -127,7 +136,38 @@ Usuario usuarioActual = null;
             </div>
         </footer>
     }
+<div class="modal fade" id="modalConfirmarSalida" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-lg"> <div class="modal-content border-0 shadow-lg">
+            
+            <div class="modal-header bg-danger text-white py-3">
+                <h2 class="modal-title fw-bold" id="exampleModalLabel">
+                    <i class="bi bi-exclamation-triangle-fill"></i> ¿DESEA SALIR?
+                </h2>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
 
+            <div class="modal-body text-center py-5">
+                <h3 class="fw-bold text-dark mb-3" style="font-size: 1.8rem;">
+                    ¿Está seguro que quiere cerrar el sistema?
+                </h3>
+                <p class="text-muted" style="font-size: 1.3rem;">
+                    Si sale ahora, deberá ingresar su contraseña nuevamente para volver a entrar.
+                </p>
+            </div>
+
+            <div class="modal-footer justify-content-center gap-4 pb-5 bg-light">
+                <button type="button" class="btn btn-secondary px-5 py-3 fs-4 rounded-pill border-2" data-bs-dismiss="modal">
+                    ❌ NO, ME QUEDO
+                </button>
+                
+                <a href="/Account/CerrarSesion" class="btn btn-danger px-5 py-3 fs-4 fw-bold rounded-pill border-2 shadow">
+                    🚪 SÍ, SALIR AHORA
+                </a>
+            </div>
+
+        </div>
+    </div>
+</div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script> 

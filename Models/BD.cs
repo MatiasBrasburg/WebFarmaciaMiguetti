@@ -487,65 +487,96 @@ public static class BD
         }
     }
 
-    public static void EliminarLiquidacion(int idLiquidacion, int idUsuario)
+ public static void EliminarLiquidacion(int idLiquidacion, int idUsuario)
+{
+    using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
     {
-        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
+        connection.Open();
+        using (var transaction = connection.BeginTransaction())
         {
-            connection.Open();
-            using (var transaction = connection.BeginTransaction())
+            try
             {
-                try
+                var parametros = new { Id = idLiquidacion, IdUsuario = idUsuario };
+
+                // PASO 1: Identificar Cobros que serán afectados
+                // (Correcto: Usamos INNER JOIN porque necesitamos filtrar por el usuario dueño de la liquidación)
+                string queryGetCobros = @"
+                SELECT DISTINCT CD.""IdCobros"" 
+                FROM ""CobrosDetalle"" CD
+                INNER JOIN ""LiquidacionDetalle"" LD ON CD.""IdLiquidacionDetalle"" = LD.""IdLiquidacionDetalle""
+                INNER JOIN ""Liquidaciones"" L ON LD.""IdLiquidaciones"" = L.""IdLiquidaciones""
+                WHERE L.""IdLiquidaciones"" = @Id AND L.""IdUsuario"" = @IdUsuario"; 
+                // NOTA: Agregué JOIN a Liquidaciones para asegurar que el IdUsuario venga de la cabecera, es más seguro.
+
+                var listaCobrosAfectados = connection.Query<int>(queryGetCobros, parametros, transaction).ToList();
+
+                // PASO 2: Borrar los detalles de cobros asociados
+                // Usamos una subquery segura contra la cabecera para validar propiedad
+                string deleteCobrosDet = @"
+                DELETE FROM ""CobrosDetalle"" 
+                WHERE ""IdLiquidacionDetalle"" IN (
+                    SELECT LD.""IdLiquidacionDetalle"" 
+                    FROM ""LiquidacionDetalle"" LD
+                    INNER JOIN ""Liquidaciones"" L ON LD.""IdLiquidaciones"" = L.""IdLiquidaciones""
+                    WHERE L.""IdLiquidaciones"" = @Id AND L.""IdUsuario"" = @IdUsuario
+                )";
+                connection.Execute(deleteCobrosDet, parametros, transaction);
+
+                // PASO 3: Recalcular y ACTUALIZAR las cabeceras de Cobros (CRÍTICO: Faltaba el UPDATE)
+                foreach (var idCobro in listaCobrosAfectados)
                 {
-                    var parametros = new { Id = idLiquidacion, IdUsuario = idUsuario };
+                    // a) Calculamos el nuevo total real sumando los detalles restantes
+                    string queryRecalculo = @"
+                    SELECT COALESCE(SUM(""ImporteCobrado""), 0) 
+                    FROM ""CobrosDetalle"" 
+                    WHERE ""IdCobros"" = @IdCobro";
 
-                    // PASO 1
-                    string queryGetCobros = @"
-                    SELECT DISTINCT CD.""IdCobros"" 
-                    FROM ""CobrosDetalle"" CD
-                    INNER JOIN ""LiquidacionDetalle"" LD ON CD.""IdLiquidacionDetalle"" = LD.""IdLiquidacionDetalle""
-                    WHERE LD.""IdLiquidaciones"" = @Id AND LD.""IdUsuario"" = @IdUsuario";
+                    decimal nuevoTotal = connection.ExecuteScalar<decimal>(queryRecalculo, new { IdCobro = idCobro }, transaction);
 
-                    var listaCobrosAfectados = connection.Query<int>(queryGetCobros, parametros, transaction).ToList();
+                    // b) ¡ACTUALIZAMOS LA CABECERA! (Esto faltaba)
+                    string updateCobro = @"
+                    UPDATE ""Cobros"" 
+                    SET ""ImporteTotal"" = @NuevoTotal 
+                    WHERE ""IdCobros"" = @IdCobro";
 
-                    // PASO 2
-                    string deleteCobrosDet = @"
-                    DELETE FROM ""CobrosDetalle"" 
-                    WHERE ""IdLiquidacionDetalle"" IN (
-                        SELECT ""IdLiquidacionDetalle"" 
-                        FROM ""LiquidacionDetalle"" 
-                        WHERE ""IdLiquidaciones"" = @Id AND ""IdUsuario"" = @IdUsuario
-                    )";
-                    connection.Execute(deleteCobrosDet, parametros, transaction);
-
-                    // PASO 3
-                    foreach (var idCobro in listaCobrosAfectados)
-                    {
-                        string queryRecalculo = @"
-                        SELECT COALESCE(SUM(""ImporteCobrado""), 0) 
-                        FROM ""CobrosDetalle"" 
-                        WHERE ""IdCobros"" = @IdCobro";
-
-                        decimal nuevoTotal = connection.ExecuteScalar<decimal>(queryRecalculo, new { IdCobro = idCobro }, transaction);
-                    }
-
-                    // PASO 4
-                    string deleteLiqDet = "DELETE FROM \"LiquidacionDetalle\" WHERE \"IdLiquidaciones\" = @Id AND \"IdUsuario\" = @IdUsuario";
-                    connection.Execute(deleteLiqDet, parametros, transaction);
-
-                    // PASO 5
-                    string deleteLiqCab = "DELETE FROM \"Liquidaciones\" WHERE \"IdLiquidaciones\" = @Id AND \"IdUsuario\" = @IdUsuario";
-                    connection.Execute(deleteLiqCab, parametros, transaction);
-
-                    transaction.Commit();
+                    connection.Execute(updateCobro, new { NuevoTotal = nuevoTotal, IdCobro = idCobro }, transaction);
                 }
-                catch (Exception ex)
+
+                // PASO 4: Eliminar LiquidacionDetalle (CORREGIDO)
+                // Aquí estaba tu duda. No buscamos 'IdUsuario' en el detalle.
+                // Usamos la cláusula USING de Postgres o una subquery estándar. 
+                // Usaré subquery estándar para máxima claridad: "Borra detalles DONDE el ID de cabecera pertenezca al usuario X"
+                string deleteLiqDet = @"
+                DELETE FROM ""LiquidacionDetalle"" 
+                WHERE ""IdLiquidaciones"" IN (
+                    SELECT ""IdLiquidaciones"" 
+                    FROM ""Liquidaciones"" 
+                    WHERE ""IdLiquidaciones"" = @Id AND ""IdUsuario"" = @IdUsuario
+                )";
+                connection.Execute(deleteLiqDet, parametros, transaction);
+
+                // PASO 5: Eliminar la Cabecera
+                string deleteLiqCab = "DELETE FROM \"Liquidaciones\" WHERE \"IdLiquidaciones\" = @Id AND \"IdUsuario\" = @IdUsuario";
+                int filasAfectadas = connection.Execute(deleteLiqCab, parametros, transaction);
+
+                // Verificación de seguridad final
+                if (filasAfectadas == 0)
                 {
-                    transaction.Rollback();
-                    throw;
+                    // Si llegamos aquí y no borró nada, significa que el ID no existía o NO ERA DE ESE USUARIO.
+                    // Hacemos rollback manual por seguridad lógica, aunque no haya fallado SQL.
+                    throw new Exception("No se encontró la liquidación o no tienes permisos para eliminarla.");
                 }
+
+                transaction.Commit();
+            }
+            catch (Exception)
+            {
+                transaction.Rollback();
+                throw;
             }
         }
     }
+}
 
     public static LiquidacionDetalle TraerDetallePorId(int idDetalle, int idUsuario)
     {
