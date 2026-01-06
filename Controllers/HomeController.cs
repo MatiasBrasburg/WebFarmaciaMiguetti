@@ -28,7 +28,7 @@ public class HomeController : Controller
         }
         return View(); 
     }
-    public IActionResult CerrarSession()
+    public IActionResult CerrarSesion()
     {
        HttpContext.Session.Clear();
         return RedirectToAction("Index", "Account");
