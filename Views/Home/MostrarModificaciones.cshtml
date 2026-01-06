@@ -372,19 +372,12 @@
 
                         </div>
 
-                        <div class="row g-3 mt-1 align-items-end">
-
-                            <div class="col-md-3">
-
-                                <label class="form-label">Total ($)</label>
-
-                                <input type="text" id="inputTotal" class="form-control" placeholder="0,00" 
-
-                                       onfocus="limpiarNumero(this)" onblur="formatearNumero(this)"
-
-                                       onkeyup="recalcularNeto('inputTotal', 'inputPlan', 'inputNeto', 'lblPorcentajeAplicado')">
-
-                            </div>
+                        <div class="col-md-3">
+    <label class="form-label">Total ($)</label>
+    <input type="text" id="inputTotal" class="form-control" placeholder="0,00" 
+            onfocus="limpiarNumero(this); this.select()"  onblur="formatearNumero(this)"
+            oninput="recalcularNeto('inputTotal', 'inputPlan', 'inputNeto', 'lblPorcentajeAplicado')" > 
+</div>
 
                             
 
@@ -620,79 +613,58 @@
 
             </div>
 
-            <div class="modal-body bg-light">
+          <div class="modal-body bg-light">
+    <input type="hidden" id="item_Id" value="0">
+    <input type="hidden" id="item_IdLiquidacionPadre" value="0">
+    
+    <div id="notificacionExito" class="alert alert-success fw-bold text-center d-none" role="alert">
+        ✅ ¡GUARDADO CORRECTAMENTE!
+    </div>
+    <div id="notificacionError" class="alert alert-danger fw-bold text-center d-none" role="alert"></div>
 
-                <input type="hidden" id="item_Id" value="0">
-
-                <input type="hidden" id="item_IdLiquidacionPadre" value="0">
-
-                
-
-                <div class="row g-3">
-
-                    <div class="col-md-6">
-
-                        <label class="form-label">Obra Social</label>
-
-                        <select id="item_IdOS" class="form-select" onchange="cargarPlanesDeOS(this.value, 'item_IdPlan')">
-
-                            <option value="0">-- Seleccione --</option>
-
-                            @foreach (var os in listaObrasSociales) { <option value="@os.IdObrasSociales">@os.Nombre</option> }
-
-                        </select>
-
-                    </div>
-
-                    <div class="col-md-6">
-
-                        <label class="form-label">Plan</label>
-
-                        <select id="item_IdPlan" class="form-select" disabled onchange="recalcularNeto('item_Total', 'item_IdPlan', 'item_Neto', 'item_lblPorc')">
-
-                            <option value="0">- Primero OS -</option>
-
-                        </select>
-
-                    </div>
-
-                    
-
-                    <div class="col-md-3"><label class="form-label">Recetas</label><input type="number" id="item_Recetas" class="form-control" placeholder="0"></div>
-
-                    
-
-                    <div class="col-md-3">
-
-                        <label class="form-label">Total ($)</label>
-
-                        <input type="text" id="item_Total" class="form-control fw-bold" placeholder="0,00" 
-
-                               onfocus="limpiarNumero(this)" onblur="formatearNumero(this)"
-
-                               onkeyup="recalcularNeto('item_Total', 'item_IdPlan', 'item_Neto', 'item_lblPorc')">
-
-                    </div>
-
-                    
-
-                    <div class="col-md-3">
-
-                        <label class="form-label">Cargo O.S.</label>
-
-                        <input type="text" id="item_CargoOS" class="form-control fw-bold" placeholder="0,00"
-
-                               onfocus="limpiarNumero(this)" onblur="formatearNumero(this)">
-
-                    </div>
-
-                    
-
-                    <div class="col-md-3"><label class="form-label text-success">Bonif ($) <small id="item_lblPorc">0%</small></label><input type="text" id="item_Neto" class="form-control fw-bold bg-white" readonly value="0,00"></div>
-
-                </div>
-
-            </div>
+    <div class="row g-3">
+        <div class="col-md-6">
+            <label class="form-label">Obra Social</label>
+            <select id="item_IdOS" class="form-select fw-bold border-dark" onchange="cargarPlanesDeOS(this.value, 'item_IdPlan')">
+                <option value="0">-- Seleccione --</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Plan (Bonificación)</label>
+            <select id="item_IdPlan" class="form-select fw-bold border-dark" disabled onchange="recalcularNetoEnVivo()">
+                <option value="0">- Primero OS -</option>
+            </select>
+        </div>
+        
+        <div class="col-md-3">
+            <label class="form-label">Recetas</label>
+            <input type="number" id="item_Recetas" class="form-control fw-bold" 
+                   onfocus="this.select()" 
+                   placeholder="0">
+        </div>
+        
+        <div class="col-md-3">
+            <label class="form-label">Total ($)</label>
+            <input type="text" id="item_Total" class="form-control fw-black fs-5 text-primary" placeholder="0,00" 
+                   onfocus="this.select()" 
+                   oninput="recalcularNetoEnVivo()"
+                   onblur="formatearNumero(this)">
+        </div>
+        
+        <div class="col-md-3">
+            <label class="form-label">Cargo O.S.</label>
+            <input type="text" id="item_CargoOS" class="form-control fw-bold" placeholder="0,00"
+                   onfocus="this.select()" 
+                   onblur="formatearNumero(this)">
+        </div>
+        
+        <div class="col-md-3">
+            <label class="form-label text-success">Bonif ($) <small id="item_lblPorc" class="text-dark">0%</small></label>
+            <input type="text" id="item_Neto" class="form-control fw-black bg-white border-success text-success fs-5" 
+                   readonly value="0,00">
+        </div>
+    </div>
+</div>
 
             <div class="modal-footer bg-light">
 
@@ -879,6 +851,7 @@ setupAuto('txtEditMandataria', 'listaEditMandataria', 'edit_Mandataria', datosMa
 document.getElementById('liqMandataria').addEventListener('change', function() {
 
     filtrarOSPorMandataria(this.value);
+    configurarTeclasRapidas();
 
 });
 
@@ -2066,13 +2039,7 @@ async function recargarTablaVisor(idLiq = null) {
 
         document.getElementById('item_IdOS').value = "0"; 
 
-        document.getElementById('item_Recetas').ariaPlaceholder = "0.00"; 
-
-        document.getElementById('item_Total').ariaPlaceholder = "0.00";
-
-        document.getElementById('item_CargoOS').ariaPlaceholder = "0.00"; 
-
-        document.getElementById('item_Neto').ariaPlaceholder = "0.00";
+      
 
         
 
@@ -2137,51 +2104,62 @@ async function recargarTablaVisor(idLiq = null) {
     
 
     async function guardarItemIndividual() {
+    // Referencias a las alertas
+    const alertaExito = document.getElementById('notificacionExito');
+    const alertaError = document.getElementById('notificacionError');
+    const btn = document.querySelector('#modalItemIndividual .btn-warning'); // El botón de guardar
 
-        const fd = new FormData();
+    // Limpiamos mensajes previos
+    alertaExito.classList.add('d-none');
+    alertaError.classList.add('d-none');
 
-        fd.append("IdLiquidacionPadre", document.getElementById('item_IdLiquidacionPadre').value);
+    // Preparamos datos
+    const fd = new FormData();
+    fd.append("IdLiquidacionPadre", document.getElementById('item_IdLiquidacionPadre').value);
+    fd.append("IdItem", document.getElementById('item_Id').value);
+    fd.append("IdOS", document.getElementById('item_IdOS').value);
+    fd.append("IdPlan", document.getElementById('item_IdPlan').value);
+    fd.append("Recetas", document.getElementById('item_Recetas').value);
+    
+    // Limpieza de moneda (Puntos y Comas)
+    fd.append("Total", document.getElementById('item_Total').value.replace(/\./g, '').replace(',', '.'));
+    fd.append("CargoOS", document.getElementById('item_CargoOS').value.replace(/\./g, '').replace(',', '.'));
+    fd.append("Bonificacion", document.getElementById('item_Neto').value.replace(/\./g, '').replace(',', '.'));
 
-        fd.append("IdItem", document.getElementById('item_Id').value);
+    try {
+        btn.disabled = true; // Evitar doble clic
+        const r = await fetch('@Url.Action("GuardarItemIndividual", "Home")', { method: 'POST', body: fd });
+        const res = await r.json();
 
-        fd.append("IdOS", document.getElementById('item_IdOS').value);
+        if(res.success) { 
+            // 1. MOSTRAR ÉXITO EN EL MISMO MODAL
+            alertaExito.classList.remove('d-none');
+            
+            // 2. ESPERAR 0.8 SEGUNDOS Y CERRAR
+            setTimeout(() => {
+                cerrarModalItem();
+                alertaExito.classList.add('d-none'); 
+                
+                // 3. ACTUALIZAR TODO
+                recargarTablaVisor(); // Actualiza el modal de items
+                
+                // Si estamos viendo por Mandataria, actualizar también la tabla de atrás
+                if(modoActual === 'Mandataria') {
+                    buscarLiquidaciones(); 
+                }
+            }, 800); 
 
-        fd.append("IdPlan", document.getElementById('item_IdPlan').value);
-
-        fd.append("Recetas", document.getElementById('item_Recetas').value);
-
-        
-
-        // LIMPIEZA DE PUNTOS PARA ENVIAR AL SERVER
-
-     // LIMPIEZA: Quitamos puntos de mil y CAMBIAMOS la coma por punto decimal
-fd.append("Total", document.getElementById('item_Total').value.replace(/\./g, '').replace(',', '.')); 
-fd.append("CargoOS", document.getElementById('item_CargoOS').value.replace(/\./g, '').replace(',', '.'));
-fd.append("Bonificacion", document.getElementById('item_Neto').value.replace(/\./g, '').replace(',', '.'));
-
-
-        try {
-
-            const r = await fetch('@Url.Action("GuardarItemIndividual", "Home")', { method: 'POST', body: fd });
-
-            if((await r.json()).success) { 
-
-                alert("✅ Guardado."); 
-
-                cerrarModalItem(); 
-
-                if(modoActual === 'OS') buscarLiquidaciones(); 
-
-                else recargarTablaVisor(); 
-
-            }
-
-            else alert("Error: No se puede agregar esta liquidacion, ya que existe un ítem con la misma Obra Social y Plan.");
-
-        } catch(e) { alert("Error."); }
-
+        } else { 
+            alertaError.textContent = "❌ " + res.message;
+            alertaError.classList.remove('d-none');
+        }
+    } catch(e) { 
+        alertaError.textContent = "❌ Error de conexión.";
+        alertaError.classList.remove('d-none');
+    } finally {
+        btn.disabled = false;
     }
-
+}
     
 
     async function eliminarItemIndividual(id) {
@@ -2611,5 +2589,54 @@ function formatearNumero(input) {
         v.focus();
         setTimeout(function() { v.print(); }, 500);
     }
+
+
+
+
+
+
+
+
+
+
+    // --- NUEVAS FUNCIONES DE VELOCIDAD UX ---
+
+function recalcularNetoEnVivo() {
+    // 1. Obtenemos el valor "sucio" (con puntos y comas)
+    let valStr = document.getElementById('item_Total').value;
+    // 2. Limpiamos: Sacamos puntos de mil, cambiamos coma por punto decimal
+    valStr = valStr.replace(/\./g, '').replace(',', '.');
+    
+    const total = parseFloat(valStr) || 0;
+    
+    // 3. Buscamos el porcentaje
+    const sel = document.getElementById('item_IdPlan');
+    let porc = 0;
+    if (sel.selectedIndex > 0) {
+        porc = parseFloat(sel.options[sel.selectedIndex].getAttribute('data-bonif')) || 0;
+    }
+    document.getElementById('item_lblPorc').textContent = porc + "%";
+
+    // 4. Calculamos y mostramos formateado AL INSTANTE
+    const bonif = total * (porc / 100.0);
+    document.getElementById('item_Neto').value = bonif.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+}
+
+// ESTA FUNCIÓN CONECTA LOS ENTERs (Recetas -> Total -> Cargo -> Guardar)
+function configurarTeclasRapidas() {
+    setupEnterNavigation('item_Recetas', 'item_Total');
+    setupEnterNavigation('item_Total', 'item_CargoOS');
+    
+    // En CargoOS, si apreta Enter, que vaya al botón Guardar o dispare el guardado
+    const cargo = document.getElementById('item_CargoOS');
+    if(cargo) {
+        cargo.addEventListener('keydown', function(e) {
+            if(e.key === 'Enter') {
+                e.preventDefault();
+                guardarItemIndividual(); // ¡Dispara el guardado directo!
+            }
+        });
+    }
+}
 </script>
 }

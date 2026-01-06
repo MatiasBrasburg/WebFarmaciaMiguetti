@@ -684,57 +684,67 @@ public static class BD
     }
 
     public static void ModificarItemIndividual(LiquidacionDetalle item, int idUsuario)
+{
+    using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
     {
-        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
+        connection.Open();
+
+        // 1. VALIDACIÓN DE SEGURIDAD FINANCIERA
+        // Consultamos cuánto dinero ya ingresó por este ítem (Cobros + Débitos)
+        decimal yaCobrado = connection.ExecuteScalar<decimal>(
+            @"SELECT COALESCE(SUM(""ImporteCobrado"" + ""MontoDebito""), 0) 
+              FROM ""CobrosDetalle"" WHERE ""IdLiquidacionDetalle"" = @IdDetalle",
+            new { IdDetalle = item.IdLiquidacionDetalle }
+        );
+
+        // Calculamos el nuevo Neto que el usuario quiere guardar
+        decimal nuevoNeto = item.MontoCargoOS - item.MontoBonificacion;
+
+        // Si el nuevo neto es MENOR a lo que ya tiene en el bolsillo, ERROR.
+        if (nuevoNeto < yaCobrado)
         {
-            connection.Open();
+            // Lanzamos error que el Frontend mostrará en el cartel rojo del modal
+            throw new Exception($"⛔ El nuevo monto neto (${nuevoNeto:N2}) es menor a lo que ya se cobró (${yaCobrado:N2}). Ajuste los cobros primero.");
+        }
 
-            string query = @"
-            UPDATE ""LiquidacionDetalle"" 
-            SET 
-                ""IdObrasSociales"" = @IdObrasSociales, 
-                ""IdPlanBonificacion"" = @IdPlanBonificacion, 
-                ""CantidadRecetas"" = @CantidadRecetas, 
-                ""TotalBruto"" = @TotalBruto, 
-                ""MontoCargoOS"" = @MontoCargoOS, 
-                ""MontoBonificacion"" = @MontoBonificacion, 
-                
-                ""SaldoPendiente"" = (@MontoCargoOS - @MontoBonificacion) - COALESCE((
-                    SELECT SUM(""ImporteCobrado"" + ""MontoDebito"") 
-                    FROM ""CobrosDetalle"" 
-                    WHERE ""IdLiquidacionDetalle"" = @IdLiquidacionDetalle
-                ), 0)
+        // 2. ACTUALIZACIÓN (Si pasa la validación)
+        string query = @"
+        UPDATE ""LiquidacionDetalle"" 
+        SET 
+            ""IdObrasSociales"" = @IdObrasSociales, 
+            ""IdPlanBonificacion"" = @IdPlanBonificacion, 
+            ""CantidadRecetas"" = @CantidadRecetas, 
+            ""TotalBruto"" = @TotalBruto, 
+            ""MontoCargoOS"" = @MontoCargoOS, 
+            ""MontoBonificacion"" = @MontoBonificacion, 
+            
+            -- Recálculo automático del saldo: (Cargo - Bonif) - (LoPagado)
+            ""SaldoPendiente"" = (@MontoCargoOS - @MontoBonificacion) - COALESCE((
+                SELECT SUM(""ImporteCobrado"" + ""MontoDebito"") 
+                FROM ""CobrosDetalle"" 
+                WHERE ""IdLiquidacionDetalle"" = @IdLiquidacionDetalle
+            ), 0)
 
-            WHERE ""IdLiquidacionDetalle"" = @IdLiquidacionDetalle
-            AND EXISTS (
-                SELECT 1 FROM ""Liquidaciones"" L 
-                WHERE L.""IdLiquidaciones"" = ""LiquidacionDetalle"".""IdLiquidaciones"" 
-                AND L.""IdUsuario"" = @pUser
-            );
-
-            UPDATE ""LiquidacionDetalle""
-            SET ""Pagado"" = CASE WHEN ""SaldoPendiente"" <= 1.00 THEN true ELSE false END
-            WHERE ""IdLiquidacionDetalle"" = @IdLiquidacionDetalle;
+        WHERE ""IdLiquidacionDetalle"" = @IdLiquidacionDetalle
+        AND EXISTS (SELECT 1 FROM ""Liquidaciones"" L WHERE L.""IdLiquidaciones"" = ""LiquidacionDetalle"".""IdLiquidaciones"" AND L.""IdUsuario"" = @pUser);
+        
+        -- Actualizar estado Pagado automáticamente
+        UPDATE ""LiquidacionDetalle""
+        SET ""Pagado"" = CASE WHEN ""SaldoPendiente"" <= 1.00 THEN true ELSE false END
+        WHERE ""IdLiquidacionDetalle"" = @IdLiquidacionDetalle;
         ";
 
-            int filasAfectadas = connection.Execute(query, new
-            {
-                item.IdLiquidacionDetalle,
-                item.IdObrasSociales,
-                item.IdPlanBonificacion,
-                item.CantidadRecetas,
-                item.TotalBruto,
-                item.MontoCargoOS,
-                item.MontoBonificacion,
-                pUser = idUsuario
-            });
+        int filas = connection.Execute(query, new { 
+            item.IdLiquidacionDetalle, item.IdObrasSociales, item.IdPlanBonificacion, 
+            item.CantidadRecetas, item.TotalBruto, item.MontoCargoOS, item.MontoBonificacion, 
+            pUser = idUsuario 
+        });
 
-            if (filasAfectadas == 0) throw new Exception("No se pudo modificar el ítem (No encontrado o sin permisos).");
+        if (filas == 0) throw new Exception("No se pudo modificar el ítem (No encontrado o sin permisos).");
 
-            ActualizarTotalCabecera(item.IdLiquidaciones, connection);
-        }
+        ActualizarTotalCabecera(item.IdLiquidaciones, connection);
     }
-
+}
     public static Liquidaciones TraerLiquidacionPorId(int id, int idUsuario)
     {
         using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
