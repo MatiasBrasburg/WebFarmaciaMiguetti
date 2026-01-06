@@ -39,4 +39,10 @@ public class AccountController : Controller
 
     
     }
+
+        public IActionResult CerrarSesion()
+    {
+       HttpContext.Session.Clear();
+        return RedirectToAction("Index");
+    }
 }
