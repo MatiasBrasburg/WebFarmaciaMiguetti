@@ -2,7 +2,7 @@ using WebFarmaciaMiguetti.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Servicios
+// 1. Servicios Esenciales
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
 {
@@ -12,38 +12,40 @@ builder.Services.AddSession(options =>
 });
 
 builder.Services.AddControllersWithViews();
-builder.Services.AddHttpContextAccessor();
+builder.Services.AddHttpContextAccessor(); // Necesario para obtener datos en las Vistas
 
 var app = builder.Build();
 
-// Configuración de Errores
+// 2. Configuración de Errores y Seguridad
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
-    // app.UseHsts(); // Comentado por seguridad en Railway si no tienes dominio propio
+    // app.UseHsts(); // Comentado para evitar problemas de redirección en Railway sin dominio
 }
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
+
 app.UseRouting();
+
 app.UseAuthorization();
-app.UseSession();
+
+app.UseSession(); // ¡Importante! Debe ir antes de los controladores
 
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
-// ====================================================================
-// CORRECCIÓN CRÍTICA PARA RAILWAY: PUERTO DINÁMICO
-// ====================================================================
-var portVar = Environment.GetEnvironmentVariable("PORT");
-if (!string.IsNullOrEmpty(portVar))
+// 3. DETECCIÓN AUTOMÁTICA DEL PUERTO DE RAILWAY
+var port = Environment.GetEnvironmentVariable("PORT");
+
+if (!string.IsNullOrEmpty(port))
 {
-    // Railway nos pasó un puerto, lo usamos.
-    app.Run($"http://0.0.0.0:{portVar}");
+    // Si Railway nos da un puerto, lo usamos (Producción)
+    app.Run($"http://0.0.0.0:{port}");
 }
 else
 {
-    // Entorno local
+    // Si estamos en tu PC, corre normal (Local)
     app.Run();
 }
