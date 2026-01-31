@@ -10,22 +10,23 @@ namespace WebFarmaciaMiguetti.Models;
 public static class BD
 {
     // Método para construir la cadena de conexión leyendo las variables de Railway
-    private static string GetConnectionString()
-    {
-        var host = Environment.GetEnvironmentVariable("PGHOST");
-        var port = Environment.GetEnvironmentVariable("PGPORT");
-        var user = Environment.GetEnvironmentVariable("PGUSER");
-        var pass = Environment.GetEnvironmentVariable("PGPASSWORD");
-        var db = Environment.GetEnvironmentVariable("PGDATABASE");
+   private static string GetConnectionString()
+{
+    var host = Environment.GetEnvironmentVariable("PGHOST");
+    var port = Environment.GetEnvironmentVariable("PGPORT");
+    var user = Environment.GetEnvironmentVariable("PGUSER");
+    var pass = Environment.GetEnvironmentVariable("PGPASSWORD");
+    var db = Environment.GetEnvironmentVariable("PGDATABASE");
 
-        // Si las variables están vacías (entorno local sin configurar), retorna una cadena por defecto o vacía
-        if (string.IsNullOrEmpty(host)) 
-            return "Server=127.0.0.1;Port=5432;Database=FarmaciaNet;User Id=postgres;Password=admin;";
+    // Entorno Local
+    if (string.IsNullOrEmpty(host)) 
+        return "Server=127.0.0.1;Port=5432;Database=FarmaciaNet;User Id=postgres;Password=admin;";
 
-        // Cadena para Railway con SSL obligatorio
-        return $"Host={host};Port={port};Database={db};Username={user};Password={pass};Pooling=true;SSL Mode=Require;Trust Server Certificate=true;";
-    }
-
+    // Entorno Railway (PRODUCCIÓN)
+    // CAMBIO CLAVE: Agregamos 'Timeout=100' y 'CommandTimeout=100'
+    // Esto le da a la BD casi 2 minutos para despertar antes de que la app tire error.
+    return $"Host={host};Port={port};Database={db};Username={user};Password={pass};Pooling=true;Timeout=100;CommandTimeout=100;SSL Mode=Require;Trust Server Certificate=true;";
+}
     //-- Codigo Mandatarias --///
 
     public static Mandatarias TraerMandatariaPorNombre(string nombreMandataria)
