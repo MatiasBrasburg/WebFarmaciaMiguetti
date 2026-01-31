@@ -18,13 +18,12 @@ public static class BD
     var pass = Environment.GetEnvironmentVariable("PGPASSWORD");
     var db = Environment.GetEnvironmentVariable("PGDATABASE");
 
-    // Entorno Local
+    // Local
     if (string.IsNullOrEmpty(host)) 
         return "Server=127.0.0.1;Port=5432;Database=FarmaciaNet;User Id=postgres;Password=admin;";
 
-    // Entorno Railway (PRODUCCIÓN)
-    // CAMBIO CLAVE: Agregamos 'Timeout=100' y 'CommandTimeout=100'
-    // Esto le da a la BD casi 2 minutos para despertar antes de que la app tire error.
+    // Railway (PRODUCCIÓN)
+    // AGREGADO: Timeout=100 y CommandTimeout=100
     return $"Host={host};Port={port};Database={db};Username={user};Password={pass};Pooling=true;Timeout=100;CommandTimeout=100;SSL Mode=Require;Trust Server Certificate=true;";
 }
     //-- Codigo Mandatarias --///

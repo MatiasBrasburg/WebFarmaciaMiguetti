@@ -1,6 +1,8 @@
+using WebFarmaciaMiguetti.Models;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// 🔹 Necesario para Session
+// Servicios
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
 {
@@ -9,37 +11,39 @@ builder.Services.AddSession(options =>
     options.Cookie.IsEssential = true;
 });
 
-// Add services to the container.
 builder.Services.AddControllersWithViews();
-
-// ====================================================================
-// ✅ AGREGADO POR EL ARQUITECTO:
-// Esto habilita la inyección de IHttpContextAccessor en el Layout
-// para poder leer la URL y poner los títulos bonitos.
 builder.Services.AddHttpContextAccessor();
-// ====================================================================
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// Configuración de Errores
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
-    app.UseHsts();
+    // app.UseHsts(); // Comentado por seguridad en Railway si no tienes dominio propio
 }
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
-
 app.UseRouting();
-
 app.UseAuthorization();
-
-// 🔹 Importante: va antes de MapControllerRoute
 app.UseSession();
 
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
-app.Run();
+// ====================================================================
+// CORRECCIÓN CRÍTICA PARA RAILWAY: PUERTO DINÁMICO
+// ====================================================================
+var portVar = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrEmpty(portVar))
+{
+    // Railway nos pasó un puerto, lo usamos.
+    app.Run($"http://0.0.0.0:{portVar}");
+}
+else
+{
+    // Entorno local
+    app.Run();
+}
