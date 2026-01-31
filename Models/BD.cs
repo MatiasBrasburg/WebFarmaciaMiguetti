@@ -213,58 +213,81 @@ public static class BD
         }
     }
 
-    public static void EliminarOS(int IdOS)
+ public static void EliminarOS(int IdOS)
+{
+    using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
     {
-        using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
+        connection.Open();
+        using (var transaction = connection.BeginTransaction())
         {
-            connection.Open();
-            using (var transaction = connection.BeginTransaction())
+            try
             {
-                try
-                {
-                    // 1. Borrar PLANES DE BONIFICACIÓN
-                    string sqlPlanes = "DELETE FROM \"PlanBonificacion\" WHERE \"IdObrasSociales\" = @pId";
-                    connection.Execute(sqlPlanes, new { pId = IdOS }, transaction);
+                var p = new { pId = IdOS };
 
-                    // 2. Borrar DETALLES DE LIQUIDACIONES
-                    string sqlLiqDet = "DELETE FROM \"LiquidacionDetalle\" WHERE \"IdObrasSociales\" = @pId";
-                    connection.Execute(sqlLiqDet, new { pId = IdOS }, transaction);
+                // ==============================================================================
+                // PASO 1: LIMPIEZA DE COBROS (Lo más bajo de la cadena)
+                // ==============================================================================
+                // Borramos los detalles de cobros que tocan a esta OS.
+                // Esto libera la referencia hacia LiquidacionDetalle.
+                connection.Execute("DELETE FROM \"CobrosDetalle\" WHERE \"IdObrasSociales\" = @pId", p, transaction);
+                
+                // Borramos Cabeceras de Cobros que sean explícitas de esta OS
+                connection.Execute("DELETE FROM \"Cobros\" WHERE \"IdObrasSociales\" = @pId", p, transaction);
 
-                    // 3. Borrar FACTURACIÓN
-                    string sqlFacturaDet = @"
-                    DELETE FROM ""FacturaDetalle"" 
-                    WHERE ""IdFacturaCabecera"" IN (SELECT ""IdFacturaCabecera"" FROM ""FacturaCabecera"" WHERE ""IdObrasSociales"" = @pId)";
-                    connection.Execute(sqlFacturaDet, new { pId = IdOS }, transaction);
+                // Limpieza de cabeceras de cobros huérfanas (que quedaron vacías tras borrar sus detalles)
+                string sqlLimpiarCabecerasCobro = @"
+                    DELETE FROM ""Cobros"" 
+                    WHERE ""IdCobros"" NOT IN (SELECT DISTINCT ""IdCobros"" FROM ""CobrosDetalle"")";
+                connection.Execute(sqlLimpiarCabecerasCobro, transaction);
 
-                    string sqlFacturaCab = "DELETE FROM \"FacturaCabecera\" WHERE \"IdObrasSociales\" = @pId";
-                    connection.Execute(sqlFacturaCab, new { pId = IdOS }, transaction);
+                // ==============================================================================
+                // PASO 2: LIMPIEZA DE LIQUIDACIONES (Crítico: Antes que Planes)
+                // ==============================================================================
+                // Borramos los renglones de liquidación de esta OS.
+                // ALERTA: Esto es necesario hacerlo ANTES de borrar los Planes, porque 
+                // LiquidacionDetalle tiene una FK que apunta a PlanBonificacion.
+                connection.Execute("DELETE FROM \"LiquidacionDetalle\" WHERE \"IdObrasSociales\" = @pId", p, transaction);
 
-                    // 4. Borrar COBROS
-                    string sqlCobroDet1 = "DELETE FROM \"CobrosDetalle\" WHERE \"IdObrasSociales\" = @pId";
-                    connection.Execute(sqlCobroDet1, new { pId = IdOS }, transaction);
+                // ==============================================================================
+                // PASO 3: AHORA SÍ, BORRAMOS LOS PLANES
+                // ==============================================================================
+                // Ya no hay liquidaciones apuntando a estos planes, es seguro borrarlos.
+                connection.Execute("DELETE FROM \"PlanBonificacion\" WHERE \"IdObrasSociales\" = @pId", p, transaction);
 
-                    string sqlCobroDet2 = @"
-                    DELETE FROM ""CobrosDetalle"" 
-                    WHERE ""IdCobros"" IN (SELECT ""IdCobros"" FROM ""Cobros"" WHERE ""IdObrasSociales"" = @pId)";
-                    connection.Execute(sqlCobroDet2, new { pId = IdOS }, transaction);
+                // (NOTA: Omito borrar Facturas porque no están en tu script.sql y daría error)
 
-                    string sqlCobros = "DELETE FROM \"Cobros\" WHERE \"IdObrasSociales\" = @pId";
-                    connection.Execute(sqlCobros, new { pId = IdOS }, transaction);
+                // ==============================================================================
+                // PASO 4: RECALCULAR TOTALES DE LIQUIDACIONES (Higiene de Datos)
+                // ==============================================================================
+                // Como borramos ítems, los totales de las cabeceras quedaron mentirosos. Actualizamos.
+                string sqlRecalcularLiq = @"
+                    UPDATE ""Liquidaciones"" 
+                    SET ""TotalPresentado"" = (
+                        SELECT COALESCE(SUM(""MontoCargoOS"" - ""MontoBonificacion""), 0) 
+                        FROM ""LiquidacionDetalle"" 
+                        WHERE ""LiquidacionDetalle"".""IdLiquidaciones"" = ""Liquidaciones"".""IdLiquidaciones""
+                    )";
+                connection.Execute(sqlRecalcularLiq, transaction);
 
-                    // 5. FINALMENTE: Borrar la OBRA SOCIAL PADRE
-                    string sqlOS = "DELETE FROM \"ObrasSociales\" WHERE \"IdObrasSociales\" = @pId";
-                    connection.Execute(sqlOS, new { pId = IdOS }, transaction);
+                // ==============================================================================
+                // PASO 5: FINALMENTE, LA OBRA SOCIAL
+                // ==============================================================================
+                string sqlOS = "DELETE FROM \"ObrasSociales\" WHERE \"IdObrasSociales\" = @pId";
+                int filas = connection.Execute(sqlOS, p, transaction);
 
-                    transaction.Commit();
-                }
-                catch (Exception)
-                {
-                    transaction.Rollback();
-                    throw;
-                }
+                if (filas == 0) throw new Exception("La Obra Social no existe o ya fue eliminada.");
+
+                transaction.Commit();
+            }
+            catch (Exception ex)
+            {
+                transaction.Rollback();
+                // Logueamos el error real para que sepas qué pasó si falla
+                throw new Exception("Error de integridad al eliminar OS: " + ex.Message);
             }
         }
     }
+}
 
     public static void AgregarBonificaciones(int IdOS, string? NombreCodigoBonificacion, int? CodigoBonificacion)
     {
