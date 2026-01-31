@@ -23,7 +23,7 @@ public static class BD
             return "Server=127.0.0.1;Port=5432;Database=FarmaciaNet;User Id=postgres;Password=admin;";
 
         // Cadena para Railway con SSL obligatorio
-        return $"Host={host};Port={port};Database={db};Username={user};Password={pass};Pooling=true;SSL Mode=Require;Trust Server Certificate=true;";
+        return $"Host={host};Port={port};Database={db};Username={user};Password={pass};Pooling=true;Timeout=100;CommandTimeout=100;SSL Mode=Require;Trust Server Certificate=true;";
     }
 
     //-- Codigo Mandatarias --///
