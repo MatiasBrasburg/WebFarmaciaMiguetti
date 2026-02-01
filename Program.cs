@@ -8,12 +8,12 @@ var builder = WebApplication.CreateBuilder(args);
 // Railway nos dice en qué puerto escuchar mediante la variable de entorno "PORT".
 // Si no le hacemos caso explícitamente, Kestrel usa el 8080 o 5000 y Railway nos mata.
 // Este bloque obliga a la app a usar el puerto que Railway quiere.
-var portVar = Environment.GetEnvironmentVariable("PORT");
+var portVar = Environment.GetEnvironmentVariable("PORT") ?? "8080";
 if (!string.IsNullOrEmpty(portVar) && int.TryParse(portVar, out int port))
 {
     builder.WebHost.ConfigureKestrel(options =>
     {
-        options.ListenAnyIP(port);
+        options.ListenAnyIP(port); // <--- ESTO ES LA CLAVE
     });
 }
 // -----------------------------------------------------------------------------
