@@ -3,16 +3,14 @@ using WebFarmaciaMiguetti.Models;
 var builder = WebApplication.CreateBuilder(args);
 
 // -----------------------------------------------------------------------------
-// 🛠️ ARQUITECTO: FORZAR PUERTO Y PROTOCOLO (FIX 502 TIMEOUT)
+// 🛠️ ARQUITECTO: CONFIGURACIÓN SEGÚN MANUAL DE RAILWAY
 // -----------------------------------------------------------------------------
-var portVar = Environment.GetEnvironmentVariable("PORT") ?? "8080";
-Console.WriteLine($"🚀 ARQUITECTO: Iniciando en puerto {portVar}"); // Para ver en logs
+// 1. Obtenemos el puerto que Railway nos inyecta (PORT). Si no existe, usamos 8080.
+var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
 
-builder.WebHost.ConfigureKestrel(options =>
-{
-    // Escuchamos en 0.0.0.0 (IPv4) para asegurar compatibilidad con el proxy
-    options.ListenAnyIP(int.Parse(portVar)); 
-});
+// 2. Forzamos a la aplicación a escuchar en 0.0.0.0 (IPv4) y en ese puerto.
+// Esto soluciona el error 502 porque alinea el servidor con el Proxy de Railway.
+builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 // -----------------------------------------------------------------------------
 
 builder.Services.AddDistributedMemoryCache();
@@ -34,14 +32,12 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-// 🚫 HTTPS REDIRECTION: DESACTIVADO (Crucial en Railway)
+// 🚫 DESACTIVADO: Railway ya maneja el HTTPS
 // app.UseHttpsRedirection(); 
 
 app.UseStaticFiles();
 app.UseRouting();
-
-// 🔹 ORDEN CRÍTICO: Session debe ir antes de Authorization y el mapeo de rutas
-app.UseSession(); 
+app.UseSession();
 app.UseAuthorization();
 
 app.MapControllerRoute(
