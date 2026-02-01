@@ -2392,7 +2392,7 @@ function formatearNumero(input) {
     }
 
     // 2. REPORTE ÍTEM INDIVIDUAL
-    async function imprimirItemIndividual(datos) {
+   async function imprimirItemIndividual(datos) {
         let info = farmaciaInfo;
         try {
             const r = await fetch('@Url.Action("ObtenerDatosFarmaciaAjax", "Home")');
@@ -2401,17 +2401,19 @@ function formatearNumero(input) {
         } catch (e) { }
 
         let displayDeuda = "";
+        // Cambio 1: Formato en la deuda si corresponde
         if (datos.deuda <= 1) displayDeuda = '<span style="color:green;">✅ PAGADO</span>';
-        else displayDeuda = '<span style="color:red; font-weight:bold;">$' + datos.deuda.toFixed(2) + '</span>';
+        else displayDeuda = '<span style="color:red; font-weight:bold;">$' + datos.deuda.toLocaleString('es-AR', {minimumFractionDigits: 2}) + '</span>';
 
+        // Cambio 2: Reemplazo de .toFixed(2) por .toLocaleString(...) en todas las columnas de plata
         const filasHTML = '<tr>' +
             '<td style="text-align:left;">' + datos.os + '</td>' +
             '<td style="text-align:center;">' + datos.plan + '</td>' +
             '<td style="text-align:center;">' + datos.recetas + '</td>' +
-            '<td style="text-align:right;">$' + datos.bruto.toFixed(2) + '</td>' +
-            '<td style="text-align:right;">$' + datos.cargo.toFixed(2) + '</td>' +
-            '<td style="text-align:right;">$' + datos.bonif.toFixed(2) + '</td>' +
-            '<td style="text-align:right; font-weight:bold;">$' + datos.neto.toFixed(2) + '</td>' +
+            '<td style="text-align:right;">$' + datos.bruto.toLocaleString('es-AR', {minimumFractionDigits: 2}) + '</td>' +
+            '<td style="text-align:right;">$' + datos.cargo.toLocaleString('es-AR', {minimumFractionDigits: 2}) + '</td>' +
+            '<td style="text-align:right;">$' + datos.bonif.toLocaleString('es-AR', {minimumFractionDigits: 2}) + '</td>' +
+            '<td style="text-align:right; font-weight:bold;">$' + datos.neto.toLocaleString('es-AR', {minimumFractionDigits: 2}) + '</td>' +
             '<td style="text-align:right;">' + displayDeuda + '</td>' +
         '</tr>';
         
