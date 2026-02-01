@@ -3,19 +3,12 @@ using WebFarmaciaMiguetti.Models;
 var builder = WebApplication.CreateBuilder(args);
 
 // -----------------------------------------------------------------------------
-// 🛠️ FIX 1: EL OÍDO ABSOLUTO (Configuración de Puerto Railway)
+// 🛠️ ARQUITECTO: VOLVEMOS A LO NATIVO
 // -----------------------------------------------------------------------------
-// Railway nos dice en qué puerto escuchar mediante la variable de entorno "PORT".
-// Si no le hacemos caso explícitamente, Kestrel usa el 8080 o 5000 y Railway nos mata.
-// Este bloque obliga a la app a usar el puerto que Railway quiere.
-var portVar = Environment.GetEnvironmentVariable("PORT") ?? "8080";
-if (!string.IsNullOrEmpty(portVar) && int.TryParse(portVar, out int port))
-{
-    builder.WebHost.ConfigureKestrel(options =>
-    {
-        options.ListenAnyIP(port); // <--- ESTO ES LA CLAVE
-    });
-}
+// Tus logs confirmaron que Railway ya inyecta la variable "ASPNETCORE_URLS" 
+// correctamente apuntando a 0.0.0.0 (IPv4).
+// Eliminamos el bloque manual "ConfigureKestrel" porque estaba forzando IPv6 ([::])
+// y causando el conflicto 502. Ahora confiamos 100% en la plataforma.
 // -----------------------------------------------------------------------------
 
 // 🔹 Necesario para Session
@@ -42,17 +35,15 @@ var app = builder.Build();
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
-    // El HSTS es bueno, lo dejamos.
+    // El HSTS ayuda a la seguridad, lo mantenemos.
     app.UseHsts();
 }
 
 // -----------------------------------------------------------------------------
-// 🛠️ FIX 2: ELIMINAR LA REDIRECCIÓN HTTPS INTERNA
+// 🚫 HTTPS REDIRECTION: DESACTIVADO
 // -----------------------------------------------------------------------------
-// Railway ya maneja el HTTPS "en la puerta" (Edge Proxy). 
-// El tráfico llega a tu app como HTTP normal. Si forzamos la redirección aquí adentro,
-// creamos un bucle infinito o un error de certificado, causando el error 502.
-// app.UseHttpsRedirection();  <-- ¡COMENTADO INTENCIONALMENTE!
+// Railway maneja el HTTPS fuera de la app. Si lo activamos aquí, rompemos el bucle.
+// app.UseHttpsRedirection(); 
 // -----------------------------------------------------------------------------
 
 app.UseStaticFiles();
