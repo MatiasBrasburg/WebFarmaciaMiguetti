@@ -1,4 +1,22 @@
+using WebFarmaciaMiguetti.Models;
+
 var builder = WebApplication.CreateBuilder(args);
+
+// -----------------------------------------------------------------------------
+// 🛠️ FIX 1: EL OÍDO ABSOLUTO (Configuración de Puerto Railway)
+// -----------------------------------------------------------------------------
+// Railway nos dice en qué puerto escuchar mediante la variable de entorno "PORT".
+// Si no le hacemos caso explícitamente, Kestrel usa el 8080 o 5000 y Railway nos mata.
+// Este bloque obliga a la app a usar el puerto que Railway quiere.
+var portVar = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrEmpty(portVar) && int.TryParse(portVar, out int port))
+{
+    builder.WebHost.ConfigureKestrel(options =>
+    {
+        options.ListenAnyIP(port);
+    });
+}
+// -----------------------------------------------------------------------------
 
 // 🔹 Necesario para Session
 builder.Services.AddDistributedMemoryCache();
@@ -14,8 +32,7 @@ builder.Services.AddControllersWithViews();
 
 // ====================================================================
 // ✅ AGREGADO POR EL ARQUITECTO:
-// Esto habilita la inyección de IHttpContextAccessor en el Layout
-// para poder leer la URL y poner los títulos bonitos.
+// Habilita IHttpContextAccessor para que funcionen tus vistas y Layouts
 builder.Services.AddHttpContextAccessor();
 // ====================================================================
 
@@ -25,10 +42,19 @@ var app = builder.Build();
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
+    // El HSTS es bueno, lo dejamos.
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+// -----------------------------------------------------------------------------
+// 🛠️ FIX 2: ELIMINAR LA REDIRECCIÓN HTTPS INTERNA
+// -----------------------------------------------------------------------------
+// Railway ya maneja el HTTPS "en la puerta" (Edge Proxy). 
+// El tráfico llega a tu app como HTTP normal. Si forzamos la redirección aquí adentro,
+// creamos un bucle infinito o un error de certificado, causando el error 502.
+// app.UseHttpsRedirection();  <-- ¡COMENTADO INTENCIONALMENTE!
+// -----------------------------------------------------------------------------
+
 app.UseStaticFiles();
 
 app.UseRouting();
