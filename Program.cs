@@ -1,8 +1,6 @@
-using WebFarmaciaMiguetti.Models;
-
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Servicios Esenciales
+// 🔹 Necesario para Session
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
 {
@@ -11,16 +9,23 @@ builder.Services.AddSession(options =>
     options.Cookie.IsEssential = true;
 });
 
+// Add services to the container.
 builder.Services.AddControllersWithViews();
-builder.Services.AddHttpContextAccessor(); // Necesario para obtener datos en las Vistas
+
+// ====================================================================
+// ✅ AGREGADO POR EL ARQUITECTO:
+// Esto habilita la inyección de IHttpContextAccessor en el Layout
+// para poder leer la URL y poner los títulos bonitos.
+builder.Services.AddHttpContextAccessor();
+// ====================================================================
 
 var app = builder.Build();
 
-// 2. Configuración de Errores y Seguridad
+// Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
-    // app.UseHsts(); // Comentado para evitar problemas de redirección en Railway sin dominio
+    app.UseHsts();
 }
 
 app.UseHttpsRedirection();
@@ -30,22 +35,11 @@ app.UseRouting();
 
 app.UseAuthorization();
 
-app.UseSession(); // ¡Importante! Debe ir antes de los controladores
+// 🔹 Importante: va antes de MapControllerRoute
+app.UseSession();
 
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
-// 3. DETECCIÓN AUTOMÁTICA DEL PUERTO DE RAILWAY
-var port = Environment.GetEnvironmentVariable("PORT");
-
-if (!string.IsNullOrEmpty(port))
-{
-    // Si Railway nos da un puerto, lo usamos (Producción)
-    app.Run($"http://0.0.0.0:{port}");
-}
-else
-{
-    // Si estamos en tu PC, corre normal (Local)
-    app.Run();
-}
+app.Run();
