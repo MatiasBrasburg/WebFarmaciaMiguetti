@@ -4,12 +4,13 @@
 @inject IHttpContextAccessor HttpContextAccessor
 
 @{
-    // 1. DETECTAR SI ES LOGIN PARA OCULTAR EL MENÚ
     bool ocultarMenu = ViewData["OcultarMenu"] as bool? ?? false;
-Usuario usuarioActual = null;
-    string nombreFarmacia = "FARMACIA MIGHETTI"; // Valor por defecto (Fallback)
+    Usuario usuarioActual = null;
+    string nombreFarmacia = "FARMACIA MIGHETTI";
 
-    var usuarioJson = HttpContextAccessor.HttpContext.Session.GetString("Usuario");
+    // Usamos Context directamente, es más robusto que el Accessor en la vista
+    var usuarioJson = Context.Session.GetString("Usuario");
+    
     if (!string.IsNullOrEmpty(usuarioJson))
     {
         try 
@@ -22,8 +23,11 @@ Usuario usuarioActual = null;
                 nombreFarmacia = usuarioActual.RazonSocial.ToUpper();
             }
         }
-        catch { } // Si falla, queda el valor por defecto
+        catch { /* Fallback al nombre por defecto */ }
     }
+    
+    // El resto de tu lógica de títulos sigue igual...
+
     // 2. TU LÓGICA ORIGINAL DE TÍTULOS
     string controlador = ViewContext.RouteData.Values["controller"]?.ToString();
     string accion = ViewContext.RouteData.Values["action"]?.ToString();
