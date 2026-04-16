@@ -205,9 +205,12 @@
                             <div class="col-md-2"><label class="form-label small">TIPO</label><select id="n_ItemTipo" class="form-select fw-bold">@foreach(var t in listaTiposPago){<option value="@t">@t</option>}</select></div>
                             
                             <div class="col-md-2">
-                                <label class="form-label small text-success">IMPORTE</label>
+                             <label class="form-label small text-success">IMPORTE</label>
                                 <input type="text" id="n_Imp" class="form-control text-success fw-bold" placeholder="0,00" 
-                                    onfocus="limpiarNumero(this)" onblur="formatearNumero(this)" data-enter="aggTemp">
+                                    onfocus="limpiarNumero(this)" onblur="formatearNumero(this)" onkeyup="calcularDeudaEnVivo('Nuevo')" data-enter="aggTemp">
+                                
+                                <input type="hidden" id="n_DeudaOriginal" value="0">
+                                <span id="n_lblDeudaRestante" class="fw-bold mt-1" style="display:block; font-size: 0.85rem;"></span>
                             </div>
                             <div class="col-md-1">
                                 <label class="form-label small text-danger">DÉB.</label>
@@ -270,7 +273,10 @@
                             <div class="col-md-2">
                                 <label class="form-label small text-success">IMPORTE</label>
                                 <input type="text" id="v_Imp" class="form-control form-control-sm text-success fw-bold" placeholder="0,00" 
-                                    onfocus="limpiarNumero(this)" onblur="formatearNumero(this)" data-enter="agregarAlLote">
+                                    onfocus="limpiarNumero(this)" onblur="formatearNumero(this)" onkeyup="calcularDeudaEnVivo('Ver')" data-enter="agregarAlLote">
+                                
+                                <input type="hidden" id="v_DeudaOriginal" value="0">
+                                <span id="v_lblDeudaRestante" class="fw-bold mt-1" style="display:block; font-size: 0.85rem;"></span>
                             </div>
                             <div class="col-md-2">
                                 <label class="form-label small text-danger">DÉBITO</label>
@@ -749,7 +755,7 @@
         } catch(e) { alert("Error buscando deudas."); }
     }
 
-    function seleccionarDeuda(idLiqDet, saldo, periodo) {
+  function seleccionarDeuda(idLiqDet, saldo, periodo) {
         mDeudas.hide();
         // Formatear saldo para ponerlo en el input de texto
         const saldoF = saldo.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
@@ -757,15 +763,80 @@
         if(origenDeuda === 'Nuevo') {
             document.getElementById('n_Imp').value = saldoF;
             document.getElementById('n_IdLiqDetalle').value = idLiqDet;
+            
+            // NUEVO: Guardamos el número exacto matemático de la BD
+            document.getElementById('n_DeudaOriginal').value = saldo; 
+            
             const lbl = document.getElementById('lblDeudaSeleccionada');
             lbl.style.display = 'inline'; lbl.textContent = `(Paga: ${periodo})`;
             document.getElementById('n_Imp').focus();
+            
+            // Forzamos el cálculo visual inicial
+            if(typeof calcularDeudaEnVivo === 'function') calcularDeudaEnVivo('Nuevo');
+            
         } else {
             document.getElementById('v_Imp').value = saldoF;
             document.getElementById('v_IdLiqDetalle').value = idLiqDet;
+            
+            // NUEVO: Guardamos el número exacto matemático de la BD
+            document.getElementById('v_DeudaOriginal').value = saldo; 
+            
             const lbl = document.getElementById('lblDeudaSeleccionadaVer');
             lbl.style.display = 'inline'; lbl.textContent = `(Paga: ${periodo})`;
             document.getElementById('v_Imp').focus();
+            
+            // Forzamos el cálculo visual inicial
+            if(typeof calcularDeudaEnVivo === 'function') calcularDeudaEnVivo('Ver');
+        }
+    }
+
+    // --- NUEVO: CÁLCULO DE DEUDA EN VIVO (UX 85 AÑOS)  el cual se conecta con la funcion de arriba---
+    function calcularDeudaEnVivo(origen) {
+        let idImp, idDeudaOriginal, idLbl;
+
+        // Identificamos de qué modal viene la acción
+        if (origen === 'Nuevo') {
+            idImp = 'n_Imp';
+            idDeudaOriginal = 'n_DeudaOriginal';
+            idLbl = 'n_lblDeudaRestante';
+        } else {
+            idImp = 'v_Imp';
+            idDeudaOriginal = 'v_DeudaOriginal';
+            idLbl = 'v_lblDeudaRestante';
+        }
+
+        // 1. Obtenemos el número matemático original
+        const deudaOriginal = parseFloat(document.getElementById(idDeudaOriginal).value) || 0;
+        const lbl = document.getElementById(idLbl);
+
+        // Si es un pago libre (sin deuda vinculada), no mostramos cartel.
+        if (deudaOriginal <= 0) {
+            lbl.style.display = 'none';
+            return;
+        }
+
+        // 2. Leemos la plata que está tipeando el usuario (usando TU función leerMoneda)
+        const inputImporte = document.getElementById(idImp);
+        const importeCargado = leerMoneda(inputImporte);
+
+        // 3. MATEMÁTICA PURA
+        const deudaRestante = deudaOriginal - importeCargado;
+        const deudaF = Math.abs(deudaRestante).toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+        // 4. FEEDBACK VISUAL AGRESIVO PARA 85 AÑOS
+        lbl.style.display = 'block';
+
+        if (deudaRestante === 0) {
+            lbl.className = 'fw-bold mt-1 text-success fs-6';
+            lbl.innerHTML = `✅ ¡PAGO EXACTO! Queda en $0,00`;
+        } 
+        else if (deudaRestante < 0) {
+            lbl.className = 'fw-bold mt-1 text-danger fs-6';
+            lbl.innerHTML = `⚠️ ¡ATENCIÓN! Cobrando de más (Sobran $${deudaF})`;
+        } 
+        else {
+            lbl.className = 'fw-bold mt-1 text-primary fs-6';
+            lbl.innerHTML = `📉 Saldo restante: $${deudaF}`;
         }
     }
 
@@ -787,6 +858,8 @@
         document.getElementById('n_Deb').value = "0,00";
         document.getElementById('n_IdLiqDetalle').value = "";
         document.getElementById('lblDeudaSeleccionada').style.display = 'none';
+        document.getElementById('n_DeudaOriginal').value = "0";
+        document.getElementById('n_lblDeudaRestante').style.display = 'none';
 
         if(document.getElementById('n_ItemFecha')) document.getElementById('n_ItemFecha').value = document.getElementById('n_FechaRef').value;
         alCambiarMandatariaNuevo();
