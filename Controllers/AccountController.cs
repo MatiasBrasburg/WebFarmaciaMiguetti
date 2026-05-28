@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using WebFarmaciaMiguetti.Models;
 using Microsoft.AspNetCore.Http;

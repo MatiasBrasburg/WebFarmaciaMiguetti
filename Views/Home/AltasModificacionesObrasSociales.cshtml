@@ -1,4 +1,4 @@
-@using System.Text.Json
+﻿@using System.Text.Json
 @using System.Linq
 @using WebFarmaciaMiguetti.Models 
 
@@ -80,7 +80,7 @@
 </style>
 
 <div class="container mt-5">
-    <h1>🏥 GESTIÓN DE OBRAS SOCIALES</h1>
+    <h1>ð¥ GESTIÓN DE OBRAS SOCIALES</h1>
 
     @if (TempData["MensajeExito"] != null) {
         <div class="alert alert-success alert-dismissible fade show fs-4 fw-bold" role="alert">
@@ -90,14 +90,14 @@
     }
     @if (TempData["MensajeError"] != null) {
         <div class="alert alert-danger alert-dismissible fade show fs-4 fw-bold" role="alert">
-            ❌ @TempData["MensajeError"]
+            â @TempData["MensajeError"]
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     }
 
     <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
         <button type="button" class="btn btn-success btn-giant" onclick="abrirModalAgregar()">
-            ➕ AGREGAR O. SOCIAL
+            â AGREGAR O. SOCIAL
         </button>
 
         <div class="buscador-wrapper">
@@ -133,18 +133,18 @@
                         <tr class="fila-os" data-id="@os.IdObrasSociales">
                             <td>@os.Nombre</td> 
                             <td class="fw-bold text-primary">@nombreMandataria</td> 
-                            <td>@((os.EsPrepaga == true) ? "SÍ" : "NO")</td>
-                            <td>@((os.Activa == true) ? "SÍ" : "NO")</td>
+                            <td>@((os.EsPrepaga == true) ? "SÃ" : "NO")</td>
+                            <td>@((os.Activa == true) ? "SÃ" : "NO")</td>
                             <td>
                                 <div class="d-flex gap-2">
                                     <button type="button" class="btn btn-warning btn-giant"
                                             onclick="abrirModalModificar(@os.IdObrasSociales, '@nombreOsJs', @os.IdMandataria, '@nombreMandJs', @((os.EsPrepaga == true).ToString().ToLower()), @((os.Activa == true).ToString().ToLower()))">
-                                            ✏️
+                                            âï¸
                                     </button>
                                     
                                     <button type="button" class="btn btn-info btn-giant"
                                             onclick="abrirModalPlanes(@os.IdObrasSociales, '@nombreOsJs')">
-                                            📋 PLANES
+                                            ð PLANES
                                     </button>
 
                                     <button type="button" class="btn btn-danger btn-giant"
@@ -180,11 +180,11 @@
 
                     <div id="divFormulario">
                         <div class="mb-3">
-                            <label class="form-label">🏥 NOMBRE OBRA SOCIAL</label>
+                            <label class="form-label">ð¥ NOMBRE OBRA SOCIAL</label>
                             <input type="text" class="form-control" name="NombreOS" id="inputNombreOS" required>
                         </div>
                         <div class="mb-3 position-relative">
-                            <label class="form-label">🏢 MANDATARIA ASOCIADA</label>
+                            <label class="form-label">ð¢ MANDATARIA ASOCIADA</label>
                             <input type="text" class="form-control" id="inputMandatariaModal" 
                                    placeholder="Escriba para buscar mandataria..." autocomplete="off" required>
                             <div id="listaSugerenciasModal" class="lista-sugerencias lista-sugerencias-modal"></div>
@@ -211,13 +211,13 @@
                     </div>
 
                     <div id="divAdvertenciaFinal" class="text-center p-3" style="display:none; background-color: #ffcccc; border: 4px solid #dc3545; color: #a00;">
-                        <h2 class="fw-bold">🛑 ¡ALTO! ¡PELIGRO! 🛑</h2>
+                        <h2 class="fw-bold">ð ¡ALTO! ¡PELIGRO! ð</h2>
                         <p class="fs-4 fw-bold text-dark mt-3">
-                            Si borra esta Obra Social, se eliminarán AUTOMÁTICAMENTE:
+                            Si borra esta Obra Social, se eliminarán AUTOMÃTICAMENTE:
                         </p>
                         <ul class="text-start d-inline-block fs-4 fw-bold text-dark">
-                            <li>❌ Todos sus PLANES y BONIFICACIONES</li>
-                            <li>❌ Todas sus liquidaciones y cobros asociados</li>
+                            <li>â Todos sus PLANES y BONIFICACIONES</li>
+                            <li>â Todas sus liquidaciones y cobros asociados</li>
                         </ul>
                         <p class="fs-3 fw-bold mt-3 text-black bg-warning p-2 border border-dark">
                             ESTA ACCIÓN ES IRREVERSIBLE.
@@ -226,8 +226,8 @@
 
                 </div>
                 <div class="modal-footer bg-light">
-                    <button type="button" class="btn btn-secondary btn-giant" data-bs-dismiss="modal">❌ CANCELAR</button>
-                    <button type="submit" class="btn btn-success btn-giant" id="btnConfirmarModal">✅ SÍ, CONFIRMAR</button>
+                    <button type="button" class="btn btn-secondary btn-giant" data-bs-dismiss="modal">â CANCELAR</button>
+                    <button type="submit" class="btn btn-success btn-giant" id="btnConfirmarModal">✅ SÃ, CONFIRMAR</button>
                 </div>
             </form>
         </div>
@@ -238,14 +238,14 @@
     <div class="modal-dialog modal-xl modal-dialog-centered">
         <div class="modal-content border-3 border-info">
             <div class="modal-header bg-info text-dark">
-                <h5 class="modal-title fw-bold">📋 PLANES DE: <span id="spanNombreOSPlan"></span></h5>
+                <h5 class="modal-title fw-bold">ð PLANES DE: <span id="spanNombreOSPlan"></span></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4 bg-light">
                 <div id="alertaPlanes" class="alert fw-bold fs-5 text-center" style="display:none;"></div>
 
                 <div class="card p-3 mb-4 shadow-sm" style="border: 2px solid #0dcaf0;">
-                    <h5 class="fw-bold mb-3">➕ Nuevo / Editar Plan</h5>
+                    <h5 class="fw-bold mb-3">â Nuevo / Editar Plan</h5>
                     <form id="formPlanesAjax">
                         <input type="hidden" id="planIdHidden" value="0">
                         <input type="hidden" id="planIdOSHidden" value="0">
@@ -255,7 +255,7 @@
                                 <input type="text" class="form-control" id="planNombre" placeholder="Ej: Plan Jubilados" required>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">N° Bonificación (Cód)</label>
+                                <label class="form-label">NÂ° Bonificación (Cód)</label>
                                 <input type="text" class="form-control" id="planCodigo" placeholder="Ej: 4001">
                             </div>
                             <div class="col-md-2">
@@ -264,7 +264,7 @@
                             </div>
                             <div class="col-md-3 d-grid">
                                 <label class="form-label">&nbsp;</label>
-                                <button type="button" class="btn btn-success fw-bold" id="btnGuardarPlanAjax">💾 GUARDAR</button>
+                                <button type="button" class="btn btn-success fw-bold" id="btnGuardarPlanAjax">ð¾ GUARDAR</button>
                             </div>
                         </div>
                     </form>
@@ -289,7 +289,7 @@
                 </div>
             </div>
             <div class="modal-footer bg-light">
-                <button type="button" class="btn btn-secondary btn-giant" data-bs-dismiss="modal">❌ CERRAR</button>
+                <button type="button" class="btn btn-secondary btn-giant" data-bs-dismiss="modal">â CERRAR</button>
             </div>
         </div>
     </div>
@@ -361,8 +361,8 @@
 
     function abrirModalAgregar() {
         resetearModal();
-        modalTitulo.textContent = '➕ AGREGAR OBRA SOCIAL';
-        btnConfirmarModal.textContent = '💾 GUARDAR';
+        modalTitulo.textContent = 'â AGREGAR OBRA SOCIAL';
+        btnConfirmarModal.textContent = 'ð¾ GUARDAR';
         
         inputQueToco.value = 'Agregar';
         inputIdOS.value = '0';
@@ -378,9 +378,9 @@
 
     function abrirModalModificar(id, nombre, idMand, nombreMand, esPrepaga, activa) {
         resetearModal();
-        modalTitulo.textContent = '✏️ MODIFICAR OBRA SOCIAL';
+        modalTitulo.textContent = 'âï¸ MODIFICAR OBRA SOCIAL';
         btnConfirmarModal.className = 'btn btn-warning btn-giant';
-        btnConfirmarModal.textContent = '💾 GUARDAR CAMBIOS';
+        btnConfirmarModal.textContent = 'ð¾ GUARDAR CAMBIOS';
         
         inputQueToco.value = 'Modificar';
         inputIdOS.value = id;      
@@ -409,7 +409,7 @@
         inputNombreOS.required = false;
         inputMandModal.required = false;
 
-        // BOTÓN FASE 1 (NO ENVÍA)
+        // BOTÓN FASE 1 (NO ENVÃA)
         btnConfirmarModal.className = 'btn btn-warning btn-giant text-dark';
         btnConfirmarModal.textContent = '⚠️ CONTINUAR...';
         btnConfirmarModal.type = "button"; 
@@ -423,9 +423,9 @@
         divMensajeEliminar.style.display = 'none';
         divAdvertenciaFinal.style.display = 'block';
 
-        // BOTÓN FASE 2 (SÍ ENVÍA)
+        // BOTÓN FASE 2 (SÃ ENVÃA)
         btnConfirmarModal.className = 'btn btn-danger btn-giant py-3 px-5 fw-bold';
-        btnConfirmarModal.innerHTML = '🔥 SÍ, BORRAR TODO';
+        btnConfirmarModal.innerHTML = 'ð¥ SÃ, BORRAR TODO';
         
         // Asignamos el envío del form manual
         btnConfirmarModal.onclick = function() {
@@ -479,7 +479,7 @@
         planNombre.value = "";
         planCodigo.value = "";
         planPorcentaje.value = "";
-        btnGuardarPlanAjax.textContent = "💾 GUARDAR";
+        btnGuardarPlanAjax.textContent = "ð¾ GUARDAR";
         btnGuardarPlanAjax.className = "btn btn-success fw-bold";
         btnGuardarPlanAjax.disabled = false; 
         alertaPlanes.style.display = 'none';
@@ -503,7 +503,7 @@
                                 <td>${p.numeroBonificacion || '-'}</td>
                                 <td class="fw-bold text-success">${bonifVisual}%</td>
                                 <td>
-                                    <button class="btn btn-sm btn-warning me-2" onclick='editarPlanAjax(${JSON.stringify(p)})'>✏️</button>
+                                    <button class="btn btn-sm btn-warning me-2" onclick='editarPlanAjax(${JSON.stringify(p)})'>âï¸</button>
                                     <button class="btn btn-sm btn-danger" onclick="eliminarPlanAjax(${p.idPlanBonificacion})">🗑️</button>
                                 </td>
                             </tr>`;
@@ -520,7 +520,7 @@
         planNombre.value = plan.nombrePlan;
         planCodigo.value = plan.numeroBonificacion;
         planPorcentaje.value = plan.bonificacion;
-        btnGuardarPlanAjax.textContent = "✏️ MODIFICAR";
+        btnGuardarPlanAjax.textContent = "âï¸ MODIFICAR";
         btnGuardarPlanAjax.className = "btn btn-warning fw-bold";
         planNombre.focus();
     }
@@ -561,10 +561,10 @@
             btnGuardarPlanAjax.textContent = textoOriginal;
             if (planIdHidden.value !== "0") {
                  btnGuardarPlanAjax.className = "btn btn-warning fw-bold";
-                 btnGuardarPlanAjax.textContent = "✏️ MODIFICAR";
+                 btnGuardarPlanAjax.textContent = "âï¸ MODIFICAR";
             } else {
                  btnGuardarPlanAjax.className = "btn btn-success fw-bold";
-                 btnGuardarPlanAjax.textContent = "💾 GUARDAR";
+                 btnGuardarPlanAjax.textContent = "ð¾ GUARDAR";
             }
         }
     });
@@ -593,7 +593,7 @@
     }
 
     // ============================================================
-    // 🚀 MOTOR DE NAVEGACIÓN (FLECHAS + ENTER)
+    // ð MOTOR DE NAVEGACIÓN (FLECHAS + ENTER)
     // ============================================================
     var currentFocus = -1; 
 
@@ -618,7 +618,7 @@
             const f = fuenteDatos.filter(x => x.texto.toLowerCase().includes(t)).slice(0, 50);
             
             if (f.length === 0) { 
-                list.innerHTML = '<div class="item-sugerencia text-muted">🚫 NO EXISTE</div>'; 
+                list.innerHTML = '<div class="item-sugerencia text-muted">ð« NO EXISTE</div>'; 
                 list.style.display = 'block'; 
                 return; 
             }

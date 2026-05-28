@@ -1,9 +1,9 @@
-using WebFarmaciaMiguetti.Models;
+﻿using WebFarmaciaMiguetti.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // -----------------------------------------------------------------------------
-// 🛠️ ARQUITECTO: CONFIGURACIÓN SEGÚN MANUAL DE RAILWAY
+// ð ï¸ ARQUITECTO: CONFIGURACIÓN SEGÚN MANUAL DE RAILWAY
 // -----------------------------------------------------------------------------
 // 1. Obtenemos el puerto que Railway nos inyecta (PORT). Si no existe, usamos 8080.
 var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
@@ -32,7 +32,7 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-// 🚫 DESACTIVADO: Railway ya maneja el HTTPS
+// ð« DESACTIVADO: Railway ya maneja el HTTPS
 // app.UseHttpsRedirection(); 
 
 app.UseStaticFiles();

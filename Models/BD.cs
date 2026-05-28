@@ -1,4 +1,4 @@
-using System.Data;
+﻿using System.Data;
 using System.Collections.Generic;
 using System.Linq;
 using Dapper;
@@ -11,24 +11,19 @@ public static class BD
 {
     // Método para construir la cadena de conexión leyendo las variables de Railway
    
-  private static string GetConnectionString()
-{
-    var host = Environment.GetEnvironmentVariable("PGHOST");
-    var port = Environment.GetEnvironmentVariable("PGPORT");
-    var user = Environment.GetEnvironmentVariable("PGUSER");
-    var pass = Environment.GetEnvironmentVariable("PGPASSWORD");
-    var db = Environment.GetEnvironmentVariable("PGDATABASE");
+    private static string GetConnectionString()
+  {
+      var conn = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
+      if (!string.IsNullOrEmpty(conn)) return conn;
 
-    // 🛠️ ARQUITECTO: Si host está vacío, el log te avisará en rojo
-    if (string.IsNullOrEmpty(host)) 
-    {
-        Console.WriteLine("❌ ERROR CRÍTICO: No se cargaron las variables de entorno de la base de datos.");
-        return "Server=127.0.0.1;Port=5432;Database=FarmaciaNet;User Id=postgres;Password=admin;";
-    }
+      var host = Environment.GetEnvironmentVariable("PGHOST") ?? "db";
+      var port = Environment.GetEnvironmentVariable("PGPORT") ?? "5432";
+      var user = Environment.GetEnvironmentVariable("PGUSER") ?? "user_miguetti";
+      var pass = Environment.GetEnvironmentVariable("PGPASSWORD") ?? "password_miguetti";
+      var db = Environment.GetEnvironmentVariable("PGDATABASE") ?? "webfarmacia_db";
 
-    // Usamos el formato exacto que PostgreSQL requiere para Railway
-    return $"Host={host};Port={port};Database={db};Username={user};Password={pass};Pooling=true;SSL Mode=Require;Trust Server Certificate=true;";
-}
+      return $"Host={host};Port={port};Database={db};Username={user};Password={pass};Pooling=true;Trust Server Certificate=true;";
+  }
     //-- Codigo Mandatarias --///
 
     public static Mandatarias TraerMandatariaPorNombre(string nombreMandataria)
@@ -112,7 +107,7 @@ public static class BD
                     )";
                     connection.Execute(sqlCobrosDetalles, new { pId = IdMandatarias }, transaction);
 
-                    // 2.2 Borrar Cobros DIRECTOS de la Mandataria (ESTO FALTABA Y HACÍA EXPLOTAR LA BD)
+                    // 2.2 Borrar Cobros DIRECTOS de la Mandataria (ESTO FALTABA Y HACÃA EXPLOTAR LA BD)
                     connection.Execute("DELETE FROM \"Cobros\" WHERE \"IdMandatarias\" = @pId", new { pId = IdMandatarias }, transaction);
 
                     // 2.3 Borrar Cobros asociados a sus Obras Sociales
@@ -252,7 +247,7 @@ public static class BD
                 connection.Execute("DELETE FROM \"LiquidacionDetalle\" WHERE \"IdObrasSociales\" = @pId", p, transaction);
 
                 // ==============================================================================
-                // PASO 3: AHORA SÍ, BORRAMOS LOS PLANES
+                // PASO 3: AHORA SÃ, BORRAMOS LOS PLANES
                 // ==============================================================================
                 // Ya no hay liquidaciones apuntando a estos planes, es seguro borrarlos.
                 connection.Execute("DELETE FROM \"PlanBonificacion\" WHERE \"IdObrasSociales\" = @pId", p, transaction);
@@ -548,7 +543,7 @@ public static class BD
                 )";
                 connection.Execute(deleteCobrosDet, parametros, transaction);
 
-                // PASO 3: Recalcular y ACTUALIZAR las cabeceras de Cobros (CRÍTICO: Faltaba el UPDATE)
+                // PASO 3: Recalcular y ACTUALIZAR las cabeceras de Cobros (CRÃTICO: Faltaba el UPDATE)
                 foreach (var idCobro in listaCobrosAfectados)
                 {
                     // a) Calculamos el nuevo total real sumando los detalles restantes
@@ -863,9 +858,11 @@ public static class BD
         using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
         {
             string query = @"
-            SELECT 
-                LD.""IdLiquidacionDetalle"", L.""Periodo"", L.""FechaPresentacion"", 
-                LD.""TotalBruto"" as ""ImporteOriginal"",
+            SELECT
+                LD.""IdLiquidacionDetalle"", L.""FechaPresentacion"",
+                LD.""TotalBruto"", 
+                LD.""MontoCargoOS"", 
+                LD.""MontoBonificacion"",
                 COALESCE(LD.""SaldoPendiente"", LD.""TotalBruto"") as ""SaldoPendiente""
             FROM ""LiquidacionDetalle"" LD
             INNER JOIN ""Liquidaciones"" L ON LD.""IdLiquidaciones"" = L.""IdLiquidaciones""
@@ -1087,7 +1084,7 @@ public static class BD
                         transaction
                     );
 
-                    if (esMio == 0) throw new Exception("⛔ No tiene permisos para modificar este cobro (o no existe).");
+                    if (esMio == 0) throw new Exception("â No tiene permisos para modificar este cobro (o no existe).");
 
                     var anterior = connection.QueryFirstOrDefault<dynamic>(
                         "SELECT \"ImporteCobrado\", \"MontoDebito\", \"IdLiquidacionDetalle\" FROM \"CobrosDetalle\" WHERE \"IdCobrosDetalle\" = @id",
@@ -1277,7 +1274,7 @@ public static class BD
 
                 int esMio = connection.ExecuteScalar<int>(sqlCheckOwner, new { pId = idCobroDetalle, pUser = idUsuario });
 
-                if (esMio == 0) throw new Exception("⛔ No tiene permisos para modificar este cobro (o no existe).");
+                if (esMio == 0) throw new Exception("â No tiene permisos para modificar este cobro (o no existe).");
 
                 query = @"UPDATE ""CobrosDetalle"" SET 
                         ""IdObrasSociales"" = @pOS,
@@ -1295,7 +1292,7 @@ public static class BD
 
                 int esMio = connection.ExecuteScalar<int>(sqlCheckPadre, new { pId = idCobroPadre, pUser = idUsuario });
 
-                if (esMio == 0) throw new Exception("⛔ No tiene permisos sobre el Lote de Cobros seleccionado.");
+                if (esMio == 0) throw new Exception("â No tiene permisos sobre el Lote de Cobros seleccionado.");
 
                 query = @"INSERT INTO ""CobrosDetalle"" 
                       (""IdCobros"", ""IdObrasSociales"", ""FechaCobroDetalle"", ""TipoPago"", ""ImporteCobrado"", ""MontoDebito"", ""MotivoDebito"", ""IdLiquidacionDetalle"")

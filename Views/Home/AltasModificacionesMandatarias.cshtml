@@ -1,4 +1,4 @@
-@using System.Text.Json
+﻿@using System.Text.Json
 @using System.Linq
 @{
     ViewData["Title"] = "Gestión de Mandatarias";
@@ -142,7 +142,7 @@
 </style>
 
 <div class="container mt-5">
-    <h1>📋 GESTIÓN DE MANDATARIAS</h1>
+    <h1>ð GESTIÓN DE MANDATARIAS</h1>
 
     @if (TempData["MensajeExito"] != null)
     {
@@ -154,7 +154,7 @@
 
     <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
         <button type="button" class="btn btn-success btn-giant" onclick="abrirModalAgregar()">
-            ➕ AGREGAR NUEVA
+            â AGREGAR NUEVA
         </button>
 
         <div class="buscador-wrapper">
@@ -198,7 +198,7 @@
                                         @(m.Cuit), 
                                         "@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(m.Descripcion ?? ""))", 
                                         "@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(m.Direccion ?? ""))")'>
-                                    ✏️
+                                    âï¸
                                 </button>
                                 <button type="button" class="btn btn-danger btn-giant" 
                                         onclick='abrirModalEliminar(@m.IdMandatarias, 
@@ -232,19 +232,19 @@
 
                     <div id="divFormulario">
                         <div class="mb-3">
-                            <label class="form-label fs-5 fw-bold">📝 NOMBRE </label>
+                            <label class="form-label fs-5 fw-bold">ð NOMBRE </label>
                             <input type="text" class="form-control" name="NombreMandataria" id="inputNombreMandataria" required>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label fs-5 fw-bold">🔢 CUIT</label>
+                            <label class="form-label fs-5 fw-bold">ð¢ CUIT</label>
                             <input type="number" class="form-control" name="Cuit" id="inputCuit">
                         </div>
                         <div class="mb-3">
-                            <label class="form-label fs-5 fw-bold">📄 DESCRIPCIÓN</label>
+                            <label class="form-label fs-5 fw-bold">ð DESCRIPCIÓN</label>
                             <textarea class="form-control" name="Descripcion" id="inputDescripcion" rows="2"></textarea>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label fs-5 fw-bold">📍 UBICACIÓN</label>
+                            <label class="form-label fs-5 fw-bold">ð UBICACIÓN</label>
                             <input type="text" class="form-control" name="Direccion" id="inputDireccion">
                         </div>
                     </div>
@@ -252,14 +252,14 @@
                         ⚠️ ¿ELIMINAR <span id="spanNombreEliminar"></span>?
                     </div>
                     <div id="divAdvertenciaFinal" class="text-center p-3" style="display:none; background-color: #ffcccc; border: 4px solid #dc3545; color: #a00;">
-    <h2 class="fw-bold">🛑 ¡ALTO! ¡PELIGRO! 🛑</h2>
+    <h2 class="fw-bold">ð ¡ALTO! ¡PELIGRO! ð</h2>
     <p class="fs-4 fw-bold text-dark mt-3">
-        Si borra esta Mandataria, se eliminarán AUTOMÁTICAMENTE:
+        Si borra esta Mandataria, se eliminarán AUTOMÃTICAMENTE:
     </p>
     <ul class="text-start d-inline-block fs-4 fw-bold text-dark">
-        <li>❌ Todas sus Obras Sociales</li>
-        <li>❌ Todas sus Liquidaciones </li>
-        <li>❌ Todos sus Pagos y Deudas</li>
+        <li>â Todas sus Obras Sociales</li>
+        <li>â Todas sus Liquidaciones </li>
+        <li>â Todos sus Pagos y Deudas</li>
     </ul>
     <p class="fs-3 fw-bold mt-3 text-black bg-warning p-2 border border-dark">
         ESTA ACCIÓN ES IRREVERSIBLE.
@@ -267,8 +267,8 @@
 </div>
                 </div>
                 <div class="modal-footer bg-light">
-                    <button type="button" class="btn btn-secondary btn-giant" data-bs-dismiss="modal">❌ NO</button>
-                    <button type="submit" class="btn btn-success btn-giant" id="btnConfirmarModal">✅ SÍ, CONFIRMAR</button>
+                    <button type="button" class="btn btn-secondary btn-giant" data-bs-dismiss="modal">â NO</button>
+                    <button type="submit" class="btn btn-success btn-giant" id="btnConfirmarModal">✅ SÃ, CONFIRMAR</button>
                 </div>
             </form>
         </div>
@@ -339,7 +339,7 @@ var divAdvertenciaFinal = document.getElementById('divAdvertenciaFinal');
     var btnConfirmarModal = document.getElementById('btnConfirmarModal');
 
     function abrirModalAgregar() {
-        modalTitulo.textContent = '➕ AGREGAR';
+        modalTitulo.textContent = 'â AGREGAR';
         btnConfirmarModal.className = 'btn btn-success btn-giant';
         inputQueToco.value = 'Agregar';
         inputIdMandataria.value = '0';
@@ -360,7 +360,7 @@ divAdvertenciaFinal.style.display = 'none';
     }
 
     function abrirModalModificar(id, nombre, cuit, desc, dir) {
-        modalTitulo.textContent = '✏️ MODIFICAR';
+        modalTitulo.textContent = 'âï¸ MODIFICAR';
         btnConfirmarModal.className = 'btn btn-warning btn-giant';
         inputQueToco.value = 'Modificar';
         inputIdMandataria.value = id;
@@ -413,7 +413,7 @@ divAdvertenciaFinal.style.display = 'none';
 
         // CONFIGURAR BOTÓN - FASE FINAL
         btnConfirmarModal.className = 'btn btn-danger btn-giant py-3 px-5 fw-bold';
-        btnConfirmarModal.innerHTML = '🔥 SÍ, BORRAR TODO';
+        btnConfirmarModal.innerHTML = 'ð¥ SÃ, BORRAR TODO';
         
         // Ahora sí, enviamos el formulario
         btnConfirmarModal.onclick = function() {
@@ -421,7 +421,7 @@ divAdvertenciaFinal.style.display = 'none';
         };
     }
     // ============================================================
-    // 🚀 MOTOR DE NAVEGACIÓN (NO TOCAR)
+    // ð MOTOR DE NAVEGACIÓN (NO TOCAR)
     // ============================================================
     
     var currentFocus = -1; 
@@ -447,7 +447,7 @@ divAdvertenciaFinal.style.display = 'none';
             const f = fuenteDatos.filter(x => x.nombre.toLowerCase().includes(t)).slice(0, 50);
             
             if (f.length === 0) { 
-                list.innerHTML = '<div class="item-sugerencia text-muted">🚫 NO EXISTE</div>'; 
+                list.innerHTML = '<div class="item-sugerencia text-muted">ð« NO EXISTE</div>'; 
                 list.style.display = 'block'; 
                 return; 
             }

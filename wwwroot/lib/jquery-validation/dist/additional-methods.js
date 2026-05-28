@@ -1,9 +1,9 @@
-/*!
+﻿/*!
  * jQuery Validation Plugin v1.19.5
  *
  * https://jqueryvalidation.org/
  *
- * Copyright (c) 2022 Jörn Zaefferer
+ * Copyright (c) 2022 JÃ¶rn Zaefferer
  * Released under the MIT license
  */
 (function( factory ) {
@@ -24,7 +24,7 @@
 		return value.replace( /<.[^<>]*?>/g, " " ).replace( /&nbsp;|&#160;/gi, " " )
 
 		// Remove punctuation
-		.replace( /[.(),;:!?%#$'\"_+=\/\-“”’]*/g, "" );
+		.replace( /[.(),;:!?%#$'\"_+=\/\-âââ]*/g, "" );
 	}
 
 	$.validator.addMethod( "maxWords", function( value, element, params ) {
@@ -595,7 +595,7 @@ $.validator.addMethod( "creditcardtypes", function( value, element, param ) {
  * Symbols can be optional or required. Symbols required by default
  *
  * Usage examples:
- *  currency: ["£", false] - Use false for soft currency validation
+ *  currency: ["Â£", false] - Use false for soft currency validation
  *  currency: ["$", false]
  *  currency: ["RM", false] - also works with text based symbols such as "RM" - Malaysia Ringgit etc
  *
@@ -615,7 +615,7 @@ $.validator.addMethod( "creditcardtypes", function( value, element, param ) {
  *
  * Multiple Symbols
  *  currencyInput: {
- *     currency: "$,£,¢"
+ *     currency: "$,Â£,Â¢"
  *  }
  */
 $.validator.addMethod( "currency", function( value, element, param ) {
@@ -1078,13 +1078,13 @@ $.validator.addMethod( "nipPL", function( value ) {
 
 /**
  * Created for project jquery-validation.
- * @Description Brazillian PIS or NIS number (Número de Identificação Social Pis ou Pasep) is the equivalent of a
+ * @Description Brazillian PIS or NIS number (Número de IdentificaÃ§Ã£o Social Pis ou Pasep) is the equivalent of a
  * Brazilian tax registration number NIS of PIS numbers have 11 digits in total: 10 numbers followed by 1 check numbers
  * that are being used for validation.
- * @copyright (c) 21/08/2018 13:14, Cleiton da Silva Mendonça
- * @author Cleiton da Silva Mendonça <cleiton.mendonca@gmail.com>
- * @link http://gitlab.com/csmendonca Gitlab of Cleiton da Silva Mendonça
- * @link http://github.com/csmendonca Github of Cleiton da Silva Mendonça
+ * @copyright (c) 21/08/2018 13:14, Cleiton da Silva MendonÃ§a
+ * @author Cleiton da Silva MendonÃ§a <cleiton.mendonca@gmail.com>
+ * @link http://gitlab.com/csmendonca Gitlab of Cleiton da Silva MendonÃ§a
+ * @link http://github.com/csmendonca Github of Cleiton da Silva MendonÃ§a
  */
 $.validator.addMethod( "nisBR", function( value ) {
 	var number;

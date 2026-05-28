@@ -1,0 +1,26 @@
+﻿services:
+  db:
+    image: postgres:17
+    container_name: db_miguetti_local
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: railway
+    ports:
+      - "5432:5432"
+    volumes:
+      # IMPORTANTE: Busca el archivo en la carpeta actual y lo mete en la DB
+      - ./06-5-2026.sql:/docker-entrypoint-initdb.d/init.sql
+
+  web:
+    build: .
+    container_name: web_miguetti_local
+    ports:
+      - "8080:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=db;Database=railway;Username=postgres;Password=postgres
+    depends_on:
+      - db
+
+

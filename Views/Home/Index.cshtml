@@ -1,4 +1,4 @@
-﻿@using Microsoft.AspNetCore.Http
+﻿ï»¿@using Microsoft.AspNetCore.Http
 @using System.Text.Json
 @using WebFarmaciaMiguetti.Models
 @inject IHttpContextAccessor HttpContextAccessor
@@ -102,17 +102,17 @@
 <div class="container-fluid py-4" style="max-width: 1400px;">
     
     <div class="welcome-banner">
-        <i class="fas fa-notes-medical welcome-icon">💊</i>
+        <i class="fas fa-notes-medical welcome-icon">ð</i>
         <div class="welcome-text">
             <h1>@nombreFarmacia</h1>
-            <p>👋 Hola, @usuarioNombre. Aquí tienes el resumen financiero de hoy.</p>
+            <p>ð Hola, @usuarioNombre. Aquí tienes el resumen financiero de hoy.</p>
         </div>
     </div>
 
     <div class="row g-4 mb-5">
         <div class="col-md-4">
             <div class="kpi-card border-cobros">
-                <i class="kpi-icon">💰</i>
+                <i class="kpi-icon">ð°</i>
                 <div class="kpi-title">Ingresos del Mes</div>
                 <div class="kpi-value" id="kpiCobrado"><div class="spinner-border spinner-border-sm text-success"></div></div>
                 <div class="kpi-sub">Total cobrado en efectivo/transf.</div>
@@ -130,7 +130,7 @@
 
         <div class="col-md-4">
             <div class="kpi-card border-liq">
-                <i class="kpi-icon">📈</i>
+                <i class="kpi-icon">ð</i>
                 <div class="kpi-title">Liquidado este Mes</div>
                 <div class="kpi-value" id="kpiLiquidado"><div class="spinner-border spinner-border-sm text-primary"></div></div>
                 <div class="kpi-sub">Total presentado a Obras Sociales</div>
@@ -138,29 +138,29 @@
         </div>
     </div>
 
-    <h5 class="fw-bold mb-4 text-muted ms-1">🚀 ACCESOS RÁPIDOS</h5>
+    <h5 class="fw-bold mb-4 text-muted ms-1">ð ACCESOS RÃPIDOS</h5>
     <div class="row g-4 mb-5">
         <div class="col-6 col-md-3">
             <a href="@Url.Action("IrAMostrarModificaciones", "Home")" class="shortcut-btn">
-                <span class="shortcut-icon">📋</span>
+                <span class="shortcut-icon">ð</span>
                 <span class="shortcut-label">Presentaciones</span>
             </a>
         </div>
         <div class="col-6 col-md-3">
             <a href="@Url.Action("IrAGestionCobros", "Home")" class="shortcut-btn">
-                <span class="shortcut-icon">💸</span>
+                <span class="shortcut-icon">ð¸</span>
                 <span class="shortcut-label">Gestión Cobros</span>
             </a>
         </div>
         <div class="col-6 col-md-3">
             <a href="@Url.Action("IrAAltasModificacionesOS", "Home")" class="shortcut-btn">
-                <span class="shortcut-icon">🏥</span>
+                <span class="shortcut-icon">ð¥</span>
                 <span class="shortcut-label">Obras Sociales</span>
             </a>
         </div>
         <div class="col-6 col-md-3">
             <a href="@Url.Action("IrAAltasModificacionesMandatarias", "Home")" class="shortcut-btn">
-                <span class="shortcut-icon">🏢</span>
+                <span class="shortcut-icon">ð¢</span>
                 <span class="shortcut-label">Mandatarias</span>
             </a>
         </div>
@@ -170,7 +170,7 @@
         <div class="col-12">
             <div class="recent-card">
                 <div class="recent-header">
-                    <span>🕒 ÚLTIMAS 5 LIQUIDACIONES PRESENTADAS</span>
+                    <span>ð ÚLTIMAS 5 LIQUIDACIONES PRESENTADAS</span>
                     <a href="@Url.Action("IrAMostrarModificaciones", "Home")" class="btn btn-sm btn-light fw-bold text-dark px-3">VER TODAS</a>
                 </div>
                 <div class="table-responsive">

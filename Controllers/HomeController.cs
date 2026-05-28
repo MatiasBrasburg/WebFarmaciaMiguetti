@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using WebFarmaciaMiguetti.Models;
 using Microsoft.AspNetCore.Http;
@@ -365,7 +365,7 @@ public class HomeController : Controller
                     );
                 }
 
-                return Json(new { success = true, message = $"¡Liquidación N° {nuevoId} guardada correctamente!" });
+                return Json(new { success = true, message = $"¡Liquidación NÂ° {nuevoId} guardada correctamente!" });
             }
             
             // -----------------------------------------------------------------
@@ -486,7 +486,7 @@ public class HomeController : Controller
         try
         {
             var item = BD.TraerDetallePorId(idDetalle, usuarioCompleto.IdUsuario);
-            if (item == null) return Json(new { success = false, message = "Ítem no encontrado" });
+            if (item == null) return Json(new { success = false, message = "Ãtem no encontrado" });
             return Json(new { success = true, data = item });
         }
         catch (Exception ex)
@@ -532,7 +532,7 @@ var itemsExistentes = BD.TraerDetallesPorIdLiquidacion(IdLiquidacionPadre, usuar
 
             if (esDuplicado)
             {
-                return Json(new { success = false, message = "⛔ ERROR: Ya existe esa Obra Social con ese Plan en esta liquidación." });
+                return Json(new { success = false, message = "â ERROR: Ya existe esa Obra Social con ese Plan en esta liquidación." });
             }
             
             LiquidacionDetalle item = new LiquidacionDetalle
@@ -553,13 +553,13 @@ var itemsExistentes = BD.TraerDetallesPorIdLiquidacion(IdLiquidacionPadre, usuar
             {
                 // INSERTAR
                 BD.AgregarItemIndividual(item, usuarioCompleto.IdUsuario);
-                return Json(new { success = true, message = "Ítem AGREGADO correctamente." });
+                return Json(new { success = true, message = "Ãtem AGREGADO correctamente." });
             }
             else
             {
                 // MODIFICAR
                 BD.ModificarItemIndividual(item, usuarioCompleto.IdUsuario);
-                return Json(new { success = true, message = "Ítem MODIFICADO correctamente." });
+                return Json(new { success = true, message = "Ãtem MODIFICADO correctamente." });
             }
         }
         catch (Exception ex)
@@ -590,7 +590,7 @@ var itemsExistentes = BD.TraerDetallesPorIdLiquidacion(IdLiquidacionPadre, usuar
         try
         {
             BD.EliminarItemIndividual(idItem, idLiquidacionPadre, usuarioCompleto.IdUsuario);
-            return Json(new { success = true, message = "Ítem eliminado." });
+            return Json(new { success = true, message = "Ãtem eliminado." });
         }
         catch (Exception ex)
         {
@@ -793,7 +793,7 @@ public class CobrosDetalleRequest
     }
 
     // ====================================================================
-    // MÉTODOS DE LECTURA Y FILTROS
+    // MÃTODOS DE LECTURA Y FILTROS
     // ====================================================================
 
     [HttpGet]
@@ -1022,7 +1022,7 @@ public IActionResult GuardarCobro(int IdCobro, int? IdLiquidacion, int? IdObraSo
         }
     }
 
-    // --- MÉTODOS PARA VISUALIZACIÓN DE DETALLES ---
+    // --- MÃTODOS PARA VISUALIZACIÓN DE DETALLES ---
 
 [HttpGet]
     public IActionResult TraerCobrosPorIdPadre(int idCobroPadre)
@@ -1062,7 +1062,7 @@ public IActionResult GuardarCobro(int IdCobro, int? IdLiquidacion, int? IdObraSo
 
    
 
-    // --- MÉTODOS DE MANTENIMIENTO ---
+    // --- MÃTODOS DE MANTENIMIENTO ---
 
     [HttpPost]
     public IActionResult EliminarLoteCompleto(int idCobroPadre)
