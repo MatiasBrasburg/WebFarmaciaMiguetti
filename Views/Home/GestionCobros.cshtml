@@ -11,7 +11,7 @@
     var jsonObrasSociales = JsonSerializer.Serialize(listaObrasSociales.Select(x => new { id = x.IdObrasSociales, nombre = x.Nombre, idMandataria = x.IdMandataria }));
     var jsonMandatarias = JsonSerializer.Serialize(listaMandatarias.Select(x => new { id = x.IdMandatarias, nombre = x.RazonSocial }));
 
-    // --- RECUPERAR DATOS DE LA FARMACIA DESDE SESIÃâN ---
+    // --- RECUPERAR DATOS DE LA FARMACIA DESDE SESSION ---
     string nombreFarmacia = "FARMACIA";
     string direccionFarmacia = "Domicilio no configurado";
     string cuitFarmacia = "---";
@@ -34,7 +34,7 @@
 
 <style>
     /* =========================================
-       ESTILOS DE ALTO IMPACTO (UX 85 AÃâOS)
+       ESTILOS DE ALTO IMPACTO (UX 85 años)
        ========================================= */
     body { font-family: 'Verdana', sans-serif; background-color: #f4f6f9; color: #000; }
     
@@ -42,7 +42,7 @@
     
     .form-label { font-weight: 900; font-size: 0.9rem; text-transform: uppercase; margin-bottom: 5px; display: block; }
 
-    /* --- ALINEACIÃâN PERFECTA DE LA FILA DE CARGA --- */
+    /* --- alineacion PERFECTA DE LA FILA DE CARGA --- */
     .row.align-items-end .form-control, 
     .row.align-items-end .form-select, 
     .row.align-items-end .btn {
@@ -103,13 +103,13 @@
 
 <div class="container-fluid mt-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1> GESTIÃâN DE COBROS</h1>
-        <button class="btn btn-success btn-lg btn-super shadow" onclick="abrirModalNuevo()">Ã¢Å¾â¢ NUEVO COBRO</button>
+        <h1> GESTION DE COBROS</h1>
+        <button class="btn btn-success btn-lg btn-super shadow" onclick="abrirModalNuevo()">💾 NUEVO COBRO</button>
     </div>
 
     <div class="card mb-4 shadow-sm" style="border: 3px solid #6c757d; background-color: #e2e3e5;">
         <div class="card-body">
-            <h4 class="mb-3 fw-bold">Ã°Å¸âÂ BUSCAR COBRO</h4>
+            <h4 class="mb-3 fw-bold">🔍 BUSCAR COBRO</h4>
             <div class="row g-3 align-items-end">
                 <div class="col-md-2"><label class="form-label">Desde</label><input type="date" id="filtroDesde" class="form-control" data-enter="buscarCobros"></div>
                 <div class="col-md-2"><label class="form-label">Hasta</label><input type="date" id="filtroHasta" class="form-control" data-enter="buscarCobros"></div>
@@ -131,12 +131,12 @@
                 </div>
                 <div class="col-md-2 d-flex gap-2">
                     <button class="btn btn-primary btn-super w-100" onclick="buscarCobros()">BUSCAR</button>
-                    <button class="btn btn-secondary btn-super" onclick="limpiarFiltros()">Ã°Å¸ââ</button>
+                    <button class="btn btn-secondary btn-super" onclick="limpiarFiltros()">🧹 LIMPIAR</button>
                 </div>
             </div>
             
             <div class="mt-3 text-end">
-                <button class="btn btn-dark fw-bold btn-super" onclick="imprimirListadoCobros()">Ã°Å¸âÂ¨Ã¯Â¸Â IMPRIMIR LISTADO</button>
+                <button class="btn btn-dark fw-bold btn-super" onclick="imprimirListadoCobros()">🖨️ IMPRIMIR LISTADO</button>
             </div>
         </div>
     </div>
@@ -163,7 +163,7 @@
     <div class="modal-dialog modal-xl" style="max-width: 95%;"> 
         <div class="modal-content border-0">
             <div class="modal-header bg-header-add py-3">
-                <h3 class="modal-title fw-bold">Ã°Å¸Â§Â¾ NUEVO LOTE COBROS</h3>
+                <h3 class="modal-title fw-bold">💾 NUEVO LOTE COBROS</h3>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body bg-light p-4">
@@ -177,7 +177,7 @@
                         </div>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label">NÃÂ° COMPROBANTE</label>
+                        <label class="form-label">N° COMPROBANTE</label>
                         <input type="text" id="n_Comp" class="form-control" placeholder="Ej: 123">
                     </div>
                     <div class="col-md-4">
@@ -198,7 +198,7 @@
                                         <input type="hidden" id="valN_OS" value="0">
                                         <div id="listN_OS" class="lista-sugerencias"></div>
                                     </div>
-                                    <button class="btn btn-outline-primary fw-bold" type="button" onclick="abrirModalDeudas('Nuevo')">Ã°Å¸âÂ DEUDAS</button>
+                                    <button class="btn btn-outline-primary fw-bold" type="button" onclick="abrirModalDeudas('Nuevo')"> 💾 DEUDAS</button>
                                 </div>
                             </div>
                             <div class="col-md-2"><label class="form-label small">FECHA PAGO</label><input type="date" id="n_ItemFecha" class="form-control fw-bold"></div>
@@ -213,12 +213,12 @@
                                 <span id="n_lblDeudaRestante" class="fw-bold mt-1" style="display:block; font-size: 0.85rem;"></span>
                             </div>
                             <div class="col-md-1">
-                                <label class="form-label small text-danger">DÃâ°B.</label>
+                                <label class="form-label small text-danger">DEBITO.</label>
                                 <input type="text" id="n_Deb" class="form-control text-danger fw-bold" placeholder="0,00" 
                                     onfocus="limpiarNumero(this)" onblur="formatearNumero(this)" data-enter="aggTemp">
                             </div>
                             
-                            <div class="col-md-1"><button class="btn btn-success w-100 fw-bold" onclick="aggTemp()">Ã¢Â¬â¡Ã¯Â¸Â</button></div>
+                            <div class="col-md-1"><button class="btn btn-success w-100 fw-bold" onclick="aggTemp()">💾</button></div>
                         </div>
                         <input type="hidden" id="n_IdLiqDetalle" value=""> <small id="lblDeudaSeleccionada" class="text-primary fw-bold ms-1" style="display:none;"></small>
                     </div>
@@ -227,7 +227,7 @@
                 <div class="table-responsive border border-2 border-dark rounded bg-white" style="height:250px; overflow-y:auto;">
                     <table class="table table-bordered mb-0">
                         <thead class="table-light sticky-top">
-                            <tr><th>OBRA SOCIAL</th><th>FECHA</th><th>TIPO</th><th class="text-end">IMPORTE</th><th class="text-end">DÃâ°BITOS</th><th>LIQ.</th><th class="text-center">X</th></tr>
+                            <tr><th>OBRA SOCIAL</th><th>FECHA</th><th>TIPO</th><th class="text-end">IMPORTE</th><th class="text-end">DÉBITOS</th><th>LIQ.</th><th class="text-center">X</th></tr>
                         </thead>
                         <tbody id="tbodyTemp"></tbody>
                     </table>
@@ -236,7 +236,7 @@
             </div>
             <div class="modal-footer bg-light py-3">
                 <button class="btn btn-secondary btn-lg btn-super me-auto" data-bs-dismiss="modal">CANCELAR</button>
-                <button class="btn btn-success btn-lg btn-super px-5 shadow" onclick="guardarNuevoLote()">Ã°Å¸âÂ¾ GUARDAR LOTE</button>
+                <button class="btn btn-success btn-lg btn-super px-5 shadow" onclick="guardarNuevoLote()">💾 GUARDAR LOTE</button>
             </div>
         </div>
     </div>
@@ -245,7 +245,7 @@
 <div class="modal fade" id="modalVer" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl">
         <div class="modal-content border-4 border-primary">
-            <div class="modal-header bg-header-view"><h4 class="modal-title fw-bold text-white">Ã°Å¸âÂÃ¯Â¸Â DETALLE DEL COBRO</h4><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+            <div class="modal-header bg-header-view"><h4 class="modal-title fw-bold text-white">🔍 DETALLE DEL COBRO</h4><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
             <div class="modal-body bg-light p-4">
                 <div class="row mb-3 bg-white border p-3 rounded mx-1 shadow-sm">
                     <div class="col-md-6"><span class="text-muted small d-block">MANDATARIA:</span><h4 class="fw-bold text-primary m-0" id="v_Titulo">---</h4></div>
@@ -254,7 +254,7 @@
                 </div>
                 
                 <div class="card mb-3 border-2 border-primary">
-                    <div class="card-header bg-primary text-white fw-bold py-1">Ã¢Å¾â¢ AGREGAR PAGO SUELTO</div>
+                    <div class="card-header bg-primary text-white fw-bold py-1">💾 AGREGAR PAGO SUELTO</div>
                     <div class="card-body py-2">
                         <div class="row g-1 align-items-end">
                             <div class="col-md-4">
@@ -265,7 +265,7 @@
                                         <input type="hidden" id="valV_OS" value="0">
                                         <div id="listV_OS" class="lista-sugerencias"></div>
                                     </div>
-                                    <button class="btn btn-outline-primary fw-bold" type="button" onclick="abrirModalDeudas('Ver')">Ã°Å¸âÂ</button>
+                                    <button class="btn btn-outline-primary fw-bold" type="button" onclick="abrirModalDeudas('Ver')">💾</button>
                                 </div>
                             </div>
                             <div class="col-md-2"><label class="form-label small">FECHA PAGO</label><input type="date" id="v_FechaItem" class="form-control form-control-sm"></div>
@@ -279,7 +279,7 @@
                                 <span id="v_lblDeudaRestante" class="fw-bold mt-1" style="display:block; font-size: 0.85rem;"></span>
                             </div>
                             <div class="col-md-2">
-                                <label class="form-label small text-danger">DÃâ°BITO</label>
+                                <label class="form-label small text-danger">DÉBITO</label>
                                 <input type="text" id="v_Deb" class="form-control form-control-sm text-danger fw-bold" placeholder="0,00" 
                                     onfocus="limpiarNumero(this)" onblur="formatearNumero(this)" data-enter="agregarAlLote">
                             </div>
@@ -292,7 +292,7 @@
 
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <h5 class="fw-bold text-primary m-0">DETALLES IMPUTADOS</h5>
-                    <input type="text" id="buscadorInterno" class="form-control w-50" placeholder="Ã°Å¸âÂ Filtrar en esta lista..." onkeyup="filtrarInterno()">
+                    <input type="text" id="buscadorInterno" class="form-control w-50" placeholder="🔍 Filtrar en esta lista..." onkeyup="filtrarInterno()">
                 </div>
 
                 <div class="table-responsive border border-2 border-dark rounded bg-white" style="height: 300px; overflow-y: auto;">
@@ -316,7 +316,7 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content border-info">
             <div class="modal-header bg-info text-dark fw-bold">
-                <h5 class="modal-title">Ã°Å¸ââ° SELECCIONAR DEUDA A PAGAR</h5>
+                <h5 class="modal-title">🔍 SELECCIONAR DEUDA A PAGAR</h5>
                 <button type="button" class="btn-close" onclick="cerrarModalDeudas()"></button>
             </div>
             <div class="modal-body p-0">
@@ -329,7 +329,7 @@
                 <div class="table-responsive" style="max-height: 400px;">
                     <table class="table table-hover mb-0">
                         <thead class="table-secondary sticky-top">
-                            <tr><th>FECHA LIQ.</th><th class="text-end">TOTAL BRUTO</th><th class="text-end">CARGO OS</th><th class="text-end">BONIF.</th><th class="text-end">SALDO PENDIENTE</th><th style="width:120px;">PAGAR ($)</th><th>ACCIÃâN</th></tr>
+                            <tr><th>FECHA LIQ.</th><th class="text-end">TOTAL BRUTO</th><th class="text-end">CARGO OS</th><th class="text-end">BONIF.</th><th class="text-end">SALDO PENDIENTE</th><th style="width:120px;">PAGAR ($)</th><th>ACCIÓN</th></tr>
                         </thead>
                         <tbody id="tbodyDeudas"></tbody>
                     </table>
@@ -346,7 +346,7 @@
 <div class="modal fade" id="modalEdit" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content border-warning">
-            <div class="modal-header bg-header-edit"><h4 class="modal-title fw-bold">Ã¢ÅÂÃ¯Â¸Â CORREGIR CABECERA</h4><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-header bg-header-edit"><h4 class="modal-title fw-bold">🔍 CORREGIR CABECERA</h4><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
             <div class="modal-body bg-white p-4">
                 <input type="hidden" id="e_IdCobroRef">
                 <div class="row g-3">
@@ -510,7 +510,7 @@
             // Filtramos y mostramos máximo 50 resultados para rendimiento
             const f = fuenteDatos.filter(x => x.nombre.toLowerCase().includes(t)).slice(0, 50);
             if (f.length === 0) { 
-                list.innerHTML = '<div class="item-sugerencia text-muted">Ã°Å¸Å¡Â« NO EXISTE</div>';
+                list.innerHTML = '<div class="item-sugerencia text-muted">❌ NO EXISTE</div>';
                 list.style.display = 'block'; 
                 return;
             }
@@ -655,9 +655,9 @@
                         <td class="text-end fw-bold fs-5 text-dark">$${totI.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
                         <td class="text-end fw-black fs-5 text-success border-start border-end bg-light">$${(totI-totD).toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
                         <td class="text-center">
-                            <button class="btn btn-danger btn-sm me-1" onclick="eliminarLoteCompleto(${idPadre})" title="Eliminar Todo">Ã°Å¸ââÃ¯Â¸Â</button>
-                            <button class="btn btn-warning btn-sm me-1" onclick="abrirEditarLote(${idPadre})" title="Editar Cabecera">Ã¢ÅÂÃ¯Â¸Â</button>
-                            <button class="btn btn-primary btn-sm fw-bold px-3" onclick="abrirVer(${idPadre})">Ã°Å¸âÂÃ¯Â¸Â VER</button>
+                            <button class="btn btn-danger btn-sm me-1" onclick="eliminarLoteCompleto(${idPadre})" title="Eliminar Todo">❌</button>
+                            <button class="btn btn-warning btn-sm me-1" onclick="abrirEditarLote(${idPadre})" title="Editar Cabecera">✏️</button>
+                            <button class="btn btn-primary btn-sm fw-bold px-3" onclick="abrirVer(${idPadre})">👁️ VER</button>
                         </td>
                     </tr>`;
                 });
@@ -733,7 +733,7 @@
         origenDeuda = origen;
         const idOS = (origen === 'Nuevo') ? document.getElementById('valN_OS').value : document.getElementById('valV_OS').value;
         const nombreOS = (origen === 'Nuevo') ? document.getElementById('txtN_OS').value : document.getElementById('txtV_OS').value;
-        if(idOS == 0) { alert("Ã¢Å¡Â Ã¯Â¸Â Seleccione primero una Obra Social."); return; }
+        if(idOS == 0) { alert("❌ Seleccione primero una Obra Social."); return; }
 
         document.getElementById('lblTituloDeudas').textContent = "Deudas de: " + nombreOS;
         document.getElementById('tbodyDeudas').innerHTML = '<tr><td colspan="8" class="text-center"><div class="spinner-border spinner-border-sm"></div> Buscando...</td></tr>';
@@ -757,11 +757,11 @@
                         <td class="text-end fw-bold text-success">$${saldo.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
                         <td><input type="number" class="form-control form-control-sm txt-pago-deuda" value="${saldo}" step="0.01" style="font-weight:bold; color:#198754;"></td>
                         <td class="text-center">
-                            <button class="btn btn-sm btn-success fw-bold" onclick="seleccionarDeuda(${d.IdLiquidacionDetalle}, ${saldo}, '${(d.FechaPresentacion||'').split('T')[0]}')">Ã¢Åâ¦ PAGAR</button>
+                            <button class="btn btn-sm btn-success fw-bold" onclick="seleccionarDeuda(${d.IdLiquidacionDetalle}, ${saldo}, '${(d.FechaPresentacion||'').split('T')[0]}')">✔ PAGAR</button>
                         </td>
                     </tr>`;
                 });
-            } else b.innerHTML = '<tr><td colspan="8" class="text-center text-success fw-bold">Ã°Å¸âÂ No hay deudas pendientes.</td></tr>';
+            } else b.innerHTML = '<tr><td colspan="8" class="text-center text-success fw-bold">🔍 No hay deudas pendientes.</td></tr>';
         } catch(e) { alert("Error buscando deudas."); }
     }
 
@@ -838,15 +838,15 @@
 
         if (deudaRestante === 0) {
             lbl.className = 'fw-bold mt-1 text-success fs-6';
-            lbl.innerHTML = `Ã¢Åâ¦ ¡PAGO EXACTO! Queda en $0,00`;
+            lbl.innerHTML = `✅ ¡PAGO EXACTO! Queda en $0,00`;
         } 
         else if (deudaRestante < 0) {
             lbl.className = 'fw-bold mt-1 text-danger fs-6';
-            lbl.innerHTML = `Ã¢Å¡Â Ã¯Â¸Â ¡ATENCIÃâN! Cobrando de más (Sobran $${deudaF})`;
+            lbl.innerHTML = `❌ ¡ATENCIÓN! Cobrando de más (Sobran $${deudaF})`;
         } 
         else {
             lbl.className = 'fw-bold mt-1 text-primary fs-6';
-            lbl.innerHTML = `Ã°Å¸ââ° Saldo restante: $${deudaF}`;
+            lbl.innerHTML = `✅ Saldo restante: $${deudaF}`;
         }
     }
 
@@ -888,7 +888,7 @@
         
         const idLiqDet = document.getElementById('n_IdLiqDetalle').value || null;
 
-        if(id==0 || imp==0 || fecha=="") { alert("Ã¢Å¡Â Ã¯Â¸Â Faltan datos (OS, Fecha, Importe)"); return; }
+        if(id==0 || imp==0 || fecha=="") { alert("Faltan datos (OS, Fecha, Importe)"); return; }
         
         itemsTemp.push({id:id, nom:nom, fecha:fecha, tipo:tipo, imp:imp, deb:deb, idLiq: idLiqDet});
         dibujarTemp();
@@ -925,7 +925,7 @@
         const comp = document.getElementById('n_Comp').value.trim();
         const fechaRef = document.getElementById('n_FechaRef').value;
 
-        if(mandId === 0 || comp === "" || itemsTemp.length === 0) { alert("Ã¢Å¡Â Ã¯Â¸Â Faltan datos."); return; }
+        if(mandId === 0 || comp === "" || itemsTemp.length === 0) { alert("❌ Faltan datos."); return; }
         if(!confirm("¿Confirmar Lote?")) return;
         const loteFinal = itemsTemp.map(x => ({
             IdMandatariasMaestro: mandId, FechaCobroMaestro: fechaRef, NumeroComprobanteMaestro: comp,
@@ -939,7 +939,7 @@
             });
             const res = await r.json();
             if(res.success) { alert(res.message); mNuevo.hide(); buscarCobros(); } 
-            else alert("Ã¢ÂÅ " + res.message);
+            else alert("❌ " + res.message);
         } catch(e) { alert("Error red: " + e.message); }
     }
 
@@ -985,8 +985,8 @@
                         <td class="text-end text-success fw-bold">$${imp.toLocaleString('es-AR', {minimumFractionDigits: 2})}</td>
                         <td class="text-end fw-black">$${(imp-deb).toLocaleString('es-AR', {minimumFractionDigits: 2})}</td>
                         <td class="text-center">
-                            <button class="btn btn-warning btn-sm me-1" onclick="abrirEditDetalle(${x.IdCobrosDetalle})">Ã¢ÅÂÃ¯Â¸Â</button>
-                            <button class="btn btn-sm btn-danger" onclick="eliminarDelLote(${x.IdCobrosDetalle})">Ã°Å¸ââÃ¯Â¸Â</button>
+                            <button class="btn btn-warning btn-sm me-1" onclick="abrirEditDetalle(${x.IdCobrosDetalle})">✏️</button>
+                            <button class="btn btn-sm btn-danger" onclick="eliminarDelLote(${x.IdCobrosDetalle})">❌</button>
                         </td>
                     </tr>`;
                 });
@@ -1183,7 +1183,7 @@
         }
         
         mDeudas.hide();
-        alert(`ÃÂ¢ÃâÃ¢â¬Â¦ Se agregaron ${selected.length} deudas correctamente.`);
+        alert(`✅  Se agregaron ${selected.length} deudas correctamente.`);
     }
 </script>
 

@@ -236,13 +236,13 @@
 
                     
 
-                    <button class="btn btn-secondary btn-super" onclick="limpiarFiltros()" title="Borrar filtros">ð</button>
+                    <button class="btn btn-secondary btn-super" onclick="limpiarFiltros()" title="Borrar filtros">🗑️</button>
 
                     
 
                     <button id="btnImprimirUnificado" class="btn btn-dark btn-lg fw-bold ps-4 pe-4" onclick="imprimirListadoGeneral()">
 
-                        ð¨ï¸ LISTADO MANDATARIAS
+                        📋 LISTADO MANDATARIAS
 
                     </button>
 
@@ -260,9 +260,9 @@
 
         <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center p-3">
 
-            <h3 class="m-0 fw-bold" id="tituloTabla">ð LISTADO</h3>
+            <h3 class="m-0 fw-bold" id="tituloTabla">📋 LISTADO</h3>
 
-            <button class="btn btn-success btn-super text-white" onclick="abrirModalNueva()">â NUEVA PRESENTACIÓN</button>
+            <button class="btn btn-success btn-super text-white" onclick="abrirModalNueva()">➕ NUEVA PRESENTACIÓN</button>
 
         </div>
 
@@ -312,11 +312,11 @@
 
                     <input type="hidden" id="liqId" value="0"> 
 
-                    <div class="col-md-3"><label class="form-label">ð FECHA</label><input type="date" id="liqFecha" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")"></div>
+                    <div class="col-md-3"><label class="form-label">📅 FECHA</label><input type="date" id="liqFecha" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")"></div>
 
                     <div class="col-md-5">
 
-    <label class="form-label">ð¢ MANDATARIA</label>
+    <label class="form-label">🏢 MANDATARIA</label>
 
     <div class="buscador-wrapper">
 
@@ -330,13 +330,13 @@
 
 </div>
 
-                    <div class="col-md-4"><label class="form-label">ð OBS</label><input type="text" id="liqObs" class="form-control"></div>
+                    <div class="col-md-4"><label class="form-label">📝 OBS</label><input type="text" id="liqObs" class="form-control"></div>
 
                 </div>
 
                 <div class="card border-info mb-4" style="border: 3px solid #0dcaf0;">
 
-                    <div class="card-header bg-info text-dark fw-bold fs-5">â AGREGAR ITEMS</div>
+                    <div class="card-header bg-info text-dark fw-bold fs-5">➕ AGREGAR ITEMS</div>
 
                     <div class="card-body bg-white">
 
@@ -414,7 +414,7 @@
 
                             </div>
 
-                            <div class="col-md-3"><button type="button" class="btn btn-success btn-super w-100" id="btnAgregarFila">â¬ï¸ AGREGAR</button></div>
+                            <div class="col-md-3"><button type="button" class="btn btn-success btn-super w-100" id="btnAgregarFila">➕ AGREGAR</button></div>
 
                         </div>
 
@@ -444,9 +444,9 @@
 
             <div class="modal-footer bg-light">
 
-                <button type="button" class="btn btn-secondary btn-super" data-bs-dismiss="modal">â CANCELAR</button>
+                <button type="button" class="btn btn-secondary btn-super" data-bs-dismiss="modal">❌ CANCELAR</button>
 
-                <button type="button" class="btn btn-primary btn-super" id="btnGuardarTodo">ð¾ GUARDAR TODO</button>
+                <button type="button" class="btn btn-primary btn-super" id="btnGuardarTodo">💾 GUARDAR TODO</button>
 
             </div>
 
@@ -466,7 +466,7 @@
 
             <div class="modal-header bg-info text-white">
 
-                <h3 class="modal-title fw-bold text-dark">ðï¸ CONSULTA Y EDICIÓN</h3>
+                <h3 class="modal-title fw-bold text-dark">👁 CONSULTA Y EDICIÓN</h3>
 
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
 
@@ -500,7 +500,7 @@
 
                     </div>
 
-                    <button class="btn btn-success btn-super ms-3" onclick="abrirItemABM(0)">â AGREGAR ÃTEM</button>
+                    <button class="btn btn-success btn-super ms-3" onclick="abrirItemABM(0)">➕ AGREGAR ÍTEM</button>
 
                 </div>
 
@@ -534,7 +534,7 @@
 
                 <button type="button" class="btn btn-primary btn-lg fw-bold" onclick="imprimirReporteGlobal()">
 
-                    ð¨ï¸ IMPRIMIR REPORTE
+                    🖨️ IMPRIMIR REPORTE
 
                 </button>
 
@@ -558,7 +558,7 @@
 
             <div class="modal-header bg-success text-white">
 
-                <h5 class="modal-title fw-bold">ð° COBROS ASOCIADOS</h5>
+                <h5 class="modal-title fw-bold">🖨️ COBROS ASOCIADOS</h5>
 
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
 
@@ -580,7 +580,7 @@
 
                                 <th class="text-end">IMPORTE</th>
 
-                                <th class="text-end">DÃBITO</th>
+                                <th class="text-end">DÉBITO</th>
 
                                 <th class="text-end">NETO</th>
 
@@ -614,7 +614,7 @@
 
             <div class="modal-header modal-warning-header">
 
-                <h4 class="modal-title fw-bold" id="tituloModalItem">EDITAR ÃTEM</h4>
+                <h4 class="modal-title fw-bold" id="tituloModalItem">EDITAR ITEM</h4>
 
                 <button type="button" class="btn-close" onclick="cerrarModalItem()"></button>
 
@@ -698,7 +698,7 @@
 
                 <button type="button" class="btn btn-secondary fw-bold" onclick="cerrarModalItem()">CANCELAR</button>
 
-                <button type="button" class="btn btn-warning fw-bold px-4" onclick="guardarItemIndividual()">ð¾ GUARDAR CAMBIOS</button>
+                <button type="button" class="btn btn-warning fw-bold px-4" onclick="guardarItemIndividual()"> GUARDAR CAMBIOS</button>
 
             </div>
 
@@ -718,7 +718,7 @@
 
             <div class="modal-header modal-edit-header">
 
-                <h4 class="modal-title fw-bold text-white">âï¸ EDITAR DATOS GENERALES</h4>
+                <h4 class="modal-title fw-bold text-white">✏️ EDITAR DATOS GENERALES</h4>
 
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
 
@@ -730,11 +730,11 @@
 
                 <div class="row g-3">
 
-                    <div class="col-md-6"><label class="form-label">ð FECHA</label><input type="date" id="edit_Fecha" class="form-control"></div>
+                    <div class="col-md-6"><label class="form-label">📅 FECHA</label><input type="date" id="edit_Fecha" class="form-control"></div>
 
                     <div class="col-md-6">
 
-    <label class="form-label">ð¢ MANDATARIA</label>
+    <label class="form-label">🏢 MANDATARIA</label>
 
     <div class="buscador-wrapper">
 
@@ -748,13 +748,13 @@
 
 </div>
 
-                    <div class="col-12"><label class="form-label">ð OBSERVACIONES</label><input type="text" id="edit_Obs" class="form-control"></div>
+                    <div class="col-12"><label class="form-label">📝 OBSERVACIONES</label><input type="text" id="edit_Obs" class="form-control"></div>
 
                 </div>
 
                 <div class="alert alert-info mt-3 fw-bold">
 
-                    â¹ï¸ Para editar los ítems (recetas, montos), utilice el botón "VER" del listado principal.
+                    Para editar los ítems (recetas, montos), utilice el botón "VER" del listado principal.
 
                 </div>
 
@@ -764,7 +764,7 @@
 
                 <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal">CANCELAR</button>
 
-                <button type="button" class="btn btn-primary fw-bold px-4" onclick="guardarEdicionCabecera()">ð¾ ACTUALIZAR DATOS</button>
+                <button type="button" class="btn btn-primary fw-bold px-4" onclick="guardarEdicionCabecera()">✏️ ACTUALIZAR DATOS</button>
 
             </div>
 
@@ -928,9 +928,9 @@ document.getElementById('liqMandataria').addEventListener('change', function() {
 
             document.getElementById('btnModeOS').classList.remove('active');
 
-            document.getElementById('tituloTabla').textContent = "ð LISTADO POR MANDATARIA";
+            document.getElementById('tituloTabla').textContent = "📋 LISTADO POR MANDATARIA";
 
-             btn.innerHTML = "ð¨ï¸ LISTADO MANDATARIAS";
+             btn.innerHTML = "🖨️ LISTADO MANDATARIAS";
 
                btn.className = "btn btn-dark btn-lg fw-bold ps-4 pe-4"; // Estilo oscuro para cabeceras
 
@@ -942,7 +942,7 @@ document.getElementById('liqMandataria').addEventListener('change', function() {
 
             document.getElementById('tituloTabla').textContent = "LISTADO POR OBRA SOCIAL";
 
-            btn.innerHTML = "ð¨ï¸ LISTADO POR O. SOCIAL";
+            btn.innerHTML = " LISTADO POR O. SOCIAL";
 
                btn.className = "btn btn-outline-dark btn-lg fw-bold ps-4 pe-4"; // Estilo outline para detalles
 
@@ -1094,9 +1094,9 @@ try {
 
                     <td class="text-center">
 
-                        <button class="btn btn-warning btn-sm fw-bold me-1" onclick="editarCabecera(${idLiq})">âï¸</button>
+                        <button class="btn btn-warning btn-sm fw-bold me-1" onclick="editarCabecera(${idLiq})">✏️</button>
 
-                        <button class="btn btn-info btn-sm text-white fw-bold me-1" onclick="verLiquidacion(${idLiq}, '${f}', '${nm}', ${l.IdMandatarias || l.idMandatarias})">ðï¸ VER</button>
+                        <button class="btn btn-info btn-sm text-white fw-bold me-1" onclick="verLiquidacion(${idLiq}, '${f}', '${nm}', ${l.IdMandatarias || l.idMandatarias})"> 👁 VER</button>
 
                         <button class="btn btn-danger btn-sm fw-bold" onclick="eliminarLiquidacion(${idLiq})">🗑️</button>
 
@@ -1112,7 +1112,7 @@ try {
 
             res.data.forEach(x => {
 
-                // AQUÃ QUITAMOS EL FILTRO "return if pagado" PARA QUE VEA EL HISTORIAL SI QUIERE
+                // AQUÍ QUITAMOS EL FILTRO "return if pagado" PARA QUE VEA EL HISTORIAL SI QUIERE
 
                 // O LO DEJAMOS SI SOLO QUIERE VER DEUDAS. ASUMO QUE QUIERE VER CUÃNDO SE PAGÓ.
 
@@ -1208,13 +1208,13 @@ try {
 
                     <td class="text-center">
 
-                        <button class="btn btn-sm btn-info text-white me-1" onclick="verCobrosDeLiquidacion(${idDet})" title="Ver Cobros">ðï¸</button>
+                        <button class="btn btn-sm btn-info text-white me-1" onclick="verCobrosDeLiquidacion(${idDet})" title="Ver Cobros">👁</button>
 
-                        <button class="btn btn-sm btn-warning me-1" onclick="abrirItemABM(${idDet}, ${idPadre})">âï¸</button>
+                        <button class="btn btn-sm btn-warning me-1" onclick="abrirItemABM(${idDet}, ${idPadre})">✏️</button>
 
                         <button class="btn btn-sm btn-danger me-1" onclick="eliminarItemIndividual(${idDet})">🗑️</button>
 
-                        <button class="btn btn-sm btn-primary" onclick="imprimirItemIndividual(${datosPrint})">ð¨ï¸</button>
+                        <button class="btn btn-sm btn-primary" onclick="imprimirItemIndividual(${datosPrint})">🖨️</button>
 
                     </td>
 
@@ -1226,7 +1226,7 @@ try {
 
             if(contadorVisibles === 0) {
 
-                tbody.innerHTML = `<tr><td colspan="${cols}" class="text-center p-4 fs-4 text-success fw-bold">ð ¡No hay datos para mostrar!</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="${cols}" class="text-center p-4 fs-4 text-success fw-bold">❌¡No hay datos para mostrar!</td></tr>`;
 
             }
 
@@ -1290,7 +1290,7 @@ try {
 
             const f = fuenteDatos.filter(x => x.nombre.toLowerCase().includes(t)).slice(0, 50); // LIMITAMOS
 
-            if (f.length === 0) { list.innerHTML = '<div class="item-sugerencia text-muted">ð« NO EXISTE</div>'; list.style.display = 'block'; return; }
+            if (f.length === 0) { list.innerHTML = '<div class="item-sugerencia text-muted">❌ NO EXISTE</div>'; list.style.display = 'block'; return; }
 
             
 
@@ -1484,7 +1484,7 @@ try {
 
         if (existe) {
 
-            alert("â ALTO: Ya cargaste esta Obra Social con este Plan en la lista.\nNo se pueden repetir.");
+            alert("❌ ALTO: Ya cargaste esta Obra Social con este Plan en la lista.\nNo se pueden repetir.");
 
             return; 
 
@@ -1578,7 +1578,7 @@ try {
 
 
 
-        btn.disabled = true; btn.innerHTML = "â...";
+        btn.disabled = true; btn.innerHTML = "Cargando...";
 
         const fd = new FormData();
 
@@ -1598,9 +1598,9 @@ try {
 
             const res = await r.json();
 
-            if (res.success) { alert("✅ Guardado."); modalABM.hide(); buscarLiquidaciones(); } else { alert("â " + res.message); }
+            if (res.success) { alert("✅ Guardado."); modalABM.hide(); buscarLiquidaciones(); } else { alert("❌ " + res.message); }
 
-        } catch (e) { alert("Error."); } finally { btn.disabled = false; btn.innerHTML = "ð¾ GUARDAR TODO"; }
+        } catch (e) { alert("Error."); } finally { btn.disabled = false; btn.innerHTML = "💾 GUARDAR TODO"; }
 
     });
 
@@ -1862,9 +1862,9 @@ async function recargarTablaVisor(idLiq = null) {
 
                     <td class="text-center">
 
-                        <button class="btn btn-sm btn-info text-white me-1" onclick="verCobrosDeLiquidacion(${x.IdLiquidacionDetalle ?? x.idLiquidacionDetalle})" title="Ver Pagos">ðï¸</button>
+                        <button class="btn btn-sm btn-info text-white me-1" onclick="verCobrosDeLiquidacion(${x.IdLiquidacionDetalle ?? x.idLiquidacionDetalle})" title="Ver Pagos">👁</button>
 
-                        <button class="btn btn-warning btn-sm" onclick="abrirItemABM(${x.IdLiquidacionDetalle ?? x.idLiquidacionDetalle}, ${id})">âï¸</button>
+                        <button class="btn btn-warning btn-sm" onclick="abrirItemABM(${x.IdLiquidacionDetalle ?? x.idLiquidacionDetalle}, ${id})">✏️</button>
 
                         <button class="btn btn-danger btn-sm" onclick="eliminarItemIndividual(${x.IdLiquidacionDetalle ?? x.idLiquidacionDetalle})">🗑️</button>
 
@@ -1944,7 +1944,7 @@ async function recargarTablaVisor(idLiq = null) {
 
             } else {
 
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted p-3">ð« Aún no se han registrado cobros para este ítem.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted p-3"> ❌ Aún no se han registrado cobros para este ítem.</td></tr>';
 
             }
 
@@ -2010,7 +2010,7 @@ async function recargarTablaVisor(idLiq = null) {
 
             if (res.success) { alert("✅ Actualizado."); modalEditCab.hide(); buscarLiquidaciones(); }
 
-            else { alert("â " + res.message); }
+            else { alert("❌ " + res.message); }
 
         } catch(e) { alert("Error al guardar."); }
 
@@ -2054,7 +2054,7 @@ async function recargarTablaVisor(idLiq = null) {
 
         document.getElementById('item_IdLiquidacionPadre').value = (idPadre > 0) ? idPadre : idLiquidacionActualVisor;
 
-        document.getElementById('tituloModalItem').textContent = (idItem === 0) ? "NUEVO ÃTEM" : "EDITAR ÃTEM";
+        document.getElementById('tituloModalItem').textContent = (idItem === 0) ? "NUEVO ÍTEM" : "EDITAR ÍTEM";
 
         
 
@@ -2454,7 +2454,7 @@ function formatearNumero(input) {
             }
         } catch (e) {
             console.error(e);
-            alert("â Error al generar el listado.");
+            alert("❌ Error al generar el listado.");
         } finally {
             btn.innerHTML = textoOriginal; btn.disabled = false;
         }

@@ -107,7 +107,7 @@ public static class BD
                     )";
                     connection.Execute(sqlCobrosDetalles, new { pId = IdMandatarias }, transaction);
 
-                    // 2.2 Borrar Cobros DIRECTOS de la Mandataria (ESTO FALTABA Y HACÃA EXPLOTAR LA BD)
+                    // 2.2 Borrar Cobros DIRECTOS de la Mandataria (ESTO FALTABA Y HACIA EXPLOTAR LA BD)
                     connection.Execute("DELETE FROM \"Cobros\" WHERE \"IdMandatarias\" = @pId", new { pId = IdMandatarias }, transaction);
 
                     // 2.3 Borrar Cobros asociados a sus Obras Sociales
