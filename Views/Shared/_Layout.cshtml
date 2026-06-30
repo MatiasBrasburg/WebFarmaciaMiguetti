@@ -1,4 +1,4 @@
-﻿ï»¿@using Microsoft.AspNetCore.Http
+﻿@using Microsoft.AspNetCore.Http
 @using System.Text.Json
 @using WebFarmaciaMiguetti.Models
 @inject IHttpContextAccessor HttpContextAccessor
@@ -28,7 +28,7 @@
     
     // El resto de tu lógica de títulos sigue igual...
 
-    // 2. TU LÓGICA ORIGINAL DE TÃTULOS
+    // 2. TU LÓGICA ORIGINAL DE TÍTULOS
     string controlador = ViewContext.RouteData.Values["controller"]?.ToString();
     string accion = ViewContext.RouteData.Values["action"]?.ToString();
     string tituloHumanizado = ViewData["Title"]?.ToString();
@@ -40,7 +40,7 @@
             case "Home": tituloHumanizado = "PORTADA PRINCIPAL"; break;
             case "Facturas": tituloHumanizado = (accion == "Create") ? "NUEVA VENTA" : "HISTORIAL DE VENTAS"; break;
             case "Socios": tituloHumanizado = "PADRÓN DE AFILIADOS"; break;
-            case "Medicamentos": tituloHumanizado = "CATÃLOGO DE PRODUCTOS"; break;
+            case "Medicamentos": tituloHumanizado = "CATALOGO DE PRODUCTOS"; break;
             case "ObrasSociales": tituloHumanizado = "LISTADO OBRAS SOCIALES"; break;
             case "Account": tituloHumanizado = "ACCESO AL SISTEMA"; break;
             default: tituloHumanizado = "SECCIÓN GENERAL"; break;
@@ -111,11 +111,11 @@
             <div class="context-bar">
                 <div class="container-fluid px-4 d-flex align-items-center justify-content-between">
                     <button onclick="goBack()" class="btn-context-back">
-                        <i class="bi bi-arrow-left"></i> VOLVER ATRÃS
+                        <i class="bi bi-arrow-left"></i> VOLVER ATRÁS
                     </button>
 
                     <div class="current-page-title">
-                        <span class="text-muted text-uppercase small ls-1">ESTÃS EN:</span>
+                        <span class="text-muted text-uppercase small ls-1">ESTAS EN:</span>
                         <strong class="ms-2 text-primary">@tituloHumanizado</strong>
                     </div>
                 </div>
@@ -160,11 +160,11 @@
 
             <div class="modal-footer justify-content-center gap-4 pb-5 bg-light">
                 <button type="button" class="btn btn-secondary px-5 py-3 fs-4 rounded-pill border-2" data-bs-dismiss="modal">
-                    â NO, ME QUEDO
+                    NO, ME QUEDO
                 </button>
                 
                 <a href="/Account/CerrarSesion" class="btn btn-danger px-5 py-3 fs-4 fw-bold rounded-pill border-2 shadow">
-                    ðª SÃ, SALIR AHORA
+                    SÍ, SALIR AHORA
                 </a>
             </div>
 

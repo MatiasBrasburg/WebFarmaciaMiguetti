@@ -899,7 +899,7 @@ public class CobrosDetalleRequest
                 listaMapeada = listaMapeada.Where(x => x.NumeroComprobante.ToString().Contains(numeroComprobante)).ToList();
             }
 
-            return Json(new { success = true, data = listaMapeada });
+            return Json(new { success = true, data = listaMapeada }, new JsonSerializerOptions());
         }
         catch (Exception ex)
         {
@@ -1041,7 +1041,7 @@ public IActionResult GuardarCobro(int IdCobro, int? IdLiquidacion, int? IdObraSo
                 MotivoDebito         = (string)cobroDetalle.MotivoDebito,
                 IdLiquidacionDetalle = (int?)cobroDetalle.IdLiquidacionDetalle
             };
-            return Json(new { success = true, data = mapeado });
+            return Json(new { success = true, data = mapeado }, new JsonSerializerOptions());
         }
         catch (Exception ex)
         {
@@ -1094,7 +1094,7 @@ public IActionResult GuardarCobro(int IdCobro, int? IdLiquidacion, int? IdObraSo
                 IdLiquidacionDetalle = (int?)x.IdLiquidacionDetalle
             }).ToList();
             
-            return Json(new { success = true, data = listaMapeada });
+            return Json(new { success = true, data = listaMapeada }, new JsonSerializerOptions());
         }
         catch (Exception ex)
         {
