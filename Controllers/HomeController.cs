@@ -883,14 +883,14 @@ public class CobrosDetalleRequest
             // Mapeamos a objetos anónimos para que el JS reciba las claves exactas que espera.
             var listaMapeada = lista.Select(x => new
             {
-                IdCobros          = (int)x.idcobros,
-                NumeroComprobante = (string)x.numerocomprobante,
-                FechaCobro        = Convert.ToDateTime(x.fechacobro).ToString("yyyy-MM-dd"),
-                NombreMandataria  = (string)x.nombremandataria,
-                IdMandatarias     = (int)x.idmandatarias,
-                CantidadItems     = (long)x.cantidaditems,
-                TotalImporte      = (decimal)x.totalimporte,
-                TotalDebitos      = (decimal)x.totaldebitos
+                IdCobros          = (int)x.IdCobros,
+                NumeroComprobante = (string)x.NumeroComprobante,
+                FechaCobro        = (string)x.FechaCobro,
+                NombreMandataria  = (string)x.NombreMandataria,
+                IdMandatarias     = (int)x.IdMandatarias,
+                CantidadItems     = (long)x.CantidadItems,
+                TotalImporte      = (decimal)x.TotalImporte,
+                TotalDebitos      = (decimal)x.TotalDebitos
             }).ToList();
             
             // Filtro en memoria opcional por comprobante
@@ -1031,15 +1031,15 @@ public IActionResult GuardarCobro(int IdCobro, int? IdLiquidacion, int? IdObraSo
             // Mapeamos a objeto anónimo para garantizar claves correctas en el JS (Npgsql retorna minúsculas con dynamic)
             var mapeado = new
             {
-                IdCobrosDetalle      = (int)cobroDetalle.idcobrosdetalle,
-                IdCobros             = (int)cobroDetalle.idcobros,
-                IdObrasSociales      = (int)cobroDetalle.idobrassociales,
-                FechaCobroDetalle    = cobroDetalle.fechacobrodetalle == null ? (string?)null : Convert.ToDateTime(cobroDetalle.fechacobrodetalle).ToString("yyyy-MM-dd"),
-                ImporteCobrado       = (decimal)cobroDetalle.importecobrado,
-                TipoPago             = (string)cobroDetalle.tipopago,
-                MontoDebito          = (decimal)cobroDetalle.montodebito,
-                MotivoDebito         = (string)cobroDetalle.motivodebito,
-                IdLiquidacionDetalle = (int?)cobroDetalle.idliquidaciondetalle
+                IdCobrosDetalle      = (int)cobroDetalle.IdCobrosDetalle,
+                IdCobros             = (int)cobroDetalle.IdCobros,
+                IdObrasSociales      = (int)cobroDetalle.IdObrasSociales,
+                FechaCobroDetalle    = cobroDetalle.FechaCobroDetalle == null ? (string?)null : Convert.ToDateTime(cobroDetalle.FechaCobroDetalle).ToString("yyyy-MM-dd"),
+                ImporteCobrado       = (decimal)cobroDetalle.ImporteCobrado,
+                TipoPago             = (string)cobroDetalle.TipoPago,
+                MontoDebito          = (decimal)cobroDetalle.MontoDebito,
+                MotivoDebito         = (string)cobroDetalle.MotivoDebito,
+                IdLiquidacionDetalle = (int?)cobroDetalle.IdLiquidacionDetalle
             };
             return Json(new { success = true, data = mapeado });
         }
@@ -1082,16 +1082,16 @@ public IActionResult GuardarCobro(int IdCobro, int? IdLiquidacion, int? IdObraSo
             // Mapeamos a objeto anónimo para garantizar claves correctas en el JS (Npgsql retorna minúsculas con dynamic)
             var listaMapeada = lista.Select(x => new
             {
-                IdCobrosDetalle   = (int)x.idcobrosdetalle,
-                IdCobros          = (int)x.idcobros,
-                IdObrasSociales   = (int)x.idobrassociales,
-                NombreObraSocial  = (string)x.nombreobrasocial,
-                FechaCobroDetalle = x.fechacobrodetalle == null ? (string?)null : Convert.ToDateTime(x.fechacobrodetalle).ToString("yyyy-MM-dd"),
-                TipoPago          = (string)x.tipopago,
-                ImporteCobrado    = (decimal)x.importecobrado,
-                MontoDebito       = (decimal)x.montodebito,
-                MotivoDebito      = (string)x.motivodebito,
-                IdLiquidacionDetalle = (int?)x.idliquidaciondetalle
+                IdCobrosDetalle   = (int)x.IdCobrosDetalle,
+                IdCobros          = (int)x.IdCobros,
+                IdObrasSociales   = (int)x.IdObrasSociales,
+                NombreObraSocial  = (string)x.NombreObraSocial,
+                FechaCobroDetalle = x.FechaCobroDetalle == null ? (string?)null : Convert.ToDateTime(x.FechaCobroDetalle).ToString("yyyy-MM-dd"),
+                TipoPago          = (string)x.TipoPago,
+                ImporteCobrado    = (decimal)x.ImporteCobrado,
+                MontoDebito       = (decimal)x.MontoDebito,
+                MotivoDebito      = (string)x.MotivoDebito,
+                IdLiquidacionDetalle = (int?)x.IdLiquidacionDetalle
             }).ToList();
             
             return Json(new { success = true, data = listaMapeada });

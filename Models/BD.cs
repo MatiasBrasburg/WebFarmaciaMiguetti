@@ -1,4 +1,4 @@
-﻿using System.Data;
+using System.Data;
 using System.Collections.Generic;
 using System.Linq;
 using Dapper;
@@ -897,7 +897,7 @@ public static class BD
         {
             string query = @"
             SELECT 
-                C.""IdCobros"", C.""NumeroComprobante"", CAST(C.""FechaCobro"" AS DATE) as ""FechaCobro"",
+                C.""IdCobros"", C.""NumeroComprobante"", TO_CHAR(C.""FechaCobro"", 'YYYY-MM-DD') as ""FechaCobro"",
                 M.""RazonSocial"" as ""NombreMandataria"", M.""IdMandatarias"",
                 COUNT(CD.""IdCobrosDetalle"") as ""CantidadItems"",
                 COALESCE(SUM(CD.""ImporteCobrado""), 0) as ""TotalImporte"",
@@ -917,7 +917,7 @@ public static class BD
             }
 
             query += @" 
-            GROUP BY C.""IdCobros"", C.""NumeroComprobante"", CAST(C.""FechaCobro"" AS DATE), M.""RazonSocial"", M.""IdMandatarias""
+            GROUP BY C.""IdCobros"", C.""NumeroComprobante"", TO_CHAR(C.""FechaCobro"", 'YYYY-MM-DD'), M.""RazonSocial"", M.""IdMandatarias""
             ORDER BY C.""FechaCobro"" DESC";
 
             return connection.Query<dynamic>(query, new { pDesde = desde, pHasta = hasta, pIdMand = idMandataria, pIdOS = idObraSocial, pUser = idUsuario }).ToList();
