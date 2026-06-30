@@ -1091,7 +1091,9 @@ public IActionResult GuardarCobro(int IdCobro, int? IdLiquidacion, int? IdObraSo
                 ImporteCobrado    = (decimal)x.ImporteCobrado,
                 MontoDebito       = (decimal)x.MontoDebito,
                 MotivoDebito      = (string)x.MotivoDebito,
-                IdLiquidacionDetalle = (int?)x.IdLiquidacionDetalle
+                IdLiquidacionDetalle = (int?)x.IdLiquidacionDetalle,
+                TotalBruto        = (decimal?)x.TotalBruto,
+                MontoCargoOS      = (decimal?)x.MontoCargoOS
             }).ToList();
             
             return Json(new { success = true, data = listaMapeada }, new JsonSerializerOptions());

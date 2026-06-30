@@ -1207,10 +1207,11 @@ public static class BD
         using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
         {
             string query = @"
-            SELECT CD.*, OS.""Nombre"" as ""NombreObraSocial""
+            SELECT CD.*, OS.""Nombre"" as ""NombreObraSocial"", LD.""TotalBruto"", LD.""MontoCargoOS""
             FROM ""CobrosDetalle"" CD
             INNER JOIN ""ObrasSociales"" OS ON CD.""IdObrasSociales"" = OS.""IdObrasSociales""
             INNER JOIN ""Cobros"" C ON CD.""IdCobros"" = C.""IdCobros"" 
+            LEFT JOIN ""LiquidacionDetalle"" LD ON CD.""IdLiquidacionDetalle"" = LD.""IdLiquidacionDetalle""
             WHERE CD.""IdCobros"" = @pId AND C.""IdUsuario"" = @pUser 
             ORDER BY CD.""IdCobrosDetalle"" DESC";
 

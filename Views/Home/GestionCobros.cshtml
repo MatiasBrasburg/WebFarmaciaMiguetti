@@ -203,14 +203,13 @@
                             </div>
                             <div class="col-md-2"><label class="form-label small">FECHA PAGO</label><input type="date" id="n_ItemFecha" class="form-control fw-bold"></div>
                             <div class="col-md-2"><label class="form-label small">TIPO</label><select id="n_ItemTipo" class="form-select fw-bold">@foreach(var t in listaTiposPago){<option value="@t">@t</option>}</select></div>
-                            
-                            <div class="col-md-2">
-                             <label class="form-label small text-success">IMPORTE</label>
+                            <div class="col-md-2 position-relative">
+                                <label class="form-label small text-success">IMPORTE</label>
                                 <input type="text" id="n_Imp" class="form-control text-success fw-bold" placeholder="0,00" 
                                     onfocus="limpiarNumero(this)" onblur="formatearNumero(this)" onkeyup="calcularDeudaEnVivo('Nuevo')" data-enter="aggTemp">
                                 
                                 <input type="hidden" id="n_DeudaOriginal" value="0">
-                                <span id="n_lblDeudaRestante" class="fw-bold mt-1" style="display:block; font-size: 0.85rem;"></span>
+                                <span id="n_lblDeudaRestante" class="fw-bold mt-1 position-absolute" style="display:none; font-size: 0.75rem; bottom: -20px; left: 8px; white-space: nowrap; z-index: 10;"></span>
                             </div>
                             <div class="col-md-1">
                                 <label class="form-label small text-danger">DEBITO.</label>
@@ -270,13 +269,13 @@
                             </div>
                             <div class="col-md-2"><label class="form-label small">FECHA PAGO</label><input type="date" id="v_FechaItem" class="form-control form-control-sm"></div>
                             <div class="col-md-2"><label class="form-label small">TIPO</label><select id="v_TipoItem" class="form-select form-select-sm">@foreach(var t in listaTiposPago){<option value="@t">@t</option>}</select></div>
-                            <div class="col-md-2">
+                            <div class="col-md-2 position-relative">
                                 <label class="form-label small text-success">IMPORTE</label>
                                 <input type="text" id="v_Imp" class="form-control form-control-sm text-success fw-bold" placeholder="0,00" 
                                     onfocus="limpiarNumero(this)" onblur="formatearNumero(this)" onkeyup="calcularDeudaEnVivo('Ver')" data-enter="agregarAlLote">
                                 
                                 <input type="hidden" id="v_DeudaOriginal" value="0">
-                                <span id="v_lblDeudaRestante" class="fw-bold mt-1" style="display:block; font-size: 0.85rem;"></span>
+                                <span id="v_lblDeudaRestante" class="fw-bold mt-1 position-absolute" style="display:none; font-size: 0.75rem; bottom: -20px; left: 8px; white-space: nowrap; z-index: 10;"></span>
                             </div>
                             <div class="col-md-2">
                                 <label class="form-label small text-danger">DÉBITO</label>
@@ -298,7 +297,7 @@
                 <div class="table-responsive border border-2 border-dark rounded bg-white" style="height: 300px; overflow-y: auto;">
                     <table class="table table-bordered table-sm mb-0">
                         <thead class="table-dark sticky-top">
-                            <tr><th>OS</th><th>FECHA</th><th>TIPO</th><th class="text-end">IMPORTE</th><th class="text-end">NETO</th><th class="text-center">X</th></tr>
+                            <tr><th>OS</th><th>FECHA</th><th>TIPO</th><th class="text-end">TOTAL</th><th class="text-end">A CARGO OS</th><th class="text-end">IMPORTE</th><th class="text-end">NETO</th><th class="text-center">X</th></tr>
                         </thead>
                         <tbody id="tbodyVer"></tbody>
                     </table>
@@ -329,7 +328,7 @@
                 <div class="table-responsive" style="max-height: 400px;">
                     <table class="table table-hover mb-0">
                         <thead class="table-secondary sticky-top">
-                            <tr><th>FECHA LIQ.</th><th class="text-end">TOTAL BRUTO</th><th class="text-end">CARGO OS</th><th class="text-end">BONIF.</th><th class="text-end">SALDO PENDIENTE</th><th style="width:120px;">PAGAR ($)</th><th>ACCIÓN</th></tr>
+                            <tr><th>FECHA LIQ.</th><th class="text-end">TOTAL BRUTO</th><th class="text-end">CARGO OS</th><th class="text-end">BONIF.</th><th class="text-end">SALDO PENDIENTE</th><th>ACCIÓN</th></tr>
                         </thead>
                         <tbody id="tbodyDeudas"></tbody>
                     </table>
@@ -739,7 +738,7 @@
         if(idOS == 0) { alert("❌ Seleccione primero una Obra Social."); return; }
 
         document.getElementById('lblTituloDeudas').textContent = "Deudas de: " + nombreOS;
-        document.getElementById('tbodyDeudas').innerHTML = '<tr><td colspan="8" class="text-center"><div class="spinner-border spinner-border-sm"></div> Buscando...</td></tr>';
+        document.getElementById('tbodyDeudas').innerHTML = '<tr><td colspan="6" class="text-center"><div class="spinner-border spinner-border-sm"></div> Buscando...</td></tr>';
         
         mDeudas.show();
 
@@ -758,13 +757,12 @@
                         <td class="text-end text-primary">$${parseFloat(d.MontoCargoOS).toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
                         <td class="text-end text-danger">$${parseFloat(d.MontoBonificacion).toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
                         <td class="text-end fw-bold text-success">$${saldo.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
-                        <td><input type="number" class="form-control form-control-sm txt-pago-deuda" value="${saldo}" step="0.01" style="font-weight:bold; color:#198754;"></td>
                         <td class="text-center">
                             <button class="btn btn-sm btn-success fw-bold" onclick="seleccionarDeuda(${d.IdLiquidacionDetalle}, ${saldo}, '${(d.FechaPresentacion||'').split('T')[0]}')">✔ PAGAR</button>
                         </td>
                     </tr>`;
                 });
-            } else b.innerHTML = '<tr><td colspan="8" class="text-center text-success fw-bold">🔍 No hay deudas pendientes.</td></tr>';
+            } else b.innerHTML = '<tr><td colspan="6" class="text-center text-success fw-bold">🔍 No hay deudas pendientes.</td></tr>';
         } catch(e) { alert("Error buscando deudas."); }
     }
 
@@ -980,6 +978,8 @@
                 res.data.forEach(x => {
                     const imp = parseFloat(x.ImporteCobrado||0);
                     const deb = parseFloat(x.MontoDebito||0);
+                    const totalB = x.TotalBruto ? `$${parseFloat(x.TotalBruto).toLocaleString('es-AR', {minimumFractionDigits: 2})}` : '-';
+                    const cargoOS = x.MontoCargoOS ? `$${parseFloat(x.MontoCargoOS).toLocaleString('es-AR', {minimumFractionDigits: 2})}` : '-';
                     tot += (imp - deb);
                     
                     b.innerHTML += `
@@ -987,6 +987,8 @@
                         <td class="fw-bold small">${x.NombreObraSocial}</td>
                         <td class="text-center small">${(x.FechaCobroDetalle||'').split('T')[0]}</td>
                         <td class="text-center small">${x.TipoPago}</td>
+                        <td class="text-end text-muted">${totalB}</td>
+                        <td class="text-end text-primary">${cargoOS}</td>
                         <td class="text-end text-success fw-bold">$${imp.toLocaleString('es-AR', {minimumFractionDigits: 2})}</td>
                         <td class="text-end fw-black">$${(imp-deb).toLocaleString('es-AR', {minimumFractionDigits: 2})}</td>
                         <td class="text-center">
