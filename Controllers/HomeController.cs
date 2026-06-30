@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using WebFarmaciaMiguetti.Models;
 using Microsoft.AspNetCore.Http;
@@ -878,14 +878,28 @@ public class CobrosDetalleRequest
         {
             // Usamos la búsqueda que agrupa Padre+Hijos y suma totales
             var lista = BD.BuscarCobros(desde, hasta, IdMandataria, IdObraSocial, usuarioCompleto.IdUsuario);
+
+            // IMPORTANTE: Npgsql/Dapper retorna dynamic con claves en minúsculas.
+            // Mapeamos a objetos anónimos para que el JS reciba las claves exactas que espera.
+            var listaMapeada = lista.Select(x => new
+            {
+                IdCobros          = (int)x.idcobros,
+                NumeroComprobante = (string)x.numerocomprobante,
+                FechaCobro        = (DateTime)x.fechacobro,
+                NombreMandataria  = (string)x.nombremandataria,
+                IdMandatarias     = (int)x.idmandatarias,
+                CantidadItems     = (long)x.cantidaditems,
+                TotalImporte      = (decimal)x.totalimporte,
+                TotalDebitos      = (decimal)x.totaldebitos
+            }).ToList();
             
             // Filtro en memoria opcional por comprobante
             if (!string.IsNullOrEmpty(numeroComprobante))
             {
-                lista = lista.Where(x => x.NumeroComprobante.ToString().Contains(numeroComprobante)).ToList();
+                listaMapeada = listaMapeada.Where(x => x.NumeroComprobante.ToString().Contains(numeroComprobante)).ToList();
             }
 
-            return Json(new { success = true, data = lista });
+            return Json(new { success = true, data = listaMapeada });
         }
         catch (Exception ex)
         {
@@ -1014,7 +1028,20 @@ public IActionResult GuardarCobro(int IdCobro, int? IdLiquidacion, int? IdObraSo
             var cobroDetalle = BD.TraerCobroDetallePorId(idCobro, usuarioCompleto.IdUsuario);
             if (cobroDetalle == null) return Json(new { success = false, message = "No encontrado" });
             
-            return Json(new { success = true, data = cobroDetalle });
+            // Mapeamos a objeto anónimo para garantizar claves correctas en el JS (Npgsql retorna minúsculas con dynamic)
+            var mapeado = new
+            {
+                IdCobrosDetalle      = (int)cobroDetalle.idcobrosdetalle,
+                IdCobros             = (int)cobroDetalle.idcobros,
+                IdObrasSociales      = (int)cobroDetalle.idobrassociales,
+                FechaCobroDetalle    = (DateTime?)cobroDetalle.fechacobrodetalle,
+                ImporteCobrado       = (decimal)cobroDetalle.importecobrado,
+                TipoPago             = (string)cobroDetalle.tipopago,
+                MontoDebito          = (decimal)cobroDetalle.montodebito,
+                MotivoDebito         = (string)cobroDetalle.motivodebito,
+                IdLiquidacionDetalle = (int?)cobroDetalle.idliquidaciondetalle
+            };
+            return Json(new { success = true, data = mapeado });
         }
         catch (Exception ex)
         {
@@ -1050,9 +1077,24 @@ public IActionResult GuardarCobro(int IdCobro, int? IdLiquidacion, int? IdObraSo
                 return Json(new { success = false, message = "ID de Lote inválido" });
 
             // Ahora llamamos a la BD pasando el ID (int), que es único y rápido
-            var lista = BD.TraerCobrosDelMismoLote(idCobroPadre, usuarioCompleto.IdUsuario); 
+            var lista = BD.TraerCobrosDelMismoLote(idCobroPadre, usuarioCompleto.IdUsuario);
             
-            return Json(new { success = true, data = lista });
+            // Mapeamos a objeto anónimo para garantizar claves correctas en el JS (Npgsql retorna minúsculas con dynamic)
+            var listaMapeada = lista.Select(x => new
+            {
+                IdCobrosDetalle   = (int)x.idcobrosdetalle,
+                IdCobros          = (int)x.idcobros,
+                IdObrasSociales   = (int)x.idobrassociales,
+                NombreObraSocial  = (string)x.nombreobrasocial,
+                FechaCobroDetalle = (DateTime?)x.fechacobrodetalle,
+                TipoPago          = (string)x.tipopago,
+                ImporteCobrado    = (decimal)x.importecobrado,
+                MontoDebito       = (decimal)x.montodebito,
+                MotivoDebito      = (string)x.motivodebito,
+                IdLiquidacionDetalle = (int?)x.idliquidaciondetalle
+            }).ToList();
+            
+            return Json(new { success = true, data = listaMapeada });
         }
         catch (Exception ex)
         {

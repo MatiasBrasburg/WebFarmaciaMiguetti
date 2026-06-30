@@ -1,4 +1,4 @@
-﻿ï»¿@using System.Text.Json
+@using System.Text.Json
 @using WebFarmaciaMiguetti.Models
 @using Microsoft.AspNetCore.Http
 @inject IHttpContextAccessor HttpContextAccessor
@@ -400,6 +400,7 @@
     var datosOS = @Html.Raw(jsonObrasSociales);
     var datosMand = @Html.Raw(jsonMandatarias ?? "[]");
     var datosOS_FiltradosNuevo = [];
+    var datosOS_FiltradosVer = [];
     var itemsTemp = [];
     var datosAgrupados = {}; 
     var loteContexto = {}; 
@@ -417,7 +418,9 @@
         setupAuto('txtFiltroMandataria', 'listaFiltroMandataria', 'filtroMandataria', datosMand);
         setupAuto('txtN_Mand', 'listaN_Mand', 'n_Mand', datosMand);
         setupAuto('txtN_OS', 'listN_OS', 'valN_OS', datosOS_FiltradosNuevo);
-        setupAuto('txtV_OS', 'listV_OS', 'valV_OS', datosOS);
+        // txtV_OS usa una variable puente para poder cambiar la fuente sin re-agregar listeners
+        datosOS_FiltradosVer.push(...datosOS);
+        setupAuto('txtV_OS', 'listV_OS', 'valV_OS', datosOS_FiltradosVer);
 
         // --- NAVEGACIÃâN MEJORADA (LOCAL) ---
         // 1. Auto-Focus en Modales
@@ -954,8 +957,10 @@
         document.getElementById('v_FechaItem').value = g.fecha; 
 
         document.getElementById('buscadorInterno').value = '';
+        // Actualizamos la fuente del autocomplete SIN re-agregar listeners (evita MaxListenersExceededWarning)
         const osDeEstaMandataria = datosOS.filter(x => x.idMandataria == g.idMand);
-        setupAuto('txtV_OS', 'listV_OS', 'valV_OS', osDeEstaMandataria);
+        datosOS_FiltradosVer.length = 0;
+        datosOS_FiltradosVer.push(...osDeEstaMandataria);
         
         traerDetalles(idPadre);
         mVer.show();
@@ -1131,8 +1136,9 @@
         });
     }
 
-    
-
+    function confirmarSeleccionDeudas() {
+        const selected = document.querySelectorAll('#tbodyDeudas input[type="checkbox"]:checked');
+        if (selected.length === 0) { alert('Seleccione al menos una deuda.'); return; }
 
         const idOS = (origenDeuda === 'Nuevo') ? document.getElementById('valN_OS').value : document.getElementById('valV_OS').value;
         const nombreOS = (origenDeuda === 'Nuevo') ? document.getElementById('txtN_OS').value : document.getElementById('txtV_OS').value;
@@ -1143,10 +1149,8 @@
             const idLiq = chk.dataset.id;
             const row = chk.closest('tr');
             const saldo = parseFloat(row.querySelector('.txt-pago-deuda').value) || 0;
-            const periodo = chk.dataset.fecha;
 
             if (origenDeuda === 'Nuevo') {
-                // Agregar a la tabla temporal directamente
                 itemsTemp.push({
                     id: idOS, 
                     nom: nombreOS, 
@@ -1157,7 +1161,6 @@
                     idLiq: idLiq
                 });
             } else {
-                // En modo "Ver" (Ver/Editar lote existente), hay que guardarlos uno por uno vía AJAX
                 const fd = new FormData();
                 fd.append("IdCobro", 0);
                 fd.append("IdObraSocial", idOS); fd.append("IdObrasSociales", idOS);
@@ -1186,5 +1189,3 @@
         alert(`✅  Se agregaron ${selected.length} deudas correctamente.`);
     }
 </script>
-
-
