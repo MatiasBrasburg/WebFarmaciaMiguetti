@@ -204,13 +204,12 @@
                             </div>
                             <div class="col-md-2"><label class="form-label small">FECHA PAGO</label><input type="date" id="n_ItemFecha" class="form-control fw-bold"></div>
                             <div class="col-md-2"><label class="form-label small">TIPO</label><select id="n_ItemTipo" class="form-select fw-bold">@foreach(var t in listaTiposPago){<option value="@t">@t</option>}</select></div>
-                            <div class="col-md-2 position-relative">
+                            <div class="col-md-2">
                                 <label class="form-label small text-success">IMPORTE</label>
                                 <input type="text" id="n_Imp" class="form-control text-success fw-bold" placeholder="0,00" 
                                     onfocus="limpiarNumero(this)" onblur="formatearNumero(this)" onkeyup="calcularDeudaEnVivo('Nuevo')" data-enter="aggTemp">
                                 
                                 <input type="hidden" id="n_DeudaOriginal" value="0">
-                                <span id="n_lblDeudaRestante" class="fw-bold mt-1 position-absolute" style="display:none; font-size: 0.75rem; bottom: -26px; left: 8px; white-space: nowrap; z-index: 10;"></span>
                             </div>
                             <div class="col-md-1">
                                 <label class="form-label small text-danger">DEBITO.</label>
@@ -220,7 +219,11 @@
                             
                             <div class="col-md-1"><button class="btn btn-success w-100 fw-bold" onclick="aggTemp()">💾</button></div>
                         </div>
-                        <input type="hidden" id="n_IdLiqDetalle" value=""> <small id="lblDeudaSeleccionada" class="text-primary fw-bold ms-1" style="display:none;"></small>
+                        <div class="mt-2">
+                            <input type="hidden" id="n_IdLiqDetalle" value="">
+                            <small id="lblDeudaSeleccionada" class="text-primary fw-bold ms-1" style="display:none;"></small>
+                            <span id="n_lblDeudaRestante" class="fw-bold ms-3" style="display:none; font-size: 0.85rem;"></span>
+                        </div>
                     </div>
                 </div>
 
@@ -270,13 +273,12 @@
                             </div>
                             <div class="col-md-2"><label class="form-label small">FECHA PAGO</label><input type="date" id="v_FechaItem" class="form-control form-control-sm"></div>
                             <div class="col-md-2"><label class="form-label small">TIPO</label><select id="v_TipoItem" class="form-select form-select-sm">@foreach(var t in listaTiposPago){<option value="@t">@t</option>}</select></div>
-                            <div class="col-md-2 position-relative">
+                            <div class="col-md-2">
                                 <label class="form-label small text-success">IMPORTE</label>
                                 <input type="text" id="v_Imp" class="form-control form-control-sm text-success fw-bold" placeholder="0,00" 
                                     onfocus="limpiarNumero(this)" onblur="formatearNumero(this)" onkeyup="calcularDeudaEnVivo('Ver')" data-enter="agregarAlLote">
                                 
                                 <input type="hidden" id="v_DeudaOriginal" value="0">
-                                <span id="v_lblDeudaRestante" class="fw-bold mt-1 position-absolute" style="display:none; font-size: 0.75rem; bottom: -26px; left: 8px; white-space: nowrap; z-index: 10;"></span>
                             </div>
                             <div class="col-md-2">
                                 <label class="form-label small text-danger">DÉBITO</label>
@@ -285,8 +287,11 @@
                             </div>
                             <div class="col-md-2"><button class="btn btn-primary fw-bold w-100 btn-sm" onclick="agregarAlLote()">AGREGAR</button></div>
                         </div>
-                        <input type="hidden" id="v_IdLiqDetalle" value="">
-                        <small id="lblDeudaSeleccionadaVer" class="text-primary fw-bold ms-1" style="display:none;"></small>
+                        <div class="mt-2">
+                            <input type="hidden" id="v_IdLiqDetalle" value="">
+                            <small id="lblDeudaSeleccionadaVer" class="text-primary fw-bold ms-1" style="display:none;"></small>
+                            <span id="v_lblDeudaRestante" class="fw-bold ms-3" style="display:none; font-size: 0.85rem;"></span>
+                        </div>
                     </div>
                 </div>
 
