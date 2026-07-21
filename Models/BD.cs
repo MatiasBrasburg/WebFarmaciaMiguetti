@@ -440,7 +440,7 @@ public static class BD
         }
     }
 
-    public static List<dynamic> BuscarLiquidaciones(int? id, DateTime? desde, DateTime? hasta, int? mandataria, int idUsuario)
+    public static List<dynamic> BuscarLiquidaciones(int? id, DateTime? desde, DateTime? hasta, int? mandataria, int idUsuario, bool incluirCobradas)
     {
         using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
         {
@@ -473,8 +473,13 @@ public static class BD
             if (hasta.HasValue) query += " AND L.\"FechaPresentacion\" <= @pHasta";
             if (mandataria.HasValue && mandataria.Value > 0) query += " AND L.\"IdMandatarias\" = @pMand";
 
-            query += @" 
-            GROUP BY L.""IdLiquidaciones"", L.""FechaPresentacion"", L.""Periodo"", L.""Observaciones"", L.""IdMandatarias"", M.""RazonSocial""
+            query += @"
+            GROUP BY L.""IdLiquidaciones"", L.""FechaPresentacion"", L.""Periodo"", L.""Observaciones"", L.""IdMandatarias"", M.""RazonSocial""";
+
+            // Si no se piden las cobradas, se ocultan las que ya no tienen saldo pendiente (tolerancia de $1)
+            if (!incluirCobradas) query += " HAVING COALESCE(SUM(LD.\"SaldoPendiente\"), 0) > 1";
+
+            query += @"
             ORDER BY L.""FechaPresentacion"" DESC";
 
             return connection.Query<dynamic>(query, new
@@ -790,7 +795,7 @@ public static class BD
     // BÚSQUEDA GLOBAL DE DETALLES
     // =============================================================================
 
-    public static List<dynamic> BuscarDetallesGlobales(DateTime? desde, DateTime? hasta, int? idMandataria, int? idOS, int idUsuario)
+    public static List<dynamic> BuscarDetallesGlobales(DateTime? desde, DateTime? hasta, int? idMandataria, int? idOS, int idUsuario, bool incluirCobradas)
     {
         using (NpgsqlConnection connection = new NpgsqlConnection(GetConnectionString()))
         {
@@ -811,6 +816,9 @@ public static class BD
             if (hasta.HasValue) query += " AND L.\"FechaPresentacion\" <= @pHasta";
             if (idMandataria.HasValue && idMandataria.Value > 0) query += " AND M.\"IdMandatarias\" = @pMand";
             if (idOS.HasValue && idOS.Value > 0) query += " AND OS.\"IdObrasSociales\" = @pOS";
+
+            // Si no se piden las cobradas, se ocultan los renglones que ya no tienen saldo pendiente (tolerancia de $1)
+            if (!incluirCobradas) query += " AND LD.\"SaldoPendiente\" > 1";
 
             query += " ORDER BY L.\"FechaPresentacion\" DESC, M.\"RazonSocial\", OS.\"Nombre\"";
 

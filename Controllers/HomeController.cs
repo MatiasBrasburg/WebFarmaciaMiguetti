@@ -431,7 +431,7 @@ public class HomeController : Controller
     // NUEVO: ENDPOINT PARA BUSCAR (AJAX)
     // =========================================================================
     [HttpGet]
-    public IActionResult BuscarLiquidacionesAjax(int? id, DateTime? desde, DateTime? hasta, int? mandataria)
+    public IActionResult BuscarLiquidacionesAjax(int? id, DateTime? desde, DateTime? hasta, int? mandataria, bool incluirCobradas = false)
     {
  string? usuarioJson = HttpContext.Session.GetString("Usuario"); // Crear el usuario session
         if (string.IsNullOrEmpty(usuarioJson))
@@ -452,7 +452,7 @@ public class HomeController : Controller
         try
         {
             // Llamamos al nuevo método de BD
-            var lista = BD.BuscarLiquidaciones(id, desde, hasta, mandataria, usuarioCompleto.IdUsuario);
+            var lista = BD.BuscarLiquidaciones(id, desde, hasta, mandataria, usuarioCompleto.IdUsuario, incluirCobradas);
             
             // Retornamos JSON para que JS dibuje la tabla
             return Json(new { success = true, data = lista });
@@ -672,7 +672,7 @@ var itemsExistentes = BD.TraerDetallesPorIdLiquidacion(IdLiquidacionPadre, usuar
     }
 
     [HttpGet]
-public IActionResult BuscarDetallesGlobalesAjax(DateTime? desde, DateTime? hasta, int? idMandataria, int? idOS)
+public IActionResult BuscarDetallesGlobalesAjax(DateTime? desde, DateTime? hasta, int? idMandataria, int? idOS, bool incluirCobradas = false)
 {
      string? usuarioJson = HttpContext.Session.GetString("Usuario"); // Crear el usuario session
         if (string.IsNullOrEmpty(usuarioJson))
@@ -691,7 +691,7 @@ public IActionResult BuscarDetallesGlobalesAjax(DateTime? desde, DateTime? hasta
         }
     try
     {
-        var lista = BD.BuscarDetallesGlobales(desde, hasta, idMandataria, idOS, usuarioCompleto.IdUsuario);
+        var lista = BD.BuscarDetallesGlobales(desde, hasta, idMandataria, idOS, usuarioCompleto.IdUsuario, incluirCobradas);
         return Json(new { success = true, data = lista });
     }
     catch (Exception ex)

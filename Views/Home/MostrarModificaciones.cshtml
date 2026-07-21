@@ -230,6 +230,18 @@
 
                 
 
+                <div class="col-md-12 mt-2">
+
+                    <div class="form-check form-switch">
+
+                        <input class="form-check-input" type="checkbox" id="chkMostrarCobradas" onchange="buscarLiquidaciones()">
+
+                        <label class="form-check-label fs-5" for="chkMostrarCobradas">Mostrar también las cobradas</label>
+
+                    </div>
+
+                </div>
+
                <div class="col-md-12 d-flex justify-content-end gap-2 mt-3">
 
                     <button class="btn btn-primary btn-super px-5" onclick="buscarLiquidaciones()">🔍 BUSCAR</button>
@@ -478,7 +490,7 @@
 
                     <div class="row">
 
-                        <div class="col-md-2">NÂ°: <span id="verId" class="fw-black text-danger">---</span></div>
+                        <div class="col-md-2">N°: <span id="verId" class="fw-black text-danger">---</span></div>
 
                         <div class="col-md-3">FECHA: <span id="verFecha" class="fw-normal">---</span></div>
 
@@ -952,7 +964,7 @@ document.getElementById('liqMandataria').addEventListener('change', function() {
 
         if(modo === 'Mandataria') {
 
-            thead.innerHTML = `<tr><th>NÂ°</th><th>FECHA</th><th>MANDATARIA</th><th>OBSERVACIONES</th><th class="text-end">TOTAL</th><th class="text-end text-danger">SALDO PEND</th><th class="text-center">ACCIONES</th></tr>`;
+            thead.innerHTML = `<tr><th>N°</th><th>FECHA</th><th>MANDATARIA</th><th>OBSERVACIONES</th><th class="text-end">TOTAL</th><th class="text-end text-danger">SALDO PEND</th><th class="text-center">ACCIONES</th></tr>`;
 
         } else {
 
@@ -980,7 +992,9 @@ document.getElementById('liqMandataria').addEventListener('change', function() {
 
         const mand = document.getElementById('filtroMandataria').value;
 
-        const idOS = document.getElementById('filtroOS').value; 
+        const idOS = document.getElementById('filtroOS').value;
+
+        const incluirCobradas = document.getElementById('chkMostrarCobradas').checked;
 
 if (idOS !== "0" && idOS !== "" && modoActual === 'Mandataria') {
 
@@ -1004,11 +1018,11 @@ if (idOS !== "0" && idOS !== "" && modoActual === 'Mandataria') {
 
         if (modoActual === 'Mandataria') {
 
-            url = `@Url.Action("BuscarLiquidacionesAjax", "Home")?desde=${desde}&hasta=${hasta}&mandataria=${mand}`; 
+            url = `@Url.Action("BuscarLiquidacionesAjax", "Home")?desde=${desde}&hasta=${hasta}&mandataria=${mand}&incluirCobradas=${incluirCobradas}`;
 
         } else {
 
-            url = `@Url.Action("BuscarDetallesGlobalesAjax", "Home")?desde=${desde}&hasta=${hasta}&idMandataria=${mand}&idOS=${idOS}`;
+            url = `@Url.Action("BuscarDetallesGlobalesAjax", "Home")?desde=${desde}&hasta=${hasta}&idMandataria=${mand}&idOS=${idOS}&incluirCobradas=${incluirCobradas}`;
 
         }
 
@@ -1258,7 +1272,9 @@ try {
 
         document.getElementById('txtFiltroMandataria').value = "";
 
-        buscarLiquidaciones(); 
+        document.getElementById('chkMostrarCobradas').checked = false;
+
+        buscarLiquidaciones();
 
     }
 
@@ -2036,7 +2052,7 @@ async function recargarTablaVisor(idLiq = null) {
 
     async function eliminarLiquidacion(id) {
 
-        if (!confirm(`¿Borrar liquidación NÂ° ${id}?`)) return;
+        if (!confirm(`¿Borrar liquidación N° ${id}?`)) return;
 
         const fd = new FormData(); fd.append("QueToco", "Eliminar"); fd.append("IdLiquidacion", id);
 
@@ -2388,7 +2404,7 @@ function formatearNumero(input) {
 
         const cols = "<th>OBRA SOCIAL</th><th>PLAN</th><th>REC</th><th>BRUTO</th><th>CARGO OS</th><th>BONIF</th><th>A COBRAR</th><th>DEUDA / PAGO</th>";
         // Pasamos null en saldoPendiente para que no muestre nada arriba
-        abrirVentanaMaestra("LIQUIDACIÓN NÂ° " + idLiq + " - " + mandataria, fecha, cols, filasHTML, htmlTotales, 0, info);
+        abrirVentanaMaestra("LIQUIDACIÓN N° " + idLiq + " - " + mandataria, fecha, cols, filasHTML, htmlTotales, 0, info);
     }
 
     // 2. REPORTE ÃTEM INDIVIDUAL
@@ -2428,16 +2444,18 @@ function formatearNumero(input) {
         const mand = document.getElementById('filtroMandataria').value;
         const idOS = document.getElementById('filtroOS').value;
 
+        const incluirCobradas = document.getElementById('chkMostrarCobradas').checked;
+
         const btn = document.getElementById('btnImprimirUnificado');
         const textoOriginal = btn.innerHTML;
-        btn.innerHTML = "â³ GENERANDO..."; btn.disabled = true;
+        btn.innerHTML = "⏳ GENERANDO..."; btn.disabled = true;
 
         try {
             let url = "";
             if (modoActual === 'Mandataria') {
-                url = `@Url.Action("BuscarLiquidacionesAjax", "Home")?desde=${desde}&hasta=${hasta}&mandataria=${mand}`;
+                url = `@Url.Action("BuscarLiquidacionesAjax", "Home")?desde=${desde}&hasta=${hasta}&mandataria=${mand}&incluirCobradas=${incluirCobradas}`;
             } else {
-                url = `@Url.Action("BuscarDetallesGlobalesAjax", "Home")?desde=${desde}&hasta=${hasta}&idMandataria=${mand}&idOS=${idOS}`;
+                url = `@Url.Action("BuscarDetallesGlobalesAjax", "Home")?desde=${desde}&hasta=${hasta}&idMandataria=${mand}&idOS=${idOS}&incluirCobradas=${incluirCobradas}`;
             }
 
             const r = await fetch(url);
@@ -2499,7 +2517,7 @@ function formatearNumero(input) {
         '</tr>';
 
         const rango = (desde && hasta) ? "Desde " + formatearFechaLinda(desde) + " hasta " + formatearFechaLinda(hasta) : "Histórico";
-        abrirVentanaMaestra("LISTADO POR MANDATARIAS", rango, "<th>FECHA</th><th>MANDATARIA</th><th>NÂ° COMPROBANTE</th><th>TOTAL</th><th>DEUDA / PAGO</th>", filas, htmlTotales, 0);
+        abrirVentanaMaestra("LISTADO POR MANDATARIAS", rango, "<th>FECHA</th><th>MANDATARIA</th><th>N° COMPROBANTE</th><th>TOTAL</th><th>DEUDA / PAGO</th>", filas, htmlTotales, 0);
     }
 
     // --- GENERADOR LISTADO OBRAS SOCIALES ---
