@@ -2533,7 +2533,7 @@ function formatearNumero(input) {
 
         datos.forEach(x => {
             const rec = x.CantidadRecetas || x.cantidadRecetas || 0;
-            const bruto = parseFloat(x.TotalBruto || x.totalBruto || 0);
+            const bruto = parseFloat(x.BrutoOriginal || x.brutoOriginal || 0);
             const cargo = parseFloat(x.MontoCargoOS || x.montoCargoOS || 0);
             const bonif = parseFloat(x.MontoBonificacion || x.montoBonificacion || 0);
             const neto = cargo - bonif; 
